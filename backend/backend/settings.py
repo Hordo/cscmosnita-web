@@ -121,7 +121,7 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # -----------------------------
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    "https://cscmosnita-web.vercel.app/",
+    "https://cscmosnita-web.vercel.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
