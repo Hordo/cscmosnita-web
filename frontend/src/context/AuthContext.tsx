@@ -1,19 +1,28 @@
-import { createContext, useContext, useState } from "react";
-import type { ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 
 type AuthContextType = {
   user: any;
-  login: (userData: any) => void;
+  login: (tokens: any) => void;
   logout: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem("auth");
+    return saved ? JSON.parse(saved) : null;
+  });
 
-  const login = (userData: any) => setUser(userData);
-  const logout = () => setUser(null);
+  const login = (tokens: any) => {
+    setUser(tokens);
+    localStorage.setItem("auth", JSON.stringify(tokens));
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem("auth");
+  };
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>

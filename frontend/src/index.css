@@ -1,0 +1,53 @@
+.navbar {
+  background: #111;
+  color: white;
+  padding: 10px 20px;
+}
+
+.navbar-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.menu {
+  display: flex;
+  gap: 20px;
+  list-style: none;
+}
+
+.menu-item {
+  position: relative;
+}
+
+.submenu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: white;
+  color: black;
+  padding: 10px;
+  display: none;
+}
+
+.submenu.open {
+  display: block;
+}
+
+.submenu.mega .mega-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 150px);
+  gap: 10px;
+}
+
+/* Make mega menu full width */
+.nav-item.dropdown.position-static .dropdown-menu {
+  left: 0;
+  right: 0;
+  border-radius: 0;
+}
+
+/* Improve spacing */
+.dropdown-menu .dropdown-item {
+  padding: 10px 20px;
+}

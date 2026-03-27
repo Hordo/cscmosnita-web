@@ -1,10 +1,11 @@
 import { Outlet } from "react-router-dom";
+import TopNavbar from "./TopNavbar";
 
 export default function Layout() {
   return (
     <div>
       <header>
-        <h2>CSC Moșnița</h2>
+        <TopNavbar />
       </header>
 
       <main>

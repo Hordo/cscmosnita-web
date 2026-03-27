@@ -14,4 +14,5 @@ router.register(r'matches', MatchViewSet, basename='matches')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('register/', __import__('club.views').views.RegisterView.as_view(), name='register'),
 ]

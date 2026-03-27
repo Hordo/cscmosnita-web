@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
     # Recommended for API
+    "corsheaders",
     "rest_framework",
 
     # Your app
@@ -36,6 +37,7 @@ INSTALLED_APPS = [
 # MIDDLEWARE
 # -----------------------------
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # static files in production
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -94,10 +96,10 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
 }
+
 
 # -----------------------------
 # INTERNATIONALIZATION
@@ -117,7 +119,11 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # -----------------------------
 # CORS (for Vercel frontend)
 # -----------------------------
-CORS_ALLOW_ALL_ORIGINS = True  # or restrict later
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "https://cscmosnita-web.vercel.app/",
+]
+CORS_ALLOW_CREDENTIALS = True
 
 # -----------------------------
 # DEFAULT PRIMARY KEY
