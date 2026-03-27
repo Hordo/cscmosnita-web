@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { API_URLS } from "../config/api";
 
 export default function Login() {
   const { login } = useAuth();
@@ -11,7 +12,7 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/token/`, {
+    const res = await fetch(API_URLS.token, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
