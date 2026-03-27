@@ -7,6 +7,14 @@ export default function TopNavbar() {
 
   const handleLogout = () => logout();
 
+  // Only show admin menu if user.is_staff is true
+  const filteredMenu = menuConfig.filter((item: any) => {
+    if (item.adminOnly) {
+      return user && user.is_staff;
+    }
+    return true;
+  });
+
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
       <div className="container-fluid">
@@ -25,7 +33,7 @@ export default function TopNavbar() {
 
         <div className="collapse navbar-collapse" id="mainNavbar">
           <ul className="navbar-nav ms-auto">
-            {menuConfig.map((item) => {
+            {filteredMenu.map((item) => {
               const visibleChildren = item.children?.filter(
                 (child) =>
                   child.auth === undefined ||
