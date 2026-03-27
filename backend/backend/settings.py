@@ -49,6 +49,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "backend.urls"
+WSGI_APPLICATION = "backend.wsgi.application"
+ASGI_APPLICATION = "backend.asgi.application"
 
 # -----------------------------
 # TEMPLATES
@@ -67,8 +69,6 @@ TEMPLATES = [
         },
     },
 ]
-
-WSGI_APPLICATION = "backend.wsgi.application"
 
 # -----------------------------
 # DATABASE (Railway auto-detect)
