@@ -93,12 +93,13 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
+        "rest_framework.permissions.AllowAny",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
 }
+
 
 
 # -----------------------------
@@ -125,6 +126,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # for local development
 ]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = ["*"]
+CORS_ALLOW_METHODS = ["*"]
 
 # -----------------------------
 # DEFAULT PRIMARY KEY
