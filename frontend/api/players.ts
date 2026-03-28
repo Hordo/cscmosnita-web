@@ -10,8 +10,8 @@ export default async function handler(req, res) {
         p.last_name,
         p.number,
         p.position,
-        p.team_id,
-        p.photo
+        p.photo,
+        p.team_id
       FROM club_player p
       ORDER BY p.id;
     `;

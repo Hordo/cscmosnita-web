@@ -4,7 +4,7 @@ import type { Team } from "../types/db.ts";
 export default async function handler(req, res) {
   try {
     const teams = await sql<Team[]>`
-      SELECT id, name, logo, discipline_id
+      SELECT id, name, age_group, season, photo, discipline_id
       FROM club_team
       ORDER BY id;
     `;
