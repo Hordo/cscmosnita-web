@@ -14,11 +14,11 @@ export type Column = MenuItem[];
 
 export const menuConfig: MenuItem[] = [
   {
-    label: "Coaches",
+    label: "Antrenori",
     path: "/coaches",
   },
   {
-    label: "Disciplines",
+    label: "Discipline",
     mega: true,
     children: [
       [],
@@ -40,10 +40,10 @@ export const menuConfig: MenuItem[] = [
       [],
       [],
       [
-        { label: "Create Team", path: "/admin/create-team" },
-        { label: "Create Coach", path: "/admin/create-coach" },
-        { label: "Create Player", path: "/admin/player" },
-        { label: "Create Discipline", path: "/admin/disciplines" },
+        { label: "Manage Teams", path: "/admin/create-team" },
+        { label: "Manage Coaches", path: "/admin/create-coach" },
+        { label: "Manage Players", path: "/admin/player" },
+        { label: "Manage Disciplines", path: "/admin/disciplines" },
       ],
     ],
   },

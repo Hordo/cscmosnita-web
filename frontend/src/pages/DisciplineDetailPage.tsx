@@ -17,24 +17,85 @@ export const DisciplineDetailPage: React.FC = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dbDisciplines, setDbDisciplines] = useState<any[]>([]);
+
+  // Helper: similarity (very basic, for Romanian diacritics and case-insensitive)
+  function similarity(a: string, b: string) {
+    a = a
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "");
+    b = b
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "");
+    let matches = 0;
+    for (let i = 0; i < Math.min(a.length, b.length); i++) {
+      if (a[i] === b[i]) matches++;
+    }
+    return matches / Math.max(a.length, b.length);
+  }
+
+  // Find best matching discipline from DB
+  const matchedDiscipline = dbDisciplines.reduce((best, d) => {
+    if (!discipline) return best;
+    const sim = similarity(discipline, d.name);
+    if (!best || sim > best.sim) return { ...d, sim };
+    return best;
+  }, null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/teams?discipline=${discipline}`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
+    // Fetch disciplines first, then teams
+    fetch("/api/disciplines")
+      .then((res) => res.json())
+      .then((discData) => {
+        setDbDisciplines(discData);
+        // Find best match
+        let best: any = null;
+        let bestSim = 0;
+        for (const d of discData) {
+          const sim = similarity(discipline || "", d.name);
+          if (sim > bestSim) {
+            best = d;
+            bestSim = sim;
+          }
+        }
+        if (best && bestSim > 0.8) {
+          // Fetch teams for this discipline id
+          fetch(`/api/teams`)
+            .then((res) => res.json())
+            .then((allTeams) => {
+              setTeams(
+                allTeams.filter(
+                  (t: any) => String(t.discipline_id) === String(best.id),
+                ),
+              );
+            })
+            .catch((err) => setError(err.message || "Unknown error"))
+            .finally(() => setLoading(false));
+        } else {
+          setTeams([]);
+          setLoading(false);
+        }
       })
-      .then((data) => setTeams(data))
-      .catch((err) => setError(err.message || "Unknown error"))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        setError(err.message || "Unknown error");
+        setLoading(false);
+      });
+    // eslint-disable-next-line
   }, [discipline]);
 
-  const disciplineName = discipline
-    ? discipline.charAt(0).toUpperCase() + discipline.slice(1)
-    : "";
-  const description = disciplineDescriptions[discipline || ""] || "";
+  const disciplineName =
+    matchedDiscipline?.name ||
+    (discipline
+      ? discipline.charAt(0).toUpperCase() + discipline.slice(1)
+      : "");
+  const description =
+    (matchedDiscipline &&
+      disciplineDescriptions[matchedDiscipline.name.toLowerCase()]) ||
+    "";
 
   return (
     <div className="container py-4">

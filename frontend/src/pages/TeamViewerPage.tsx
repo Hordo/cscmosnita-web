@@ -8,6 +8,7 @@ export const TeamViewerPage: React.FC = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
+  const [disciplines, setDisciplines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,17 +28,22 @@ export const TeamViewerPage: React.FC = () => {
         if (!res.ok) throw new Error(await res.text());
         return res.json();
       }),
+      fetch("/api/disciplines").then(async (res) => {
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+      }),
     ])
-      .then(([teamsData, playersData, coachesData]) => {
+      .then(([teamsData, playersData, coachesData, disciplinesData]) => {
         setTeams(teamsData);
         setPlayers(playersData);
         setCoaches(coachesData);
+        setDisciplines(disciplinesData);
       })
       .catch((err) => setError(err.message || "Unknown error"))
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center mt-5">Loading...</div>;
+  if (loading) return <div className="text-center mt-5">Se încarcă...</div>;
   if (error) return <div className="alert alert-danger mt-3">{error}</div>;
 
   let filteredTeams = teams;
@@ -46,15 +52,24 @@ export const TeamViewerPage: React.FC = () => {
   }
 
   if (filteredTeams.length === 0) {
-    return <div className="alert alert-warning mt-4">Team not found.</div>;
+    return (
+      <div className="alert alert-warning mt-4">Echipa nu a fost găsită.</div>
+    );
   }
 
   const team = filteredTeams[0];
-  const teamPlayers = players.filter((p) => p.team === team.id);
+  // Accept both string and number for team_id
+  const teamPlayers = players.filter(
+    (p) => String(p.team_id) === String(team.id),
+  );
   // Find coaches for this team (if Coach.teams is available as array of team ids)
   const teamCoaches = coaches.filter(
     (c) => c.teams && c.teams.includes(team.id),
   );
+  const disciplineName = team.discipline_id
+    ? disciplines.find((d) => String(d.id) === String(team.discipline_id))
+        ?.name || ""
+    : "";
 
   return (
     <div className="container py-4">
@@ -66,32 +81,35 @@ export const TeamViewerPage: React.FC = () => {
               title={`${teamCoaches[0].first_name} ${teamCoaches[0].last_name}`}
               subtitle={teamCoaches[0].role || undefined}
               imageUrl={teamCoaches[0].photo}
-              description={"Coach"}
+              description={"Antrenor"}
               className="mb-3"
             />
           )}
         </div>
         <div className="col-md-8">
           <div className="card p-3 mb-3">
-            <h5>Team Info</h5>
+            <h5>Informații echipă</h5>
             <ul className="list-unstyled mb-0">
-              <li>
-                <strong>Season:</strong> {team.season}
-              </li>
-              <li>
-                <strong>Age Group:</strong> {team.age_group}
-              </li>
-              <li>
-                <strong>Discipline:</strong> {team.discipline}
-              </li>
+              {team.age_group && (
+                <li>
+                  <strong>Grupa de vârstă:</strong> {team.age_group}
+                </li>
+              )}
+              {disciplineName && (
+                <li>
+                  <strong>Disciplină:</strong> {disciplineName}
+                </li>
+              )}
             </ul>
           </div>
         </div>
       </div>
-      <h4 className="mb-3">Players</h4>
+      <h4 className="mb-3">Jucători</h4>
       <div className="row g-4">
         {teamPlayers.length === 0 ? (
-          <div className="col-12 text-center">No players for this team.</div>
+          <div className="col-12 text-center">
+            Nu există jucători pentru această echipă.
+          </div>
         ) : (
           teamPlayers.map((player) => (
             <div className="col-12 col-md-6 col-lg-4" key={player.id}>
