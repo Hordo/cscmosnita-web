@@ -69,7 +69,7 @@ export const CoachAdminPage: React.FC = () => {
     if (values.photo_url) formData.append("photo_url", values.photo_url);
     if (values.teams && Array.isArray(values.teams)) {
       values.teams.forEach((teamId: string | number) => {
-        formData.append("teams", teamId);
+        formData.append("teams", String(teamId));
       });
     }
     try {
@@ -106,7 +106,7 @@ export const CoachAdminPage: React.FC = () => {
     if (values.photo_url) formData.append("photo_url", values.photo_url);
     if (values.teams && Array.isArray(values.teams)) {
       values.teams.forEach((teamId: string | number) => {
-        formData.append("teams", teamId);
+        formData.append("teams", String(teamId));
       });
     }
     try {

@@ -20,11 +20,7 @@ const router = createBrowserRouter([
       { path: "logout", element: <Logout /> },
       {
         path: "admin",
-        element: (
-          <AdminOnlyRoute>
-            <div />
-          </AdminOnlyRoute>
-        ),
+        element: <AdminOnlyRoute />,
         children: [
           {
             path: "create-team",
