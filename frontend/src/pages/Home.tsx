@@ -1,63 +1,55 @@
-import { useAuth } from "../context/AuthContext";
-import { Link } from "react-router-dom";
+import React from "react";
+import "../styles/HomePage.css";
+import logo from "../assets/CSCMosnita.png";
+
+const features = [
+  {
+    title: "Performanță și Pasiune",
+    desc: "Dezvoltăm tineri sportivi cu valori, disciplină și spirit de echipă în inima comunității din Moșnița.",
+  },
+  {
+    title: "Echipă și Comunitate",
+    desc: "Suntem o familie unită, cu antrenori dedicați și suporteri entuziaști. Fiecare membru contează!",
+  },
+  {
+    title: "Infrastructură Modernă",
+    desc: "Terenuri de calitate, echipamente moderne și un mediu sigur pentru antrenamente și competiții.",
+  },
+  {
+    title: "Progres și Educație",
+    desc: "Susținem educația și progresul personal al fiecărui jucător, pe teren și în afara lui.",
+  },
+];
 
 export default function Home() {
-  const { user } = useAuth();
-
   return (
-    <div className="container py-5">
-      {/* Hero Section */}
-      <div className="p-5 mb-4 bg-light rounded-3 shadow-sm">
-        <div className="container-fluid py-5">
-          <h1 className="display-5 fw-bold">Welcome to CSC Moșnița</h1>
-          <p className="col-md-8 fs-5 mt-3">
-            Your central hub for teams, coaches, schedules, and club updates.
-          </p>
-
-          {!user ? (
-            <div className="mt-4">
-              <Link to="/login" className="btn btn-primary btn-lg me-2">
-                Login
-              </Link>
-              <Link to="/register" className="btn btn-outline-primary btn-lg">
-                Register
-              </Link>
-            </div>
-          ) : (
-            <div className="mt-4">
-              <Link to="/profile" className="btn btn-success btn-lg">
-                Go to Profile
-              </Link>
-            </div>
-          )}
+    <>
+      <div className="csc-home-hero">
+        <img src={logo} alt="CSC Moșnița Logo" className="csc-home-logo" />
+        <div className="csc-home-title">CSC Moșnița Nouă</div>
+        <div className="csc-home-subtitle">
+          Club sportiv de elită pentru tineri, performanță și comunitate.
         </div>
       </div>
 
-      {/* Authenticated Section */}
-      {user && (
-        <div className="card shadow-sm">
-          <div className="card-body">
-            <h4 className="card-title">You’re logged in</h4>
-            <p className="card-text text-muted">
-              Welcome back! You now have access to your profile and private
-              sections.
-            </p>
-
-            <ul className="list-group list-group-flush">
-              <li className="list-group-item">
-                <strong>Username:</strong> {user.username}
-              </li>
-            </ul>
-          </div>
+      <div className="csc-home-section">
+        <div className="csc-home-section-title">
+          De ce să alegi CSC Moșnița?
         </div>
-      )}
-
-      {/* Not logged in */}
-      {!user && (
-        <div className="text-center mt-4 text-muted">
-          <p>You are not logged in. Please sign in to access your profile.</p>
+        <div className="csc-home-features">
+          {features.map((f, i) => (
+            <div className="csc-home-feature" key={i}>
+              <div className="csc-home-feature-title">{f.title}</div>
+              <div className="csc-home-feature-desc">{f.desc}</div>
+            </div>
+          ))}
         </div>
-      )}
-    </div>
+      </div>
+
+      <footer className="csc-home-footer">
+        &copy; {new Date().getFullYear()} CSC Moșnița Nouă &mdash; Toate
+        drepturile rezervate
+      </footer>
+    </>
   );
 }

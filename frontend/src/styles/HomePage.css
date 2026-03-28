@@ -1,0 +1,105 @@
+/* CSC Mosnita Homepage Styles */
+
+:root {
+  --csc-blue: #1a2b5c;
+  --csc-yellow: #f7c948;
+  --csc-white: #ffffff;
+  --csc-dark: #222b3a;
+  --csc-light: #f4f6fa;
+}
+
+.csc-home-hero {
+  background: linear-gradient(
+    120deg,
+    var(--csc-blue) 60%,
+    var(--csc-yellow) 100%
+  );
+  color: var(--csc-white);
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  position: relative;
+}
+
+.csc-home-logo {
+  width: 160px;
+  height: auto;
+  margin-bottom: 1.5rem;
+  filter: drop-shadow(0 4px 16px rgba(26, 43, 92, 0.2));
+}
+
+.csc-home-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  color: var(--csc-yellow);
+  text-shadow: 0 2px 8px rgba(26, 43, 92, 0.15);
+}
+
+.csc-home-subtitle {
+  font-size: 1.3rem;
+  font-weight: 400;
+  color: var(--csc-white);
+  margin-bottom: 2rem;
+  opacity: 0.95;
+}
+
+.csc-home-section {
+  background: var(--csc-light);
+  padding: 3rem 0 2rem 0;
+}
+
+.csc-home-section-title {
+  color: var(--csc-blue);
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.csc-home-features {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.csc-home-feature {
+  background: var(--csc-white);
+  border-radius: 1rem;
+  box-shadow: 0 2px 12px rgba(26, 43, 92, 0.08);
+  padding: 2rem 1.5rem;
+  max-width: 320px;
+  flex: 1 1 260px;
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+.csc-home-feature:hover {
+  box-shadow: 0 4px 24px rgba(26, 43, 92, 0.16);
+}
+.csc-home-feature-title {
+  color: var(--csc-blue);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.csc-home-feature-desc {
+  color: var(--csc-dark);
+  font-size: 1rem;
+  opacity: 0.85;
+}
+
+.csc-home-footer {
+  background: var(--csc-blue);
+  color: var(--csc-white);
+  text-align: center;
+  padding: 1.2rem 0 0.7rem 0;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  margin-top: 2rem;
+}

@@ -155,7 +155,8 @@ AWS_DEFAULT_ACL = None
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_AUTH = False
 MEDIA_URL = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET_NAME}/"
-MEDIA_ROOT = "/media/"
+# MEDIA_ROOT is not used with S3/R2 storage, but Django requires it to be set. It will not be used for uploads.
+MEDIA_ROOT = ""
 
 # -----------------------------
 # CORS (for Vercel frontend)
