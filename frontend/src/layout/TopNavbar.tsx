@@ -26,7 +26,7 @@ export default function TopNavbar() {
   });
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-csc">
+    <nav className="navbar navbar-expand-lg navbar-csc sticky-top">
       <div className="container-fluid">
         <Link className="navbar-brand" to="/">
           CSC Moșnița

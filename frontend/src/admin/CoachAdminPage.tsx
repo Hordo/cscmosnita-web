@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from "react";
+import "../styles/adminStyles.css";
 import { ReusableAdminForm } from "./ReusableAdminForm";
 import { ReusableAdminTable } from "./ReusableAdminTable";
-import type { AdminFormField } from "./ReusableAdminForm";
-import type { AdminTableColumn } from "./ReusableAdminTable";
 import { API_URLS } from "../config/api";
-import api, { setAuthToken } from "../config/axios";
+import api from "../config/axios";
 import { useAuth } from "../context/AuthContext";
 
-const coachFields: AdminFormField[] = [
+const coachFields = [
   { name: "first_name", label: "First Name", type: "text", required: true },
   { name: "last_name", label: "Last Name", type: "text", required: true },
   { name: "role", label: "Role", type: "text", required: false },
-  { name: "photo_url", label: "Photo URL", type: "url", required: false },
-  // teams will be handled dynamically
+  { name: "photo", label: "Photo", type: "file", required: false },
 ];
 
-const coachColumns: AdminTableColumn[] = [
+const coachColumns = [
   { key: "first_name", label: "First Name" },
   { key: "last_name", label: "Last Name" },
   { key: "role", label: "Role" },
@@ -23,12 +21,24 @@ const coachColumns: AdminTableColumn[] = [
   { key: "teams", label: "Teams" },
 ];
 
-export const CoachAdminPage: React.FC = () => {
+interface Coach {
+  id: number;
+  first_name: string;
+  last_name: string;
+  role?: string;
+  photo_url?: string;
+  teams?: { id: number; name: string }[];
+}
+interface Team {
+  id: number;
+  name: string;
+}
+const CoachAdminPage: React.FC = () => {
   const { user } = useAuth();
-  const [coaches, setCoaches] = useState<any[]>([]);
-  const [teams, setTeams] = useState<any[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [editIndex, setEditIndex] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,10 +47,8 @@ export const CoachAdminPage: React.FC = () => {
       setTeams([]);
       setError(null);
       setLoading(false);
-      setAuthToken();
       return;
     }
-    setAuthToken(user.access);
     const fetchAll = async () => {
       setLoading(true);
       setError(null);
@@ -51,8 +59,11 @@ export const CoachAdminPage: React.FC = () => {
         ]);
         setCoaches(coachesRes.data);
         setTeams(teamsRes.data);
-      } catch (err: any) {
-        setError(err.response?.data?.detail || err.message || "Unknown error");
+      } catch (err) {
+        const error = err as any;
+        setError(
+          error.response?.data?.detail || error.message || "Unknown error",
+        );
       } finally {
         setLoading(false);
       }
@@ -66,17 +77,22 @@ export const CoachAdminPage: React.FC = () => {
     formData.append("first_name", values.first_name);
     formData.append("last_name", values.last_name);
     if (values.role) formData.append("role", values.role);
-    if (values.photo_url) formData.append("photo_url", values.photo_url);
-    if (values.teams && Array.isArray(values.teams)) {
-      values.teams.forEach((teamId: string | number) => {
-        formData.append("teams", String(teamId));
-      });
+    if (values.photo instanceof File) formData.append("photo", values.photo);
+    if (values.teams_id && Array.isArray(values.teams_id)) {
+      (values.teams_id as (string | number)[]).forEach(
+        (teamId: string | number) => {
+          formData.append("teams_id", String(teamId));
+        },
+      );
     }
     try {
       const res = await api.post(API_URLS.coaches, formData);
-      setCoaches((prev) => [...prev, res.data]);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "Unknown error");
+      setCoaches((prev: Coach[]) => [...prev, res.data]);
+    } catch (err) {
+      const error = err as any;
+      setError(
+        error.response?.data?.detail || error.message || "Unknown error",
+      );
     }
   };
 
@@ -90,75 +106,100 @@ export const CoachAdminPage: React.FC = () => {
       await api.delete(`${API_URLS.coaches}${row.id}/`);
       setCoaches(coaches.filter((c) => c.id !== row.id));
       setEditIndex(null);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "Unknown error");
+    } catch (err) {
+      const error = err as any;
+      setError(
+        error.response?.data?.detail || error.message || "Unknown error",
+      );
     }
   };
 
   const handleUpdate = async (values: any) => {
     if (editIndex === null) return;
     setError(null);
-    const coachId = coaches[editIndex].id;
+    const coachId = coaches[editIndex!].id;
     const formData = new FormData();
     formData.append("first_name", values.first_name);
     formData.append("last_name", values.last_name);
     if (values.role) formData.append("role", values.role);
-    if (values.photo_url) formData.append("photo_url", values.photo_url);
-    if (values.teams && Array.isArray(values.teams)) {
-      values.teams.forEach((teamId: string | number) => {
-        formData.append("teams", String(teamId));
-      });
+    if (values.photo instanceof File) formData.append("photo", values.photo);
+    if (values.teams_id && Array.isArray(values.teams_id)) {
+      (values.teams_id as (string | number)[]).forEach(
+        (teamId: string | number) => {
+          formData.append("teams_id", String(teamId));
+        },
+      );
     }
     try {
       const res = await api.put(`${API_URLS.coaches}${coachId}/`, formData);
       const updated = [...coaches];
-      updated[editIndex] = res.data;
+      updated[editIndex!] = res.data;
       setCoaches(updated);
       setEditIndex(null);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "Unknown error");
+    } catch (err) {
+      const error = err as any;
+      setError(
+        error.response?.data?.detail || error.message || "Unknown error",
+      );
     }
   };
 
-  // Add teams as a multi-select field
-  const coachFieldsWithTeams: AdminFormField[] = [
+  const coachFieldsWithTeams = [
     ...coachFields,
     {
-      name: "teams",
+      name: "teams_id",
       label: "Teams",
       type: "select",
       required: false,
-      options: teams.map((t: any) => ({ value: t.id, label: t.name })),
+      options: teams.map((t) => ({ value: t.id, label: t.name })),
+      multiple: true,
     },
   ];
 
+  if (!user?.access) {
+    return (
+      <div className="alert alert-warning mt-4">
+        You must be logged in as an admin to manage coaches.
+      </div>
+    );
+  }
+
   return (
-    <div className="container-fluid py-3">
+    <div className="container-fluid py-3 admin-min-height">
+      {error && <div className="alert alert-danger mb-3">{error}</div>}
       <div className="row justify-content-center">
         <div className="col-md-4 mb-3">
           <div className="card shadow-sm h-100">
-            <div className="card-body overflow-auto" style={{ maxHeight: 500 }}>
+            <div className="card-body admin-max-height">
               <h4 className="mb-3">
                 {editIndex === null ? "Create Coach" : "Edit Coach"}
               </h4>
               <ReusableAdminForm
                 fields={coachFieldsWithTeams}
                 onSubmit={editIndex === null ? handleCreate : handleUpdate}
-                initialValues={editIndex !== null ? coaches[editIndex] : {}}
+                initialValues={
+                  editIndex !== null
+                    ? {
+                        ...coaches[editIndex],
+                        teams_id: Array.isArray(coaches[editIndex]?.teams)
+                          ? coaches[editIndex].teams.map((t: any) => t.id)
+                          : [],
+                      }
+                    : {}
+                }
                 submitLabel={editIndex === null ? "Create" : "Update"}
               />
-              {error && <div className="alert alert-danger mt-2">{error}</div>}
             </div>
           </div>
         </div>
         <div className="col-md-8 mb-3">
           <div className="card shadow-sm h-100">
-            <div className="card-body overflow-auto" style={{ maxHeight: 500 }}>
+            <div className="card-body admin-max-height">
               <h4 className="mb-3">Coaches</h4>
               {loading ? (
                 <div>Loading...</div>
               ) : (
-                <div style={{ minWidth: 300 }}>
+                <div className="admin-min-width">
                   <ReusableAdminTable
                     columns={coachColumns}
                     data={coaches}
@@ -170,21 +211,17 @@ export const CoachAdminPage: React.FC = () => {
                           <img
                             src={row.photo_url}
                             alt="Coach"
-                            style={{
-                              maxWidth: 60,
-                              maxHeight: 60,
-                              objectFit: "cover",
-                            }}
+                            className="admin-img-thumb"
                           />
                         ) : (
-                          <span style={{ color: "#888" }}>No photo</span>
+                          <span className="admin-no-photo">No photo</span>
                         );
                       }
                       if (col.key === "teams") {
                         return Array.isArray(row.teams)
-                          ? row.teams.map((t: any) => t.name || t).join(", ")
+                          ? row.teams.map((t: any) => t.name).join(", ")
                           : row.teams || (
-                              <span style={{ color: "#888" }}>No teams</span>
+                              <span className="admin-no-teams">No teams</span>
                             );
                       }
                       return row[col.key];

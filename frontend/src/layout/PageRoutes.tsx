@@ -8,6 +8,7 @@ import PlayerAdminPage from "../admin/PlayerAdminPage";
 import TeamAdminPage from "../admin/TeamAdminPage";
 import AdminOnlyRoute from "../admin/AdminOnlyRoute";
 import CoachAdminPage from "../admin/CoachAdminPage";
+import NotFound from "../pages/NotFound";
 
 const router = createBrowserRouter([
   {
@@ -44,6 +45,7 @@ const router = createBrowserRouter([
           },
         ],
       },
+      { path: "*", element: <NotFound /> },
     ],
   },
 ]);

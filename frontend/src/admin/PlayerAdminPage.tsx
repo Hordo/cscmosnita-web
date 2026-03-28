@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
+import "../styles/adminStyles.css";
 import { ReusableAdminForm } from "./ReusableAdminForm";
-import { ReusableAdminTable } from "./ReusableAdminTable";
 import type { AdminFormField } from "./ReusableAdminForm";
+import { ReusableAdminTable } from "./ReusableAdminTable";
 import type { AdminTableColumn } from "./ReusableAdminTable";
 import { API_URLS } from "../config/api";
 import api, { setAuthToken } from "../config/axios";
 import { useAuth } from "../context/AuthContext";
 
-// Will be set dynamically after fetching teams
 const basePlayerFields: AdminFormField[] = [
   { name: "first_name", label: "First Name", type: "text", required: true },
   { name: "last_name", label: "Last Name", type: "text", required: true },
@@ -25,8 +25,7 @@ const basePlayerFields: AdminFormField[] = [
       { value: "FW", label: "Forward" },
     ],
   },
-  { name: "photo_url", label: "Photo URL", type: "url", required: false },
-  // team will be added after fetching teams
+  { name: "photo", label: "Photo", type: "file", required: false },
 ];
 
 const playerColumns: AdminTableColumn[] = [
@@ -46,7 +45,6 @@ export const PlayerAdminPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch players and teams from API only if authenticated
   useEffect(() => {
     if (!user?.access) {
       setPlayers([]);
@@ -76,7 +74,17 @@ export const PlayerAdminPage: React.FC = () => {
     fetchAll();
   }, [user]);
 
-  // Create player
+  const playerFields: AdminFormField[] = [
+    ...basePlayerFields,
+    {
+      name: "team_id",
+      label: "Team",
+      type: "select",
+      required: true,
+      options: teams.map((t: any) => ({ value: String(t.id), label: t.name })),
+    },
+  ];
+
   const handleCreate = async (values: any) => {
     setError(null);
     const formData = new FormData();
@@ -84,8 +92,8 @@ export const PlayerAdminPage: React.FC = () => {
     formData.append("last_name", values.last_name);
     if (values.number) formData.append("number", values.number);
     if (values.position) formData.append("position", values.position);
-    if (values.photo_url) formData.append("photo_url", values.photo_url);
-    if (values.team) formData.append("team", values.team);
+    if (values.photo instanceof File) formData.append("photo", values.photo);
+    if (values.team_id) formData.append("team_id", String(values.team_id));
     try {
       const res = await api.post(API_URLS.players, formData);
       setPlayers((prev) => [...prev, res.data]);
@@ -94,12 +102,10 @@ export const PlayerAdminPage: React.FC = () => {
     }
   };
 
-  // Edit player
   const handleEdit = (row: any) => {
     setEditIndex(players.findIndex((p) => p.id === row.id));
   };
 
-  // Delete player
   const handleDelete = async (row: any) => {
     setError(null);
     try {
@@ -111,7 +117,6 @@ export const PlayerAdminPage: React.FC = () => {
     }
   };
 
-  // Update player
   const handleUpdate = async (values: any) => {
     if (editIndex === null) return;
     setError(null);
@@ -119,10 +124,10 @@ export const PlayerAdminPage: React.FC = () => {
     const formData = new FormData();
     formData.append("first_name", values.first_name);
     formData.append("last_name", values.last_name);
-    formData.append("dob", values.dob);
-    if (values.picture instanceof File) {
-      formData.append("picture", values.picture);
-    }
+    if (values.number) formData.append("number", values.number);
+    if (values.position) formData.append("position", values.position);
+    if (values.photo instanceof File) formData.append("photo", values.photo);
+    if (values.team_id) formData.append("team_id", String(values.team_id));
     try {
       const res = await api.put(`${API_URLS.players}${playerId}/`, formData);
       const updated = [...players];
@@ -142,45 +147,45 @@ export const PlayerAdminPage: React.FC = () => {
     );
   }
 
-  // Dynamically build playerFields with team options
-  const playerFields: AdminFormField[] = [
-    ...basePlayerFields,
-    {
-      name: "team",
-      label: "Team",
-      type: "select",
-      required: true,
-      options: teams.map((t: any) => ({ value: t.id, label: t.name })),
-    },
-  ];
-
   return (
-    <div className="container-fluid py-3">
+    <div className="container-fluid py-3 admin-min-height">
+      {error && <div className="alert alert-danger mb-3">{error}</div>}
       <div className="row justify-content-center">
         <div className="col-md-4 mb-3">
           <div className="card shadow-sm h-100">
-            <div className="card-body overflow-auto" style={{ maxHeight: 500 }}>
+            <div className="card-body admin-max-height">
               <h4 className="mb-3">
                 {editIndex === null ? "Create Player" : "Edit Player"}
               </h4>
               <ReusableAdminForm
                 fields={playerFields}
                 onSubmit={editIndex === null ? handleCreate : handleUpdate}
-                initialValues={editIndex !== null ? players[editIndex] : {}}
+                initialValues={
+                  editIndex !== null
+                    ? {
+                        ...players[editIndex],
+                        team_id: (() => {
+                          const t = teams.find(
+                            (team) => team.name === players[editIndex].team,
+                          );
+                          return t ? String(t.id) : "";
+                        })(),
+                      }
+                    : {}
+                }
                 submitLabel={editIndex === null ? "Create" : "Update"}
               />
-              {error && <div className="alert alert-danger mt-2">{error}</div>}
             </div>
           </div>
         </div>
         <div className="col-md-8 mb-3">
           <div className="card shadow-sm h-100">
-            <div className="card-body overflow-auto" style={{ maxHeight: 500 }}>
+            <div className="card-body admin-max-height">
               <h4 className="mb-3">Players</h4>
               {loading ? (
                 <div>Loading...</div>
               ) : (
-                <div style={{ minWidth: 300 }}>
+                <div className="admin-min-width">
                   <ReusableAdminTable
                     columns={playerColumns}
                     data={players}
@@ -192,21 +197,16 @@ export const PlayerAdminPage: React.FC = () => {
                           <img
                             src={row.photo_url}
                             alt="Player"
-                            style={{
-                              maxWidth: 60,
-                              maxHeight: 60,
-                              objectFit: "cover",
-                            }}
+                            className="admin-img-thumb"
                           />
                         ) : (
-                          <span style={{ color: "#888" }}>No photo</span>
+                          <span className="admin-no-photo">No photo</span>
                         );
                       }
                       if (col.key === "team") {
                         return (
-                          row.team?.name ||
                           row.team || (
-                            <span style={{ color: "#888" }}>No team</span>
+                            <span className="admin-no-teams">No team</span>
                           )
                         );
                       }

@@ -1,0 +1,29 @@
+/* adminStyles.css - shared styles for admin forms and tables */
+
+.admin-min-height {
+  min-height: 90vh;
+}
+
+.admin-max-height {
+  max-height: 500px;
+  overflow: auto;
+}
+
+.admin-min-width {
+  min-width: 300px;
+}
+
+.admin-form-min-width {
+  min-width: 250px;
+}
+
+.admin-img-thumb {
+  max-width: 60px;
+  max-height: 60px;
+  object-fit: cover;
+}
+
+.admin-no-photo,
+.admin-no-teams {
+  color: #888;
+}

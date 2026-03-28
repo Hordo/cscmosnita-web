@@ -1,4 +1,5 @@
 import React from "react";
+import "../styles/adminStyles.css";
 
 export type AdminTableColumn = {
   key: string;

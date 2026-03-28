@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "../styles/adminStyles.css";
 
 export type AdminFormField = {
   name: string;
@@ -6,6 +7,7 @@ export type AdminFormField = {
   type: string;
   options?: { value: string | number; label: string }[]; // for select fields
   required?: boolean;
+  multiple?: boolean;
 };
 
 export type ReusableAdminFormProps = {
@@ -40,6 +42,12 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
             ? (e.target as HTMLInputElement).files![0]
             : undefined,
       });
+    } else if (e.target.multiple) {
+      // Multi-select: collect selected options as array
+      const selected = Array.from(
+        (e.target as HTMLSelectElement).selectedOptions,
+      ).map((opt) => opt.value);
+      setValues({ ...values, [e.target.name]: selected });
     } else {
       setValues({ ...values, [e.target.name]: e.target.value });
     }
@@ -51,7 +59,7 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ minWidth: 250 }}>
+    <form onSubmit={handleSubmit} className="admin-form-min-width">
       {fields.map((field) => (
         <div className="mb-3" key={field.name}>
           <label className="form-label">{field.label}</label>
@@ -59,11 +67,18 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
             <select
               className="form-select"
               name={field.name}
-              value={values[field.name] || ""}
+              value={
+                field.multiple
+                  ? values[field.name] || []
+                  : typeof values[field.name] === "number"
+                    ? String(values[field.name])
+                    : values[field.name] || ""
+              }
               onChange={handleChange}
               required={field.required}
+              multiple={field.multiple}
             >
-              <option value="">Select...</option>
+              {!field.multiple && <option value="">Select...</option>}
               {field.options.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}

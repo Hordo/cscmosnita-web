@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "../styles/adminStyles.css";
 import { ReusableAdminForm } from "./ReusableAdminForm";
 import { ReusableAdminTable } from "./ReusableAdminTable";
 import type { AdminFormField } from "./ReusableAdminForm";
@@ -11,6 +12,7 @@ const teamFields: AdminFormField[] = [
   { name: "name", label: "Team Name", type: "text", required: true },
   { name: "age_group", label: "Age Group", type: "text", required: false },
   { name: "season", label: "Season", type: "text", required: false },
+  { name: "photo", label: "Photo", type: "file", required: false },
 ];
 
 const teamColumns: AdminTableColumn[] = [
@@ -56,6 +58,7 @@ export const TeamAdminPage: React.FC = () => {
     formData.append("name", values.name);
     if (values.age_group) formData.append("age_group", values.age_group);
     if (values.season) formData.append("season", values.season);
+    if (values.photo instanceof File) formData.append("photo", values.photo);
     try {
       const res = await api.post(API_URLS.teams, formData);
       setTeams((prev) => [...prev, res.data]);
@@ -87,6 +90,7 @@ export const TeamAdminPage: React.FC = () => {
     formData.append("name", values.name);
     if (values.age_group) formData.append("age_group", values.age_group);
     if (values.season) formData.append("season", values.season);
+    if (values.photo instanceof File) formData.append("photo", values.photo);
     try {
       const res = await api.put(`${API_URLS.teams}${teamId}/`, formData);
       const updated = [...teams];
@@ -107,11 +111,12 @@ export const TeamAdminPage: React.FC = () => {
   }
 
   return (
-    <div className="container-fluid py-3">
+    <div className="container-fluid py-3 admin-min-height">
+      {error && <div className="alert alert-danger mb-3">{error}</div>}
       <div className="row justify-content-center">
         <div className="col-md-4 mb-3">
           <div className="card shadow-sm h-100">
-            <div className="card-body overflow-auto" style={{ maxHeight: 500 }}>
+            <div className="card-body admin-max-height">
               <h4 className="mb-3">
                 {editIndex === null ? "Create Team" : "Edit Team"}
               </h4>
@@ -121,18 +126,17 @@ export const TeamAdminPage: React.FC = () => {
                 initialValues={editIndex !== null ? teams[editIndex] : {}}
                 submitLabel={editIndex === null ? "Create" : "Update"}
               />
-              {error && <div className="alert alert-danger mt-2">{error}</div>}
             </div>
           </div>
         </div>
         <div className="col-md-8 mb-3">
           <div className="card shadow-sm h-100">
-            <div className="card-body overflow-auto" style={{ maxHeight: 500 }}>
+            <div className="card-body admin-max-height">
               <h4 className="mb-3">Teams</h4>
               {loading ? (
                 <div>Loading...</div>
               ) : (
-                <div style={{ minWidth: 300 }}>
+                <div className="admin-min-width">
                   <ReusableAdminTable
                     columns={teamColumns}
                     data={teams}
