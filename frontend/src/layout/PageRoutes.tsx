@@ -53,6 +53,7 @@ const router = createBrowserRouter([
         ],
       },
       { path: "teams", element: <TeamViewerPage /> },
+      { path: "teams/:teamId", element: <TeamViewerPage /> },
       { path: "disciplines/:discipline", element: <DisciplineDetailPage /> },
       { path: "*", element: <NotFound /> },
     ],

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-// import api from "../config/axios";
+import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
 
 const disciplineDescriptions: Record<string, string> = {
@@ -14,6 +13,7 @@ const disciplineDescriptions: Record<string, string> = {
 
 export const DisciplineDetailPage: React.FC = () => {
   const { discipline } = useParams<{ discipline: string }>();
+  const navigate = useNavigate();
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +54,12 @@ export const DisciplineDetailPage: React.FC = () => {
               </div>
             ) : (
               teams.map((team) => (
-                <div className="col-12 col-md-6 col-lg-4" key={team.id}>
+                <div
+                  className="col-12 col-md-6 col-lg-4"
+                  key={team.id}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => navigate(`/teams/${team.id}`)}
+                >
                   <Card
                     title={team.name}
                     subtitle={team.season ? `Sezon: ${team.season}` : undefined}

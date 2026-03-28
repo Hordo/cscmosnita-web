@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { Card } from "../components/Card";
-// import api from "../config/axios";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 export const DisciplineTeamsPage: React.FC = () => {
   const { discipline } = useParams<{ discipline: string }>();
+  const navigate = useNavigate();
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,12 @@ export const DisciplineTeamsPage: React.FC = () => {
       </h2>
       <div className="row g-4">
         {teams.map((team) => (
-          <div className="col-12 col-md-6 col-lg-4" key={team.id}>
+          <div
+            className="col-12 col-md-6 col-lg-4"
+            key={team.id}
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate(`/teams/${team.id}`)}
+          >
             <Card
               title={team.name}
               subtitle={team.season ? `Season: ${team.season}` : undefined}

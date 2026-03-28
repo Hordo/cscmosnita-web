@@ -51,3 +51,9 @@ export interface Discipline {
   id: number;
   name: string;
 }
+
+export interface CoachTeam {
+  id: number;
+  coach_id: number;
+  team_id: number;
+}
