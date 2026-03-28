@@ -9,24 +9,28 @@ class Discipline(models.Model):
 from django.db import models
 
 
+
 class Team(models.Model):
     name = models.CharField(max_length=100)  # e.g. "U10", "U12", "Seniori"
     age_group = models.CharField(max_length=50, blank=True)  # optional
     season = models.CharField(max_length=20, blank=True)  # e.g. "2024-2025"
+    photo = models.ImageField(upload_to="teams/photos/", blank=True, null=True)
 
     def __str__(self):
-        return f"{self.name} ({self.season})" if self.season else self.name
+        return self.name
+
 
 
 class Coach(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     role = models.CharField(max_length=100, blank=True)  # e.g. "Head Coach"
-    photo_url = models.URLField(blank=True)
+    photo = models.ImageField(upload_to="coaches/photos/", blank=True, null=True)
     teams = models.ManyToManyField(Team, related_name="coaches", blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+
 
 
 class Player(models.Model):
@@ -34,7 +38,7 @@ class Player(models.Model):
     last_name = models.CharField(max_length=100)
     number = models.IntegerField(null=True, blank=True)
     position = models.CharField(max_length=50, blank=True)  # GK, DF, MF, FW
-    photo_url = models.URLField(blank=True)
+    photo = models.ImageField(upload_to="players/photos/", blank=True, null=True)
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="players")
 
     def __str__(self):
