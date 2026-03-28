@@ -1,4 +1,4 @@
-import React from "react";
+import "./Card.css";
 
 export type CardProps = {
   title: string;
@@ -19,7 +19,7 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   return (
     <div
-      className={`card shadow-sm h-100 ${className}`}
+      className={`card team-card shadow-sm h-100 ${className}`}
       style={{ maxWidth: 320 }}
     >
       {imageUrl && (

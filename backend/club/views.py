@@ -12,8 +12,16 @@ class DisciplineViewSet(viewsets.ModelViewSet):
 
 
 class TeamViewSet(viewsets.ModelViewSet):
+
     queryset = Team.objects.all()
     serializer_class = TeamSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        discipline_slug = self.request.query_params.get("discipline")
+        if discipline_slug:
+            queryset = queryset.filter(discipline__name__iexact=discipline_slug)
+        return queryset
 
     def create(self, request, *args, **kwargs):
         try:

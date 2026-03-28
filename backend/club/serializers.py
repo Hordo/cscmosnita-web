@@ -9,12 +9,28 @@ class DisciplineSerializer(serializers.ModelSerializer):
 
 
 
+
+
 class TeamSerializer(serializers.ModelSerializer):
     photo_url = serializers.SerializerMethodField(read_only=True)
+    discipline = serializers.StringRelatedField(read_only=True)
+    discipline_id = serializers.PrimaryKeyRelatedField(
+        queryset=Discipline.objects.all(), source="discipline", write_only=True, required=False
+    )
+    coaches = serializers.SerializerMethodField(read_only=True)
+
 
     class Meta:
         model = Team
         fields = '__all__'
+        extra_fields = ['discipline_id']
+        def get_fields(self):
+            fields = super().get_fields()
+            fields['discipline_id'] = self.fields['discipline_id']
+            return fields
+
+    def get_coaches(self, obj):
+        return [f"{coach.first_name} {coach.last_name}" for coach in obj.coaches.all()]
 
     def get_photo_url(self, obj):
         if obj.photo:

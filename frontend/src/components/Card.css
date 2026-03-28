@@ -1,0 +1,36 @@
+.team-card {
+  border-radius: 1.25rem;
+  border: 2px solid #e0e0e0;
+  box-shadow: 0 4px 24px 0 rgba(0, 0, 0, 0.08);
+  transition:
+    transform 0.18s cubic-bezier(0.4, 2, 0.6, 1),
+    box-shadow 0.18s;
+  background: linear-gradient(135deg, #f8fafc 60%, #e3e9f7 100%);
+  overflow: hidden;
+}
+.team-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.16);
+  border-color: #b6c6e3;
+}
+.team-card .card-img-top {
+  border-top-left-radius: 1.25rem;
+  border-top-right-radius: 1.25rem;
+  height: 180px;
+  object-fit: cover;
+  background: #e3e9f7;
+}
+.team-card .card-title {
+  font-weight: 700;
+  color: #1a237e;
+  letter-spacing: 0.5px;
+}
+.team-card .card-subtitle {
+  font-size: 1rem;
+  color: #3949ab;
+}
+.team-card .card-text {
+  font-size: 0.98rem;
+  color: #333;
+  white-space: pre-line;
+}

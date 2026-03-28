@@ -18,15 +18,15 @@ export const menuConfig: MenuItem[] = [
     path: "/coaches",
   },
   {
-    label: "Teams",
+    label: "Disciplines",
     mega: true,
     children: [
       [],
       [],
       [
-        { label: "Team 1", path: "/teams/team1" },
-        { label: "Team 2", path: "/teams/team2" },
-        { label: "Team 3", path: "/teams/team3" },
+        { label: "Fotbal", path: "/disciplines/fotbal" },
+        { label: "Baschet", path: "/disciplines/baschet" },
+        { label: "Handbal", path: "/disciplines/handbal" },
       ],
     ],
   },
@@ -37,14 +37,13 @@ export const menuConfig: MenuItem[] = [
     // Custom property to indicate admin-only
     adminOnly: true as any, // TypeScript workaround, will filter in navbar
     children: [
-      [{ label: "Create Team", path: "/admin/create-team" }],
+      [],
+      [],
       [
-        { label: "Create Player", path: "/admin/player" },
-        { label: "Assign Players to Teams", path: "/admin/assign-players" },
-      ],
-      [
+        { label: "Create Team", path: "/admin/create-team" },
         { label: "Create Coach", path: "/admin/create-coach" },
-        { label: "Assign Coaches to Teams", path: "/admin/assign-coaches" },
+        { label: "Create Player", path: "/admin/player" },
+        { label: "Create Discipline", path: "/admin/disciplines" },
       ],
     ],
   },

@@ -6,27 +6,26 @@ import type { AdminFormField } from "./ReusableAdminForm";
 import type { AdminTableColumn } from "./ReusableAdminTable";
 import { API_URLS } from "../config/api";
 import api, { setAuthToken } from "../config/axios";
+import { fetchDisciplines } from "../utils/fetchDisciplines";
 import { useAuth } from "../context/AuthContext";
-
-const teamFields: AdminFormField[] = [
-  { name: "name", label: "Team Name", type: "text", required: true },
-  { name: "age_group", label: "Age Group", type: "text", required: false },
-  { name: "season", label: "Season", type: "text", required: false },
-  { name: "photo", label: "Photo", type: "file", required: false },
-];
-
-const teamColumns: AdminTableColumn[] = [
-  { key: "name", label: "Team Name" },
-  { key: "age_group", label: "Age Group" },
-  { key: "season", label: "Season" },
-];
 
 export const TeamAdminPage: React.FC = () => {
   const { user } = useAuth();
   const [teams, setTeams] = useState<any[]>([]);
+  const [disciplines, setDisciplines] = useState<any[]>([]);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchDisciplines().then(setDisciplines);
+  }, []);
+
+  const teamColumns: AdminTableColumn[] = [
+    { key: "name", label: "Team Name" },
+    { key: "age_group", label: "Age Group" },
+    { key: "season", label: "Season" },
+  ];
 
   useEffect(() => {
     if (!user?.access) {
@@ -52,12 +51,28 @@ export const TeamAdminPage: React.FC = () => {
     fetchTeams();
   }, [user]);
 
+  const teamFields: AdminFormField[] = [
+    { name: "name", label: "Team Name", type: "text", required: true },
+    { name: "age_group", label: "Age Group", type: "text", required: false },
+    { name: "season", label: "Season", type: "text", required: false },
+    {
+      name: "discipline_id",
+      label: "Discipline",
+      type: "select",
+      required: false,
+      options: disciplines.map((d: any) => ({ value: d.id, label: d.name })),
+    },
+    { name: "photo", label: "Photo", type: "file", required: false },
+  ];
+
   const handleCreate = async (values: any) => {
     setError(null);
     const formData = new FormData();
     formData.append("name", values.name);
     if (values.age_group) formData.append("age_group", values.age_group);
     if (values.season) formData.append("season", values.season);
+    if (values.discipline_id)
+      formData.append("discipline_id", values.discipline_id);
     if (values.photo instanceof File) formData.append("photo", values.photo);
     try {
       const res = await api.post(API_URLS.teams, formData);
@@ -90,6 +105,8 @@ export const TeamAdminPage: React.FC = () => {
     formData.append("name", values.name);
     if (values.age_group) formData.append("age_group", values.age_group);
     if (values.season) formData.append("season", values.season);
+    if (values.discipline_id)
+      formData.append("discipline_id", values.discipline_id);
     if (values.photo instanceof File) formData.append("photo", values.photo);
     try {
       const res = await api.put(`${API_URLS.teams}${teamId}/`, formData);

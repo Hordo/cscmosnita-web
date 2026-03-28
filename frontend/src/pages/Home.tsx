@@ -1,4 +1,3 @@
-import React from "react";
 import "../styles/HomePage.css";
 import logo from "../assets/CSCMosnita.png";
 

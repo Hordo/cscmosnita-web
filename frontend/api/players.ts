@@ -1,0 +1,23 @@
+import { sql } from "../lib/db";
+import type { Player } from "../types/db";
+
+export default async function handler(req, res) {
+  try {
+    const players = await sql<Player[]>`
+      SELECT 
+        p.id,
+        p.first_name,
+        p.last_name,
+        p.number,
+        p.position,
+        p.team_id,
+        p.photo
+      FROM club_player p
+      ORDER BY p.id;
+    `;
+
+    res.status(200).json(players);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
