@@ -1,6 +1,9 @@
 import { Link } from "react-router-dom";
 import { menuConfig } from "../config/menu";
+import type { MenuItem, Column } from "../config/menu";
 import { useAuth } from "../context/AuthContext";
+import "../styles/cscmosnita-colors.css";
+import "../styles/topnavbar.css";
 
 export default function TopNavbar() {
   const { user, logout } = useAuth();
@@ -12,11 +15,18 @@ export default function TopNavbar() {
     if (item.adminOnly) {
       return user && user.is_staff;
     }
+    // Only show Login if not logged in, and Logout if logged in
+    if (item.label === "Login") {
+      return !user;
+    }
+    if (item.label === "Logout") {
+      return !!user;
+    }
     return true;
   });
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav className="navbar navbar-expand-lg navbar-csc">
       <div className="container-fluid">
         <Link className="navbar-brand" to="/">
           CSC Moșnița
@@ -34,12 +44,32 @@ export default function TopNavbar() {
         <div className="collapse navbar-collapse" id="mainNavbar">
           <ul className="navbar-nav ms-auto">
             {filteredMenu.map((item) => {
-              const visibleChildren = item.children?.filter(
-                (child) =>
-                  child.auth === undefined ||
-                  (child.auth && user) ||
-                  (!child.auth && !user),
-              );
+              let visibleChildren: any = undefined;
+              if (item.children) {
+                // If mega, children is Column[] (array of arrays)
+                if (
+                  item.mega &&
+                  Array.isArray(item.children) &&
+                  Array.isArray(item.children[0])
+                ) {
+                  visibleChildren = (item.children as Column[]).map((col) =>
+                    col.filter(
+                      (child) =>
+                        child.auth === undefined ||
+                        (child.auth && user) ||
+                        (!child.auth && !user),
+                    ),
+                  );
+                } else {
+                  // Normal dropdown
+                  visibleChildren = (item.children as MenuItem[]).filter(
+                    (child) =>
+                      child.auth === undefined ||
+                      (child.auth && user) ||
+                      (!child.auth && !user),
+                  );
+                }
+              }
 
               // Simple link
               if (!item.children) {
@@ -67,15 +97,26 @@ export default function TopNavbar() {
                       {item.label}
                     </a>
 
-                    <div className="dropdown-menu w-100 mt-0 p-4 bg-light shadow">
+                    <div className="dropdown-menu w-100 mt-0 p-4 shadow align-items-end">
                       <div className="row">
-                        {visibleChildren?.map((child) => (
-                          <div className="col-4" key={child.label}>
-                            <Link className="dropdown-item" to={child.path!}>
-                              {child.label}
-                            </Link>
-                          </div>
-                        ))}
+                        {visibleChildren?.map(
+                          (col: MenuItem[], colIdx: number) => (
+                            <div
+                              className="col-4 mega-menu-col align-items-end"
+                              key={colIdx}
+                            >
+                              {col.map((child: MenuItem) => (
+                                <Link
+                                  className="dropdown-item"
+                                  to={child.path!}
+                                  key={child.label}
+                                >
+                                  {child.label}
+                                </Link>
+                              ))}
+                            </div>
+                          ),
+                        )}
                       </div>
                     </div>
                   </li>
@@ -94,7 +135,7 @@ export default function TopNavbar() {
                   </a>
 
                   <ul className="dropdown-menu dropdown-menu-end">
-                    {visibleChildren?.map((child) =>
+                    {visibleChildren?.map((child: MenuItem) =>
                       child.label === "Logout" ? (
                         <li key={child.label}>
                           <button

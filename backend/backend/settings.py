@@ -7,7 +7,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # -----------------------------
 # SECURITY
 # -----------------------------
-SECRET_KEY = os.environ.get("SECRET_KEY", "unsafe-secret-key")
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "b7f8e2d1c4a9e6f3b2d5c8a1e4f7b6d3c2a1e4f7b6d3c2a1e4f7b6d3c2a1e4f7"
+)
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
@@ -72,15 +75,26 @@ TEMPLATES = [
 ]
 
 # -----------------------------
-# DATABASE (Railway auto-detect)
+# DATABASE: SQLite locally, Aiven PostgreSQL on Koyeb
 # -----------------------------
-DATABASES = {
-    "default": dj_database_url.config(
-        default="sqlite:///db.sqlite3",
-        conn_max_age=600,
-        ssl_require=False,
-    )
-}
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
 
 # -----------------------------
 # PASSWORD VALIDATION

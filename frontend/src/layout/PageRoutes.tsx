@@ -4,6 +4,10 @@ import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import Logout from "../pages/Logout";
+import PlayerAdminPage from "../admin/PlayerAdminPage";
+import TeamAdminPage from "../admin/TeamAdminPage";
+import AdminOnlyRoute from "../admin/AdminOnlyRoute";
+import CoachAdminPage from "../admin/CoachAdminPage";
 
 const router = createBrowserRouter([
   {
@@ -14,6 +18,36 @@ const router = createBrowserRouter([
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
       { path: "logout", element: <Logout /> },
+      {
+        path: "admin",
+        element: (
+          <AdminOnlyRoute>
+            <div />
+          </AdminOnlyRoute>
+        ),
+        children: [
+          {
+            path: "create-team",
+            element: <TeamAdminPage />,
+          },
+          {
+            path: "player",
+            element: <PlayerAdminPage />,
+          },
+          {
+            path: "assign-players",
+            element: <div>Assign Players to Teams (TODO)</div>,
+          },
+          {
+            path: "create-coach",
+            element: <CoachAdminPage />,
+          },
+          {
+            path: "assign-coaches",
+            element: <div>Assign Coaches to Teams (TODO)</div>,
+          },
+        ],
+      },
     ],
   },
 ]);

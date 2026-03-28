@@ -1,5 +1,13 @@
 from django.db import models
 
+class Discipline(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
+
+from django.db import models
+
 
 class Team(models.Model):
     name = models.CharField(max_length=100)  # e.g. "U10", "U12", "Seniori"

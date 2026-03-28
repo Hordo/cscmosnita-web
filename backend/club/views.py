@@ -1,9 +1,14 @@
 from rest_framework import viewsets
-from .models import Team, Coach, Player, Championship, Match
+from .models import Team, Coach, Player, Championship, Match, Discipline
 from .serializers import (
     TeamSerializer, CoachSerializer, PlayerSerializer,
-    ChampionshipSerializer, MatchSerializer
+    ChampionshipSerializer, MatchSerializer, DisciplineSerializer
 )
+
+# Discipline ViewSet
+class DisciplineViewSet(viewsets.ModelViewSet):
+    queryset = Discipline.objects.all()
+    serializer_class = DisciplineSerializer
 
 
 class TeamViewSet(viewsets.ModelViewSet):
@@ -16,9 +21,15 @@ class CoachViewSet(viewsets.ModelViewSet):
     serializer_class = CoachSerializer
 
 
+from rest_framework.response import Response
+from rest_framework import status
+import logging
+
 class PlayerViewSet(viewsets.ModelViewSet):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
+
+    # Debug print statements removed
 
 
 class ChampionshipViewSet(viewsets.ModelViewSet):

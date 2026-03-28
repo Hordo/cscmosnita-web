@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Team, Coach, Player, Championship, Match
+from .models import Team, Coach, Player, Championship, Match, Discipline
+
+# Discipline Serializer
+class DisciplineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Discipline
+        fields = '__all__'
 
 
 class TeamSerializer(serializers.ModelSerializer):
@@ -15,6 +21,8 @@ class CoachSerializer(serializers.ModelSerializer):
 
 
 class PlayerSerializer(serializers.ModelSerializer):
+    team = serializers.StringRelatedField()
+
     class Meta:
         model = Player
         fields = '__all__'

@@ -1,0 +1,62 @@
+/* TopNavbar styles for CSC Mosnita */
+
+.navbar-csc {
+  background: var(--csc-primary);
+  color: var(--csc-on-primary);
+  border-bottom: 2px solid var(--csc-accent);
+}
+
+.navbar-csc .navbar-brand {
+  color: var(--csc-on-primary);
+  font-weight: 700;
+}
+
+.navbar-csc .navbar-nav .nav-link {
+  color: var(--csc-on-primary);
+  font-weight: 600;
+}
+
+.navbar-csc .nav-item.dropdown .dropdown-menu {
+  background: var(--csc-accent);
+  color: var(--csc-on-accent);
+}
+
+/* Mega menu styles */
+
+.navbar-csc .mega-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: 100vw;
+  min-width: 100vw;
+  top: 100%;
+  background: var(--csc-accent);
+  color: var(--csc-on-accent);
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 32px;
+  z-index: 1050;
+  padding: 2rem 3vw;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+}
+
+.navbar-csc .mega-menu-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+}
+
+.navbar-csc .dropdown-item {
+  color: var(--csc-on-accent);
+  text-align: right;
+  font-weight: 500;
+  background: transparent;
+}
+
+.navbar-csc .dropdown-item:active,
+.navbar-csc .dropdown-item:focus,
+.navbar-csc .dropdown-item:hover {
+  background: var(--csc-primary);
+  color: var(--csc-on-primary);
+}
