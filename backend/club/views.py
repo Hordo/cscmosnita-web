@@ -15,10 +15,38 @@ class TeamViewSet(viewsets.ModelViewSet):
     queryset = Team.objects.all()
     serializer_class = TeamSerializer
 
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
+
 
 class CoachViewSet(viewsets.ModelViewSet):
     queryset = Coach.objects.all()
     serializer_class = CoachSerializer
+
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
 
 
 from rest_framework.response import Response
@@ -29,7 +57,19 @@ class PlayerViewSet(viewsets.ModelViewSet):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
 
-    # Debug print statements removed
+    def create(self, request, *args, **kwargs):
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
+
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
 
 
 class ChampionshipViewSet(viewsets.ModelViewSet):
