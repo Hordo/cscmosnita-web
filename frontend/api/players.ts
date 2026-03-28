@@ -1,5 +1,5 @@
-import { sql } from "../lib/db";
-import type { Player } from "../types/db";
+import { sql } from "../lib/db.js";
+import type { Player } from "../types/db.ts";
 
 export default async function handler(req, res) {
   try {
