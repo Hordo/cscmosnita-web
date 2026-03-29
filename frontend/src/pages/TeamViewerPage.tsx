@@ -132,7 +132,7 @@ export const TeamViewerPage: React.FC = () => {
               <Card
                 title={`${player.first_name} ${player.last_name}`}
                 subtitle={player.position || undefined}
-                imageUrl={player.photo}
+                imageUrl={player.photo_url || undefined}
                 description={player.number ? `#${player.number}` : undefined}
                 className="player-card"
               />
