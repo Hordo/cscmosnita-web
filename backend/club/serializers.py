@@ -12,7 +12,7 @@ class DisciplineSerializer(serializers.ModelSerializer):
 
 
 class TeamSerializer(serializers.ModelSerializer):
-    photo_url = serializers.SerializerMethodField(read_only=True)
+    photo_url = serializers.CharField(allow_blank=True, allow_null=True, required=False)
     discipline = serializers.StringRelatedField(read_only=True)
     discipline_id = serializers.PrimaryKeyRelatedField(
         queryset=Discipline.objects.all(), source="discipline", write_only=True, required=False
@@ -32,10 +32,7 @@ class TeamSerializer(serializers.ModelSerializer):
     def get_coaches(self, obj):
         return [f"{coach.first_name} {coach.last_name}" for coach in obj.coaches.all()]
 
-    def get_photo_url(self, obj):
-        if obj.photo:
-            return obj.photo.url
-        return None
+    # No need for get_photo_url, direct field
 
 
 
@@ -44,7 +41,7 @@ class CoachSerializer(serializers.ModelSerializer):
     teams_id = serializers.PrimaryKeyRelatedField(
         queryset=Team.objects.all(), source="teams", many=True, write_only=True, required=False
     )
-    photo_url = serializers.SerializerMethodField(read_only=True)
+    photo_url = serializers.CharField(allow_blank=True, allow_null=True, required=False)
 
 
     class Meta:
@@ -61,10 +58,7 @@ class CoachSerializer(serializers.ModelSerializer):
             {"id": team.id, "name": team.name} for team in obj.teams.all()
         ]
 
-    def get_photo_url(self, obj):
-        if obj.photo:
-            return obj.photo.url
-        return None
+    # No need for get_photo_url, direct field
 
 
 
@@ -73,7 +67,7 @@ class PlayerSerializer(serializers.ModelSerializer):
     team_id = serializers.PrimaryKeyRelatedField(
         queryset=Team.objects.all(), source="team", write_only=True
     )
-    photo_url = serializers.SerializerMethodField(read_only=True)
+    photo_url = serializers.CharField(allow_blank=True, allow_null=True, required=False)
 
 
     class Meta:
@@ -86,10 +80,7 @@ class PlayerSerializer(serializers.ModelSerializer):
             fields['team_id'] = self.fields['team_id']
             return fields
 
-    def get_photo_url(self, obj):
-        if obj.photo:
-            return obj.photo.url
-        return None
+    # No need for get_photo_url, direct field
 
 
 class ChampionshipSerializer(serializers.ModelSerializer):

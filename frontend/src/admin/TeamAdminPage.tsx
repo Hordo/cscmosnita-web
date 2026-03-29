@@ -67,15 +67,15 @@ export const TeamAdminPage: React.FC = () => {
 
   const handleCreate = async (values: any) => {
     setError(null);
-    const formData = new FormData();
-    formData.append("name", values.name);
-    if (values.age_group) formData.append("age_group", values.age_group);
-    if (values.season) formData.append("season", values.season);
-    if (values.discipline_id)
-      formData.append("discipline_id", values.discipline_id);
-    if (values.photo instanceof File) formData.append("photo", values.photo);
+    const payload: any = {
+      name: values.name,
+      age_group: values.age_group,
+      season: values.season,
+      discipline_id: values.discipline_id,
+    };
+    if (values.photo_url) payload.photo_url = values.photo_url;
     try {
-      const res = await api.post(API_URLS.teams, formData);
+      const res = await api.post(API_URLS.teams, payload);
       setTeams((prev) => [...prev, res.data]);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || "Unknown error");
@@ -101,15 +101,15 @@ export const TeamAdminPage: React.FC = () => {
     if (editIndex === null) return;
     setError(null);
     const teamId = teams[editIndex].id;
-    const formData = new FormData();
-    formData.append("name", values.name);
-    if (values.age_group) formData.append("age_group", values.age_group);
-    if (values.season) formData.append("season", values.season);
-    if (values.discipline_id)
-      formData.append("discipline_id", values.discipline_id);
-    if (values.photo instanceof File) formData.append("photo", values.photo);
+    const payload: any = {
+      name: values.name,
+      age_group: values.age_group,
+      season: values.season,
+      discipline_id: values.discipline_id,
+    };
+    if (values.photo_url) payload.photo_url = values.photo_url;
     try {
-      const res = await api.put(`${API_URLS.teams}${teamId}/`, formData);
+      const res = await api.put(`${API_URLS.teams}${teamId}/`, payload);
       const updated = [...teams];
       updated[editIndex] = res.data;
       setTeams(updated);

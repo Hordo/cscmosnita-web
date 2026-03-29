@@ -23,38 +23,14 @@ class TeamViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(discipline__name__iexact=discipline_slug)
         return queryset
 
-    def create(self, request, *args, **kwargs):
-        try:
-            return super().create(request, *args, **kwargs)
-        except Exception as e:
-            import traceback
-            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
-
-    def update(self, request, *args, **kwargs):
-        try:
-            return super().update(request, *args, **kwargs)
-        except Exception as e:
-            import traceback
-            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
+    # No file upload handling needed; serializers accept photo_url as string
 
 
 class CoachViewSet(viewsets.ModelViewSet):
     queryset = Coach.objects.all()
     serializer_class = CoachSerializer
 
-    def create(self, request, *args, **kwargs):
-        try:
-            return super().create(request, *args, **kwargs)
-        except Exception as e:
-            import traceback
-            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
-
-    def update(self, request, *args, **kwargs):
-        try:
-            return super().update(request, *args, **kwargs)
-        except Exception as e:
-            import traceback
-            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
+    # No file upload handling needed; serializers accept photo_url as string
 
 
 from rest_framework.response import Response
@@ -65,19 +41,7 @@ class PlayerViewSet(viewsets.ModelViewSet):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
 
-    def create(self, request, *args, **kwargs):
-        try:
-            return super().create(request, *args, **kwargs)
-        except Exception as e:
-            import traceback
-            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
-
-    def update(self, request, *args, **kwargs):
-        try:
-            return super().update(request, *args, **kwargs)
-        except Exception as e:
-            import traceback
-            return Response({"detail": str(e), "trace": traceback.format_exc()}, status=500)
+    # No file upload handling needed; serializers accept photo_url as string
 
 
 class ChampionshipViewSet(viewsets.ModelViewSet):

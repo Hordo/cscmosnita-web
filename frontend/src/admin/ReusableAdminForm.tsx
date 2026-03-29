@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import "../styles/adminStyles.css";
+import api from "../config/axios";
+import { API_URLS } from "../config/api";
 
 export type AdminFormField = {
   name: string;
@@ -30,18 +32,48 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
     setValues(initialValues);
   }, [initialValues]);
 
-  const handleChange = (
+  const handleChange = async (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     if (e.target.type === "file") {
-      setValues({
-        ...values,
-        [e.target.name]:
-          (e.target as HTMLInputElement).files &&
-          (e.target as HTMLInputElement).files![0]
-            ? (e.target as HTMLInputElement).files![0]
-            : undefined,
-      });
+      const file =
+        (e.target as HTMLInputElement).files &&
+        (e.target as HTMLInputElement).files![0];
+      if (file) {
+        // Determine which upload endpoint to use
+        let uploadApi = API_URLS.uploadPlayerPhoto;
+        if (
+          e.target.name === "photo" &&
+          window.location.pathname.includes("team")
+        ) {
+          uploadApi = API_URLS.uploadTeamPhoto;
+        }
+        // Get file extension
+        const ext = file.name.split(".").pop() || "jpg";
+        // Get signed upload URL
+        try {
+          const { data } = await api.post(uploadApi, {
+            ext,
+            contentType: file.type || "image/jpeg",
+          });
+          // Upload file to R2
+          await fetch(data.uploadUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Type": file.type || "image/jpeg",
+            },
+            body: file,
+          });
+          // Set photo_url in form values
+          setValues({
+            ...values,
+            photo_url: data.finalUrl,
+            [e.target.name]: undefined, // clear file input
+          });
+        } catch (err) {
+          alert("Image upload failed. Please try again.");
+        }
+      }
     } else if (e.target.multiple) {
       // Multi-select: collect selected options as array
       const selected = Array.from(
@@ -96,6 +128,16 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
               onChange={handleChange}
               required={field.required}
             />
+          )}
+          {/* Show preview if photo_url is set */}
+          {field.name === "photo" && values.photo_url && (
+            <div className="mt-2">
+              <img
+                src={values.photo_url}
+                alt="Preview"
+                style={{ maxWidth: 120, maxHeight: 120, borderRadius: 8 }}
+              />
+            </div>
           )}
         </div>
       ))}

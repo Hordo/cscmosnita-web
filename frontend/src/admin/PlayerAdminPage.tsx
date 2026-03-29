@@ -87,15 +87,16 @@ export const PlayerAdminPage: React.FC = () => {
 
   const handleCreate = async (values: any) => {
     setError(null);
-    const formData = new FormData();
-    formData.append("first_name", values.first_name);
-    formData.append("last_name", values.last_name);
-    if (values.number) formData.append("number", values.number);
-    if (values.position) formData.append("position", values.position);
-    if (values.photo instanceof File) formData.append("photo", values.photo);
-    if (values.team_id) formData.append("team_id", String(values.team_id));
+    const payload: any = {
+      first_name: values.first_name,
+      last_name: values.last_name,
+      number: values.number,
+      position: values.position,
+      team_id: values.team_id,
+    };
+    if (values.photo_url) payload.photo_url = values.photo_url;
     try {
-      const res = await api.post(API_URLS.players, formData);
+      const res = await api.post(API_URLS.players, payload);
       setPlayers((prev) => [...prev, res.data]);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || "Unknown error");
@@ -121,15 +122,16 @@ export const PlayerAdminPage: React.FC = () => {
     if (editIndex === null) return;
     setError(null);
     const playerId = players[editIndex].id;
-    const formData = new FormData();
-    formData.append("first_name", values.first_name);
-    formData.append("last_name", values.last_name);
-    if (values.number) formData.append("number", values.number);
-    if (values.position) formData.append("position", values.position);
-    if (values.photo instanceof File) formData.append("photo", values.photo);
-    if (values.team_id) formData.append("team_id", String(values.team_id));
+    const payload: any = {
+      first_name: values.first_name,
+      last_name: values.last_name,
+      number: values.number,
+      position: values.position,
+      team_id: values.team_id,
+    };
+    if (values.photo_url) payload.photo_url = values.photo_url;
     try {
-      const res = await api.put(`${API_URLS.players}${playerId}/`, formData);
+      const res = await api.put(`${API_URLS.players}${playerId}/`, payload);
       const updated = [...players];
       updated[editIndex] = res.data;
       setPlayers(updated);

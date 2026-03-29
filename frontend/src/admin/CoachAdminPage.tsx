@@ -73,20 +73,15 @@ const CoachAdminPage: React.FC = () => {
 
   const handleCreate = async (values: any) => {
     setError(null);
-    const formData = new FormData();
-    formData.append("first_name", values.first_name);
-    formData.append("last_name", values.last_name);
-    if (values.role) formData.append("role", values.role);
-    if (values.photo instanceof File) formData.append("photo", values.photo);
-    if (values.teams_id && Array.isArray(values.teams_id)) {
-      (values.teams_id as (string | number)[]).forEach(
-        (teamId: string | number) => {
-          formData.append("teams_id", String(teamId));
-        },
-      );
-    }
+    const payload: any = {
+      first_name: values.first_name,
+      last_name: values.last_name,
+      role: values.role,
+      teams_id: values.teams_id,
+    };
+    if (values.photo_url) payload.photo_url = values.photo_url;
     try {
-      const res = await api.post(API_URLS.coaches, formData);
+      const res = await api.post(API_URLS.coaches, payload);
       setCoaches((prev: Coach[]) => [...prev, res.data]);
     } catch (err) {
       const error = err as any;
@@ -118,20 +113,15 @@ const CoachAdminPage: React.FC = () => {
     if (editIndex === null) return;
     setError(null);
     const coachId = coaches[editIndex!].id;
-    const formData = new FormData();
-    formData.append("first_name", values.first_name);
-    formData.append("last_name", values.last_name);
-    if (values.role) formData.append("role", values.role);
-    if (values.photo instanceof File) formData.append("photo", values.photo);
-    if (values.teams_id && Array.isArray(values.teams_id)) {
-      (values.teams_id as (string | number)[]).forEach(
-        (teamId: string | number) => {
-          formData.append("teams_id", String(teamId));
-        },
-      );
-    }
+    const payload: any = {
+      first_name: values.first_name,
+      last_name: values.last_name,
+      role: values.role,
+      teams_id: values.teams_id,
+    };
+    if (values.photo_url) payload.photo_url = values.photo_url;
     try {
-      const res = await api.put(`${API_URLS.coaches}${coachId}/`, formData);
+      const res = await api.put(`${API_URLS.coaches}${coachId}/`, payload);
       const updated = [...coaches];
       updated[editIndex!] = res.data;
       setCoaches(updated);
