@@ -1,4 +1,5 @@
 import "./Card.css";
+import userPlaceholder from "../assets/user-placeholder.svg";
 
 export type CardProps = {
   title: string;
@@ -22,12 +23,23 @@ export const Card: React.FC<CardProps> = ({
       className={`card team-card shadow-sm h-100 ${className}`}
       style={{ maxWidth: 320 }}
     >
-      {imageUrl && (
+      {imageUrl ? (
         <img
           src={imageUrl}
           alt={title}
           className="card-img-top"
           style={{ objectFit: "cover", maxHeight: 200 }}
+        />
+      ) : (
+        <img
+          src={userPlaceholder}
+          alt="placeholder"
+          className="card-img-top"
+          style={{
+            objectFit: "contain",
+            maxHeight: 200,
+            background: "#e3e9f7",
+          }}
         />
       )}
       <div className="card-body d-flex flex-column">

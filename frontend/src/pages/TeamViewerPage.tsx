@@ -75,17 +75,17 @@ export const TeamViewerPage: React.FC = () => {
     <div className="container py-4">
       <h2 className="mb-4 text-center">{team.name}</h2>
       <div className="row mb-4">
-        <div className="col-md-4">
-          {teamCoaches.length > 0 && (
+        {teamCoaches.map((coach) => (
+          <div className="col-12 col-md-6 col-lg-4" key={coach.id}>
             <Card
-              title={`${teamCoaches[0].first_name} ${teamCoaches[0].last_name}`}
-              subtitle={teamCoaches[0].role || undefined}
-              imageUrl={teamCoaches[0].photo}
+              title={`${coach.first_name} ${coach.last_name}`}
+              subtitle={coach.role || undefined}
+              imageUrl={coach.photo || coach.photo_url || undefined}
               description={"Antrenor"}
-              className="mb-3"
+              className="coach-card"
             />
-          )}
-        </div>
+          </div>
+        ))}
         <div className="col-md-8">
           <div className="card p-3 mb-3">
             <h5>Informații echipă</h5>
