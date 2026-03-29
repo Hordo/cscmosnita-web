@@ -143,6 +143,7 @@ INSTALLED_APPS += ["storages"]
 
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
+
 # Cloudflare R2 settings (from environment variables)
 AWS_ACCESS_KEY_ID = R2_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY = R2_SECRET_ACCESS_KEY
@@ -155,6 +156,8 @@ AWS_DEFAULT_ACL = None
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_AUTH = False
 MEDIA_URL = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET_NAME}/"
+# Public URL for direct access (custom domain or default)
+R2_PUBLIC_URL = os.environ.get("R2_PUBLIC_URL", MEDIA_URL.rstrip("/"))
 # MEDIA_ROOT is not used with S3/R2 storage, but Django requires it to be set. It will not be used for uploads.
 MEDIA_ROOT = ""
 

@@ -31,7 +31,7 @@ class GenerateCoachPhotoUploadURL(APIView):
                 ExpiresIn=600,
                 HttpMethod='PUT',
             )
-            final_url = f"{settings.MEDIA_URL}{key}"
+            final_url = f"{settings.R2_PUBLIC_URL}/{key}"
             return Response({'uploadUrl': upload_url, 'finalUrl': final_url})
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -60,7 +60,7 @@ class GenerateGeneralPhotoUploadURL(APIView):
                 ExpiresIn=600,
                 HttpMethod='PUT',
             )
-            final_url = f"{settings.MEDIA_URL}{key}"
+            final_url = f"{settings.R2_PUBLIC_URL}/{key}"
             return Response({'uploadUrl': upload_url, 'finalUrl': final_url})
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -89,7 +89,7 @@ class GeneratePlayerPhotoUploadURL(APIView):
                 ExpiresIn=600,
                 HttpMethod='PUT',
             )
-            final_url = f"{settings.MEDIA_URL}{key}"
+            final_url = f"{settings.R2_PUBLIC_URL}/{key}"
             return Response({'uploadUrl': upload_url, 'finalUrl': final_url})
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -118,7 +118,7 @@ class GenerateTeamPhotoUploadURL(APIView):
                 ExpiresIn=600,
                 HttpMethod='PUT',
             )
-            final_url = f"{settings.MEDIA_URL}{key}"
+            final_url = f"{settings.R2_PUBLIC_URL}/{key}"
             return Response({'uploadUrl': upload_url, 'finalUrl': final_url})
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
