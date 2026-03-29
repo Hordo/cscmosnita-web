@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Card } from "../components/Card";
+import userPlaceholder from "../assets/user-placeholder.svg";
 import "../styles/adminStyles.css";
 
 export const TeamViewerPage: React.FC = () => {
@@ -73,14 +74,29 @@ export const TeamViewerPage: React.FC = () => {
 
   return (
     <div className="container py-4">
-      <h2 className="mb-4 text-center">{team.name}</h2>
+      <div className="d-flex align-items-center mb-4">
+        <div style={{ width: 120, height: 120, marginRight: 24 }}>
+          <img
+            src={team.photo_url || userPlaceholder}
+            alt={team.name}
+            className="card-img-top"
+            style={{
+              objectFit: "cover",
+              maxHeight: 120,
+              borderRadius: 16,
+              background: "#e3e9f7",
+            }}
+          />
+        </div>
+        <h2 className="mb-0 text-center flex-grow-1">{team.name}</h2>
+      </div>
       <div className="row mb-4">
         {teamCoaches.map((coach) => (
           <div className="col-12 col-md-6 col-lg-4" key={coach.id}>
             <Card
               title={`${coach.first_name} ${coach.last_name}`}
               subtitle={coach.role || undefined}
-              imageUrl={coach.photo || coach.photo_url || undefined}
+              imageUrl={coach.photo_url || undefined}
               description={"Antrenor"}
               className="coach-card"
             />
