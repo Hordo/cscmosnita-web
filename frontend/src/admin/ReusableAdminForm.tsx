@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ImageCropDialog from "../components/ImageCropDialog";
 import "../styles/adminStyles.css";
 import api from "../config/axios";
 import { API_URLS } from "../config/api";
@@ -32,6 +33,10 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
     setValues(initialValues);
   }, [initialValues]);
 
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+
   const handleChange = async (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -40,23 +45,21 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
         (e.target as HTMLInputElement).files &&
         (e.target as HTMLInputElement).files![0];
       if (file) {
-        // Determine which upload endpoint to use
-        let uploadApi = API_URLS.uploadPlayerPhoto;
-        if (
-          e.target.name === "photo" &&
-          window.location.pathname.includes("team")
-        ) {
-          uploadApi = API_URLS.uploadTeamPhoto;
+        // Open crop dialog for player photo
+        if (e.target.name === "photo") {
+          setPendingFile(file);
+          setCropImage(URL.createObjectURL(file));
+          setCropDialogOpen(true);
+          return;
         }
-        // Get file extension
+        // For other file fields, upload directly
+        let uploadApi = API_URLS.uploadTeamPhoto;
         const ext = file.name.split(".").pop() || "jpg";
-        // Get signed upload URL
         try {
           const { data } = await api.post(uploadApi, {
             ext,
             contentType: file.type || "image/jpeg",
           });
-          // Upload file to R2
           await fetch(data.uploadUrl, {
             method: "PUT",
             headers: {
@@ -64,18 +67,16 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
             },
             body: file,
           });
-          // Set photo_url in form values
           setValues({
             ...values,
             photo_url: data.finalUrl,
-            [e.target.name]: undefined, // clear file input
+            [e.target.name]: undefined,
           });
         } catch (err) {
           alert("Image upload failed. Please try again.");
         }
       }
     } else if (e.target.multiple) {
-      // Multi-select: collect selected options as array
       const selected = Array.from(
         (e.target as HTMLSelectElement).selectedOptions,
       ).map((opt) => opt.value);
@@ -85,65 +86,109 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
     }
   };
 
+  // Handle crop dialog result
+  const handleCropCancel = () => {
+    setCropDialogOpen(false);
+    setCropImage(null);
+    setPendingFile(null);
+  };
+
+  const handleCropSave = async (croppedBlob: Blob) => {
+    setCropDialogOpen(false);
+    setCropImage(null);
+    if (!pendingFile) return;
+    let uploadApi = API_URLS.uploadPlayerPhoto;
+    const ext = pendingFile.name.split(".").pop() || "jpg";
+    try {
+      const { data } = await api.post(uploadApi, {
+        ext,
+        contentType: "image/jpeg",
+      });
+      await fetch(data.uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "image/jpeg",
+        },
+        body: croppedBlob,
+      });
+      setValues({
+        ...values,
+        photo_url: data.finalUrl,
+        photo: undefined,
+      });
+    } catch (err) {
+      alert("Image upload failed. Please try again.");
+    }
+    setPendingFile(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(values);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="admin-form-min-width">
-      {fields.map((field) => (
-        <div className="mb-3" key={field.name}>
-          <label className="form-label">{field.label}</label>
-          {field.type === "select" && field.options ? (
-            <select
-              className="form-select"
-              name={field.name}
-              value={
-                field.multiple
-                  ? values[field.name] || []
-                  : typeof values[field.name] === "number"
-                    ? String(values[field.name])
-                    : values[field.name] || ""
-              }
-              onChange={handleChange}
-              required={field.required}
-              multiple={field.multiple}
-            >
-              {!field.multiple && <option value="">Select...</option>}
-              {field.options.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              className="form-control"
-              type={field.type}
-              name={field.name}
-              value={
-                field.type === "file" ? undefined : values[field.name] || ""
-              }
-              onChange={handleChange}
-              required={field.required}
-            />
-          )}
-          {/* Show preview if photo_url is set */}
-          {field.name === "photo" && values.photo_url && (
-            <div className="mt-2">
-              <img
-                src={values.photo_url}
-                alt="Preview"
-                style={{ maxWidth: 120, maxHeight: 120, borderRadius: 8 }}
+    <>
+      <form onSubmit={handleSubmit} className="admin-form-min-width">
+        {fields.map((field) => (
+          <div className="mb-3" key={field.name}>
+            <label className="form-label">{field.label}</label>
+            {field.type === "select" && field.options ? (
+              <select
+                className="form-select"
+                name={field.name}
+                value={
+                  field.multiple
+                    ? values[field.name] || []
+                    : typeof values[field.name] === "number"
+                      ? String(values[field.name])
+                      : values[field.name] || ""
+                }
+                onChange={handleChange}
+                required={field.required}
+                multiple={field.multiple}
+              >
+                {!field.multiple && <option value="">Select...</option>}
+                {field.options.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className="form-control"
+                type={field.type}
+                name={field.name}
+                value={
+                  field.type === "file" ? undefined : values[field.name] || ""
+                }
+                onChange={handleChange}
+                required={field.required}
               />
-            </div>
-          )}
-        </div>
-      ))}
-      <button className="btn btn-primary w-100" type="submit">
-        {submitLabel}
-      </button>
-    </form>
+            )}
+            {/* Show preview if photo_url is set */}
+            {field.name === "photo" && values.photo_url && (
+              <div className="mt-2">
+                <img
+                  src={values.photo_url}
+                  alt="Preview"
+                  style={{ maxWidth: 120, maxHeight: 120, borderRadius: 8 }}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+        <button className="btn btn-primary w-100" type="submit">
+          {submitLabel}
+        </button>
+      </form>
+      <ImageCropDialog
+        open={cropDialogOpen}
+        image={cropImage}
+        onCancel={handleCropCancel}
+        onCrop={handleCropSave}
+      />
+    </>
   );
 };
