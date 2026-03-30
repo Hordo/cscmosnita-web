@@ -8,6 +8,8 @@ export type CardProps = {
   className?: string;
   number?: string | number;
   role?: string;
+  subtitle?: string;
+  status?: "active" | "inactive" | "pending";
 };
 
 export const Card: React.FC<CardProps> = ({
@@ -16,37 +18,58 @@ export const Card: React.FC<CardProps> = ({
   className = "",
   number,
   role,
+  subtitle,
+  status = "active",
 }) => {
   return (
-    <div
-      className={`card team-card shadow-sm h-100 ${className}`}
-      style={{ maxWidth: 320, position: "relative" }}
-    >
-      <div className="card-img-full-container">
+    <div className={`enhanced-card ${className}`} data-status={status}>
+      <div className="card-image-container">
         {imageUrl ? (
-          <img src={imageUrl} alt={title} className="card-img-full" />
+          <>
+            <img src={imageUrl} alt={title} className="card-image" />
+            <div className="card-image-overlay"></div>
+          </>
         ) : (
-          <img
-            src={userPlaceholder}
-            alt="placeholder"
-            className="card-img-full"
-          />
-        )}
-        <div className="card-bottom-bar">
-          <div className="card-bottom-bar-content">
-            {number && <span className="card-number-badge">{number}</span>}
-            {role && <span className="card-role-badge">{role}</span>}
+          <div className="card-placeholder">
+            <img
+              src={userPlaceholder}
+              alt="placeholder"
+              className="card-placeholder-image"
+            />
+            <div className="card-placeholder-text">No Photo</div>
           </div>
-          <img src={badgeImg} alt="badge" className="card-badge-img-bottom" />
-        </div>
+        )}
+
+        {/* Number badge */}
+        {number && (
+          <div className="card-number-badge">
+            <span className="number-text">{number}</span>
+          </div>
+        )}
+
+        {/* Status indicator */}
+        <div className={`card-status-indicator status-${status}`}></div>
       </div>
-      <div className="card-body d-flex flex-column card-body-name-only">
-        <h5
-          className="card-title"
-          style={{ textAlign: "center", width: "100%" }}
-        >
-          {title}
-        </h5>
+
+      <div className="card-content">
+        <div className="card-header">
+          <h3 className="card-title">{title}</h3>
+          {subtitle && <div className="card-subtitle">{subtitle}</div>}
+        </div>
+
+        {role && (
+          <div className="card-role-section">
+            <div className="card-role-badge">
+              <span className="role-text">{role}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="card-footer">
+          <div className="card-badge-container">
+            <img src={badgeImg} alt="CSC Mosnita" className="card-badge" />
+          </div>
+        </div>
       </div>
     </div>
   );
