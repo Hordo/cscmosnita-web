@@ -1,48 +1,35 @@
 import React, { useState, useEffect } from "react";
 import { ReusableAdminForm } from "./ReusableAdminForm";
 import { ReusableAdminTable } from "./ReusableAdminTable";
-import api from "../config/axios";
 
-const disciplineFields = [
-  { name: "name", label: "Name (RO)", type: "text", required: true },
-  { name: "name_en", label: "Name (EN)", type: "text", required: false },
-  {
-    name: "description",
-    label: "Description (RO)",
-    type: "text",
-    required: false,
-  },
-  {
-    name: "description_en",
-    label: "Description (EN)",
-    type: "text",
-    required: false,
-  },
-];
+import api from "../config/axios";
+import { API_URLS } from "../config/api";
 
 const disciplineColumns = [
   { key: "name", label: "Name (RO)" },
   { key: "name_en", label: "Name (EN)" },
   { key: "description", label: "Description (RO)" },
   { key: "description_en", label: "Description (EN)" },
+  { key: "head_coach", label: "Head Coach" },
 ];
 
 const DisciplineAdminPage: React.FC = () => {
   const [disciplines, setDisciplines] = useState<any[]>([]);
+  const [coaches, setCoaches] = useState<any[]>([]);
   const [editIndex, setEditIndex] = useState<number | null>(null);
-  // Removed unused loading state
   const [error, setError] = useState<string | null>(null);
 
   const fetchDisciplines = async () => {
-    // setLoading(true); (removed)
     setError(null);
     try {
-      const res = await api.get("/api/disciplines/");
-      setDisciplines(res.data);
+      const [discRes, coachRes] = await Promise.all([
+        api.get("/api/disciplines/"),
+        api.get(API_URLS.coaches),
+      ]);
+      setDisciplines(discRes.data);
+      setCoaches(coachRes.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || "Unknown error");
-    } finally {
-      // setLoading(false); (removed)
     }
   };
 
@@ -97,6 +84,34 @@ const DisciplineAdminPage: React.FC = () => {
     }
   };
 
+  // Dynamically build disciplineFields with head_coach select
+  const disciplineFieldsWithHeadCoach = [
+    { name: "name", label: "Name (RO)", type: "text", required: true },
+    { name: "name_en", label: "Name (EN)", type: "text", required: false },
+    {
+      name: "description",
+      label: "Description (RO)",
+      type: "text",
+      required: false,
+    },
+    {
+      name: "description_en",
+      label: "Description (EN)",
+      type: "text",
+      required: false,
+    },
+    {
+      name: "head_coach_id",
+      label: "Head Coach",
+      type: "select",
+      required: false,
+      options: coaches.map((c: any) => ({
+        value: c.id,
+        label: `${c.first_name} ${c.last_name}`,
+      })),
+    },
+  ];
+
   return (
     <div className="container-fluid py-3 admin-min-height">
       <h2 className="mb-4">Manage Disciplines</h2>
@@ -109,7 +124,7 @@ const DisciplineAdminPage: React.FC = () => {
                 {editIndex === null ? "Create Discipline" : "Edit Discipline"}
               </h4>
               <ReusableAdminForm
-                fields={disciplineFields}
+                fields={disciplineFieldsWithHeadCoach}
                 onSubmit={editIndex === null ? handleCreate : handleUpdate}
                 initialValues={editIndex !== null ? disciplines[editIndex] : {}}
                 submitLabel={editIndex === null ? "Create" : "Update"}

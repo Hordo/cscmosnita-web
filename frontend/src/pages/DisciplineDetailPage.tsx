@@ -67,6 +67,11 @@ export const DisciplineDetailPage: React.FC = () => {
           fetch(`/api/teams`)
             .then((res) => res.json())
             .then((allTeams) => {
+              if (!Array.isArray(allTeams)) {
+                setError("API /api/teams did not return an array.");
+                setTeams([]);
+                return;
+              }
               setTeams(
                 allTeams.filter(
                   (t: any) => String(t.discipline_id) === String(best.id),

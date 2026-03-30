@@ -24,7 +24,6 @@ export interface Coach {
   role: string;
   photo: string | null;
   teams: number[]; // array of team ids
-  is_head_of_discipline?: boolean;
 }
 
 // CoachTeam is not needed, as Coach.teams and Team.coaches are M2M

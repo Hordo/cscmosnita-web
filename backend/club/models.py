@@ -2,10 +2,16 @@ from django.db import models
 
 
 class Discipline(models.Model):
+
     name = models.CharField(max_length=100, unique=True)
     name_en = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     description_en = models.TextField(blank=True, null=True)
+    head_coach = models.ForeignKey(
+        'Coach', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='disciplines_headed',
+        help_text='Head coach for this discipline (optional)'
+    )
 
     def __str__(self):
         return self.name

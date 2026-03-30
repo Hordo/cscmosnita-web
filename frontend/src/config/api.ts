@@ -11,6 +11,7 @@ export const API_URLS = {
   players: `${API_BASE}/api/players/`,
   championships: `${API_BASE}/api/championships/`,
   matches: `${API_BASE}/api/matches/`,
+  disciplines: `${API_BASE}/api/disciplines/`,
   uploadPlayerPhoto: `${API_BASE}/api/upload/player-photo/`,
   uploadTeamPhoto: `${API_BASE}/api/upload/team-photo/`,
   uploadCoachPhoto: `${API_BASE}/api/upload/coach-photo/`,

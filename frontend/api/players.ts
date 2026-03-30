@@ -1,7 +1,7 @@
 import { sql } from "../lib/db.js";
 import type { Player } from "../types/db.ts";
 
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) {
   try {
     const players = await sql<Player[]>`
       SELECT 

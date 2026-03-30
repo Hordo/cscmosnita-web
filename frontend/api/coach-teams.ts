@@ -1,7 +1,7 @@
 import { sql } from "../lib/db.js";
 import type { CoachTeam } from "../types/db.ts";
 
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) {
   try {
     const rows = await sql<CoachTeam[]>`
       SELECT id, coach_id, team_id

@@ -7,10 +7,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+.pnp
+.pnp.js
+
+# Build outputs
 dist
 dist-ssr
+build
+*.tsbuildinfo
+
+# Environment variables (ignore all except example files)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.local
+!.env.example
+!.env.template
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +38,54 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Vercel
+.vercel
+
+# Testing
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# Cache
+.cache
+.parcel-cache
+.eslintcache
+.stylelintcache
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+
+# OS files
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.yarn-integrity
+
+# TypeScript
+*.tsbuildinfo
+
+# Misc
+*.tgz
+.yarn-integrity

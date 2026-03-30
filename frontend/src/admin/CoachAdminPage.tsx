@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import "../styles/adminStyles.css";
 import { ReusableAdminForm } from "./ReusableAdminForm";
 import { ReusableAdminTable } from "./ReusableAdminTable";
+
 import { API_URLS } from "../config/api";
 import api from "../config/axios";
 import { useAuth } from "../context/AuthContext";
@@ -11,12 +12,6 @@ const coachFields = [
   { name: "last_name", label: "Last Name", type: "text", required: true },
   { name: "phone", label: "Phone", type: "text", required: false },
   { name: "photo", label: "Photo", type: "file", required: false },
-  {
-    name: "is_head_of_discipline",
-    label: "Head of discipline",
-    type: "checkbox",
-    required: false,
-  },
 ];
 
 const coachColumns = [
@@ -25,7 +20,6 @@ const coachColumns = [
   { key: "phone", label: "Phone" },
   { key: "photo_url", label: "Photo" },
   { key: "teams", label: "Teams" },
-  { key: "is_head_of_discipline", label: "Head of discipline" },
 ];
 
 interface Coach {
@@ -40,10 +34,12 @@ interface Team {
   id: number;
   name: string;
 }
+
 const CoachAdminPage: React.FC = () => {
   const { user } = useAuth();
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  // Removed disciplines state, not needed
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,8 +83,6 @@ const CoachAdminPage: React.FC = () => {
       teams_id: values.teams_id,
     };
     if (values.photo_url) payload.photo_url = values.photo_url;
-    if (typeof values.is_head_of_discipline !== "undefined")
-      payload.is_head_of_discipline = values.is_head_of_discipline;
     try {
       const res = await api.post(API_URLS.coaches, payload);
       setCoaches((prev: Coach[]) => [...prev, res.data]);
@@ -127,7 +121,6 @@ const CoachAdminPage: React.FC = () => {
       last_name: values.last_name,
       phone: values.phone,
       teams_id: values.teams_id,
-      is_head_of_discipline: values.is_head_of_discipline,
     };
     if (values.photo_url) payload.photo_url = values.photo_url;
     try {

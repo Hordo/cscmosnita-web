@@ -1,0 +1,156 @@
+# SECURITY-SPECIFIC GITIGNORE ADDENDUM
+# Add these patterns to your main .gitignore for maximum security
+
+# === SECRETS & CREDENTIALS ===
+# API Keys and tokens
+api_keys.txt
+credentials.json
+secrets.json
+private_keys/
+*.pem
+*.key
+*.crt
+*.p12
+
+# Database credentials
+database_config.py
+db_config.json
+*.sql
+*.dump
+*.backup
+
+# Cloud provider credentials
+.aws/
+.gcp/
+.azure/
+service-account.json
+
+# === ENVIRONMENT FILES ===
+# All possible environment variable files
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Configuration files with secrets
+config/production.py
+config/secrets.py
+settings/local.py
+settings/production.py
+
+# === PERSONAL & SENSITIVE DATA ===
+# Personal files
+personal/
+private/
+confidential/
+
+# User data
+users.csv
+personal_data.xlsx
+contacts.json
+
+# Financial data
+payments/
+billing/
+invoices/
+
+# === DEVELOPMENT ARTIFACTS ===
+# Local development
+local_settings.py
+settings_local.py
+debug.log
+error.log
+
+# Temporary files with potential sensitive data
+temp/
+tmp/
+*.tmp
+*.temp
+
+# Backup files that might contain data
+*.bak
+*.backup
+*.old
+
+# === BUILD & DEPLOYMENT SECRETS ===
+# Deployment configurations with secrets
+deploy/secrets.yml
+docker-compose.override.yml
+k8s/secrets/
+
+# CI/CD secrets
+.github/secrets/
+.gitlab-ci.yml
+.travis.yml
+
+# === LOGS & MONITORING ===
+# Log files that might contain sensitive data
+logs/
+*.log
+access.log
+error.log
+audit.log
+
+# Monitoring configuration
+monitoring/config.json
+alerts/secrets.json
+
+# === CERTIFICATES & KEYS ===
+# SSL/TLS certificates
+*.crt
+*.key
+*.pem
+ssl/
+certificates/
+
+# SSH keys
+id_rsa*
+*.pem
+ssh/
+
+# === DATABASE ===
+# Local database files
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# Database exports
+export.sql
+dump.sql
+backup.sql
+
+# === MEDIA & UPLOADS ===
+# User uploaded files
+media/uploads/
+media/user_content/
+uploads/
+
+# Private media
+media/private/
+media/secure/
+
+# === CACHE & SESSIONS ===
+# Session files that might contain user data
+sessions/
+cache/sessions/
+*.session
+
+# Redis dumps
+dump.rdb
+
+# === ANALYTICS & TRACKING ===
+# Analytics configuration with secrets
+analytics/config.json
+tracking/secrets.js
+
+# === COMPLIANCE & AUDIT ===
+# Audit logs
+audit/
+compliance/
+gdpr/
+
+# Legal documents
+legal/
+contracts/
+nda/

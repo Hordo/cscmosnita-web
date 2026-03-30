@@ -3,9 +3,19 @@ from .models import Team, Coach, Player, Championship, Match, Discipline
 
 # Discipline Serializer
 class DisciplineSerializer(serializers.ModelSerializer):
+    head_coach = serializers.StringRelatedField(read_only=True)
+    head_coach_id = serializers.PrimaryKeyRelatedField(
+        queryset=Coach.objects.all(), source="head_coach", write_only=True, required=False
+    )
+
     class Meta:
         model = Discipline
         fields = '__all__'
+        extra_fields = ['head_coach_id']
+        def get_fields(self):
+            fields = super().get_fields()
+            fields['head_coach_id'] = self.fields['head_coach_id']
+            return fields
 
 
 
