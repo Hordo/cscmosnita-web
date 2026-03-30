@@ -16,5 +16,9 @@ export const API_URLS = {
   uploadTeamPhoto: `${API_BASE}/api/upload/team-photo/`,
   uploadCoachPhoto: `${API_BASE}/api/upload/coach-photo/`,
   uploadGeneralPhoto: `${API_BASE}/api/upload/general-photo/`,
+  // Calendar endpoints
+  calendarEvents: `${API_BASE}/api/calendar/events/`,
+  calendarEventTypes: `${API_BASE}/api/calendar/event-types/`,
+  calendarTrainings: `${API_BASE}/api/calendar/trainings/`,
   // Add more endpoints as needed
 };

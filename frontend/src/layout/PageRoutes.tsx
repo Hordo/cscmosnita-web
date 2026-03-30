@@ -17,6 +17,7 @@ import CookiesPolicy from "../pages/CookiesPolicy";
 import About from "../pages/About";
 import Contact from "../pages/Contact";
 import GDPR from "../pages/GDPR";
+import Calendar from "../admin/Calendar";
 
 const router = createBrowserRouter([
   {
@@ -54,6 +55,10 @@ const router = createBrowserRouter([
           {
             path: "disciplines",
             element: <DisciplineAdminPage />,
+          },
+          {
+            path: "calendar",
+            element: <Calendar />,
           },
         ],
       },

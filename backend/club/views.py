@@ -1,8 +1,10 @@
 from rest_framework import viewsets
-from .models import Team, Coach, Player, Championship, Match, Discipline
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance
 from .serializers import (
     TeamSerializer, CoachSerializer, PlayerSerializer,
-    ChampionshipSerializer, MatchSerializer, DisciplineSerializer
+    ChampionshipSerializer, MatchSerializer, DisciplineSerializer,
+    EventTypeSerializer, CalendarEventSerializer, CalendarEventCreateSerializer,
+    TrainingSessionSerializer, EventAttendanceSerializer, CalendarEventListSerializer
 )
 
 # Discipline ViewSet
@@ -70,3 +72,240 @@ class RegisterView(APIView):
             serializer.save()
             return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# --- Calendar ViewSets ---
+
+from rest_framework.decorators import action
+from rest_framework.filters import OrderingFilter, SearchFilter
+
+class EventTypeViewSet(viewsets.ModelViewSet):
+    """ViewSet for EventType model"""
+    queryset = EventType.objects.all()
+    serializer_class = EventTypeSerializer
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['name', 'name_en']
+    ordering_fields = ['name']
+    ordering = ['name']
+
+
+class CalendarEventViewSet(viewsets.ModelViewSet):
+    """ViewSet for CalendarEvent model"""
+    queryset = CalendarEvent.objects.select_related(
+        'event_type', 'discipline', 'team', 'created_by'
+    ).prefetch_related('players')
+    
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['title', 'description', 'location']
+    ordering_fields = ['start_datetime', 'created_at', 'title']
+    ordering = ['-start_datetime']
+
+    def list(self, request, *args, **kwargs):
+        print("=== CalendarEventViewSet.list() called ===")
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+            print(f"Queryset count: {queryset.count()}")
+            
+            page = self.paginate_queryset(queryset)
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                print(f"Serialized data: {len(serializer.data)} items")
+                return self.get_paginated_response(serializer.data)
+
+            serializer = self.get_serializer(queryset, many=True)
+            print(f"Returning {len(serializer.data)} events")
+            return Response(serializer.data)
+        except Exception as e:
+            print(f"ERROR in CalendarEventViewSet.list(): {e}")
+            print(f"ERROR TYPE: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
+
+    def get_queryset(self):
+        print("=== CalendarEventViewSet.get_queryset() called ===")
+        try:
+            queryset = super().get_queryset()
+            print(f"Base queryset count: {queryset.count()}")
+            
+            # Manual filtering instead of DjangoFilterBackend
+            event_type = self.request.query_params.get('event_type')
+            discipline = self.request.query_params.get('discipline')
+            team = self.request.query_params.get('team')
+            is_cancelled = self.request.query_params.get('is_cancelled')
+            
+            print(f"Filters - event_type: {event_type}, discipline: {discipline}, team: {team}, is_cancelled: {is_cancelled}")
+            
+            if event_type:
+                queryset = queryset.filter(event_type_id=event_type)
+                print(f"Filtered by event_type: {event_type}, count: {queryset.count()}")
+            if discipline:
+                queryset = queryset.filter(discipline_id=discipline)
+                print(f"Filtered by discipline: {discipline}, count: {queryset.count()}")
+            if team:
+                queryset = queryset.filter(team_id=team)
+                print(f"Filtered by team: {team}, count: {queryset.count()}")
+            if is_cancelled is not None:
+                queryset = queryset.filter(is_cancelled=is_cancelled.lower() == 'true')
+                print(f"Filtered by is_cancelled: {is_cancelled}, count: {queryset.count()}")
+                
+            print(f"Final queryset count: {queryset.count()}")
+            return queryset
+        except Exception as e:
+            print(f"ERROR in get_queryset(): {e}")
+            print(f"ERROR TYPE: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CalendarEventCreateSerializer
+        elif self.action == 'list':
+            return CalendarEventListSerializer
+        return CalendarEventSerializer
+
+    def create(self, request, *args, **kwargs):
+        print("=== CalendarEventViewSet.create() called ===")
+        print(f"Request data: {request.data}")
+        print(f"User: {request.user}")
+        
+        try:
+            response = super().create(request, *args, **kwargs)
+            print(f"Successfully created event: {response.data}")
+            return response
+        except Exception as e:
+            print(f"ERROR in create(): {e}")
+            print(f"ERROR TYPE: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
+
+    def perform_create(self, serializer):
+        """Set created_by to current user when creating events"""
+        print("=== perform_create() called ===")
+        print(f"Serializer data: {serializer.validated_data}")
+        print(f"Current user: {self.request.user}")
+        print(f"Is authenticated: {self.request.user.is_authenticated}")
+        
+        try:
+            # Only set created_by if user is authenticated
+            if self.request.user.is_authenticated:
+                print(f"Setting created_by to authenticated user: {self.request.user}")
+                instance = serializer.save(created_by=self.request.user)
+            else:
+                print(f"User is not authenticated, created_by will be None")
+                instance = serializer.save()
+            
+            print(f"Created event instance: {instance}")
+            return instance
+        except Exception as e:
+            print(f"ERROR in perform_create(): {e}")
+            print(f"ERROR TYPE: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
+
+    @action(detail=False, methods=['get'])
+    def upcoming(self, request):
+        """Get upcoming events"""
+        from django.utils import timezone
+        now = timezone.now()
+        upcoming_events = self.get_queryset().filter(start_datetime__gte=now)
+        page = self.paginate_queryset(upcoming_events)
+        serializer = self.get_serializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def by_date_range(self, request):
+        """Get events within a date range"""
+        from django.utils import timezone
+        from datetime import datetime
+        
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+        
+        if not start_date or not end_date:
+            return Response(
+                {"error": "Both start_date and end_date parameters are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            start_datetime = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            end_datetime = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            
+            events = self.get_queryset().filter(
+                start_datetime__gte=start_datetime,
+                start_datetime__lte=end_datetime
+            )
+            
+            serializer = self.get_serializer(events, many=True)
+            return Response(serializer.data)
+            
+        except ValueError:
+            return Response(
+                {"error": "Invalid date format. Use ISO format."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'])
+    def mark_cancelled(self, request, pk=None):
+        """Mark event as cancelled"""
+        event = self.get_object()
+        cancellation_reason = request.data.get('cancellation_reason', '')
+        
+        event.is_cancelled = True
+        event.cancellation_reason = cancellation_reason
+        event.save()
+        
+        serializer = self.get_serializer(event)
+        return Response(serializer.data)
+
+
+class TrainingSessionViewSet(viewsets.ModelViewSet):
+    """ViewSet for TrainingSession model"""
+    queryset = TrainingSession.objects.select_related('calendar_event')
+    serializer_class = TrainingSessionSerializer
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['objectives', 'notes']
+    ordering_fields = ['calendar_event__start_datetime']
+    ordering = ['-calendar_event__start_datetime']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        training_type = self.request.query_params.get('training_type')
+        
+        if training_type:
+            queryset = queryset.filter(training_type=training_type)
+            
+        return queryset
+
+
+class EventAttendanceViewSet(viewsets.ModelViewSet):
+    """ViewSet for EventAttendance model"""
+    queryset = EventAttendance.objects.select_related('calendar_event', 'player', 'recorded_by')
+    serializer_class = EventAttendanceSerializer
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['notes']
+    ordering_fields = ['recorded_at', 'calendar_event__start_datetime']
+    ordering = ['-calendar_event__start_datetime']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        calendar_event = self.request.query_params.get('calendar_event')
+        player = self.request.query_params.get('player')
+        status = self.request.query_params.get('status')
+        
+        if calendar_event:
+            queryset = queryset.filter(calendar_event_id=calendar_event)
+        if player:
+            queryset = queryset.filter(player_id=player)
+        if status:
+            queryset = queryset.filter(status=status)
+            
+        return queryset
+
+    def perform_create(self, serializer):
+        """Set recorded_by to current user when recording attendance"""
+        serializer.save(recorded_by=self.request.user)

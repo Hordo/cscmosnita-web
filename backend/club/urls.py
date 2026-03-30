@@ -2,7 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     TeamViewSet, CoachViewSet, PlayerViewSet,
-    ChampionshipViewSet, MatchViewSet, DisciplineViewSet
+    ChampionshipViewSet, MatchViewSet, DisciplineViewSet,
+    EventTypeViewSet, CalendarEventViewSet, TrainingSessionViewSet, EventAttendanceViewSet
 )
 from .signed_upload import (
     GeneratePlayerPhotoUploadURL, GenerateTeamPhotoUploadURL, GenerateCoachPhotoUploadURL, GenerateGeneralPhotoUploadURL
@@ -15,6 +16,12 @@ router.register(r'players', PlayerViewSet, basename='players')
 router.register(r'championships', ChampionshipViewSet, basename='championships')
 router.register(r'matches', MatchViewSet, basename='matches')
 router.register(r'disciplines', DisciplineViewSet, basename='disciplines')
+
+# Calendar endpoints
+router.register(r'calendar/events', CalendarEventViewSet, basename='calendar-events')
+router.register(r'calendar/event-types', EventTypeViewSet, basename='event-types')
+router.register(r'calendar/trainings', TrainingSessionViewSet, basename='training-sessions')
+router.register(r'calendar/attendance', EventAttendanceViewSet, basename='event-attendance')
 
 urlpatterns = [
     path('', include(router.urls)),

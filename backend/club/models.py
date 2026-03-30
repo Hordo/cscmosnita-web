@@ -90,3 +90,113 @@ class Match(models.Model):
 
     def __str__(self):
         return f"{self.team.name} vs {self.opponent_name} ({self.date})"
+
+
+# Calendar Models
+class EventType(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    name_en = models.CharField(max_length=50, blank=True, null=True)
+    color = models.CharField(max_length=7, default="#007bff", help_text="Hex color code for calendar display")
+    icon = models.CharField(max_length=50, blank=True, null=True, help_text="FontAwesome icon class")
+    description = models.TextField(blank=True, null=True)
+    description_en = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "Event Type"
+        verbose_name_plural = "Event Types"
+
+
+class CalendarEvent(models.Model):
+    EVENT_TYPE_CHOICES = [
+        ('training', 'Training'),
+        ('match', 'Match'),
+        ('meeting', 'Meeting'),
+        ('other', 'Other'),
+    ]
+
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    event_type = models.ForeignKey(EventType, on_delete=models.SET_NULL, null=True, blank=True)
+    discipline = models.ForeignKey(Discipline, on_delete=models.SET_NULL, null=True, blank=True)
+    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Date and time
+    start_datetime = models.DateTimeField()
+    end_datetime = models.DateTimeField()
+    all_day = models.BooleanField(default=False)
+    
+    # Location and details
+    location = models.CharField(max_length=200, blank=True, null=True)
+    
+    # Status
+    is_cancelled = models.BooleanField(default=False)
+    cancellation_reason = models.TextField(blank=True, null=True)
+    
+    # Attendance tracking
+    players = models.ManyToManyField(Player, blank=True, related_name="calendar_events")
+    
+    # Metadata
+    created_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.start_datetime.date()})"
+
+    class Meta:
+        verbose_name = "Calendar Event"
+        verbose_name_plural = "Calendar Events"
+        ordering = ['-start_datetime']
+
+
+class TrainingSession(models.Model):
+    """Specific model for training sessions with additional fields"""
+    calendar_event = models.OneToOneField(CalendarEvent, on_delete=models.CASCADE, related_name="training_session")
+    
+    # Training specific fields
+    training_type = models.CharField(max_length=50, choices=[
+        ('regular', 'Regular Training'),
+        ('conditioning', 'Conditioning'),
+        ('tactical', 'Tactical'),
+        ('technical', 'Technical'),
+        ('match_prep', 'Match Preparation'),
+    ], default='regular')
+    
+    objectives = models.TextField(help_text="Training objectives for this session")
+    notes = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"Training: {self.calendar_event.title}"
+
+    class Meta:
+        verbose_name = "Training Session"
+        verbose_name_plural = "Training Sessions"
+
+
+class EventAttendance(models.Model):
+    """Track attendance for calendar events"""
+    calendar_event = models.ForeignKey(CalendarEvent, on_delete=models.CASCADE, related_name="attendance_records")
+    player = models.ForeignKey(Player, on_delete=models.CASCADE, related_name="attendance_records")
+    
+    ATTENDANCE_STATUS = [
+        ('present', 'Present'),
+        ('absent', 'Absent'),
+        ('late', 'Late'),
+        ('excused', 'Excused'),
+    ]
+    
+    status = models.CharField(max_length=10, choices=ATTENDANCE_STATUS, default='present')
+    notes = models.TextField(blank=True, null=True)
+    recorded_at = models.DateTimeField(auto_now_add=True)
+    recorded_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.player} - {self.calendar_event} - {self.status}"
+
+    class Meta:
+        verbose_name = "Event Attendance"
+        verbose_name_plural = "Event Attendance"
+        unique_together = ['calendar_event', 'player']

@@ -28,11 +28,9 @@ export default function Contact() {
     setLoading(true);
     fetch("/api/disciplines")
       .then((res) => {
-        console.log("Disciplines API response status:", res.status);
         return res.json();
       })
       .then((data) => {
-        console.log("Disciplines data:", data);
         if (Array.isArray(data)) {
           setDisciplines(data);
         } else {

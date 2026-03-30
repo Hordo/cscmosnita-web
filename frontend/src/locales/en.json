@@ -19,5 +19,6 @@
   "menu.manage_teams": "Manage Teams",
   "menu.manage_coaches": "Manage Coaches",
   "menu.manage_players": "Manage Players",
-  "menu.manage_disciplines": "Manage Disciplines"
+  "menu.manage_disciplines": "Manage Disciplines",
+  "menu.calendar": "Calendar"
 }

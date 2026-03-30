@@ -37,7 +37,7 @@ export const menuConfig: MenuItem[] = [
     adminOnly: true as any, // TypeScript workaround, will filter in navbar
     children: [
       [],
-      [],
+      [{ label: "menu.calendar", path: "/admin/calendar" }],
       [
         { label: "menu.manage_teams", path: "/admin/create-team" },
         { label: "menu.manage_coaches", path: "/admin/create-coach" },
