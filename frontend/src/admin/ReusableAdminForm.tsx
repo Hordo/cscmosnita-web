@@ -155,6 +155,16 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
                   </option>
                 ))}
               </select>
+            ) : field.type === "checkbox" ? (
+              <input
+                className="form-check-input"
+                type="checkbox"
+                name={field.name}
+                checked={!!values[field.name]}
+                onChange={(e) =>
+                  setValues({ ...values, [field.name]: e.target.checked })
+                }
+              />
             ) : (
               <input
                 className="form-control"

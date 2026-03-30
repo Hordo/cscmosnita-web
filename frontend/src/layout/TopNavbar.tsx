@@ -2,13 +2,16 @@ import { Link } from "react-router-dom";
 import { menuConfig } from "../config/menu";
 import type { MenuItem, Column } from "../config/menu";
 import { useAuth } from "../context/AuthContext";
-import "../styles/cscmosnita-colors.css";
+import { useTranslation } from "react-i18next";
 import "../styles/topnavbar.css";
-
+import "../styles/cscmosnita-colors.css";
 export default function TopNavbar() {
   const { user, logout } = useAuth();
-
+  const { i18n, t } = useTranslation();
   const handleLogout = () => logout();
+  const toggleLanguage = () => {
+    i18n.changeLanguage(i18n.language === "ro" ? "en" : "ro");
+  };
 
   // Only show admin menu if user.is_staff is true
   const filteredMenu = menuConfig.filter((item: any) => {
@@ -16,10 +19,10 @@ export default function TopNavbar() {
       return user && user.is_staff;
     }
     // Only show Login if not logged in, and Logout if logged in
-    if (item.label === "Login") {
+    if (item.label === "login") {
       return !user;
     }
-    if (item.label === "Logout") {
+    if (item.label === "logout") {
       return !!user;
     }
     return true;
@@ -27,13 +30,24 @@ export default function TopNavbar() {
 
   return (
     <nav className="navbar navbar-expand-lg navbar-csc sticky-top">
-      <div className="container-fluid">
-        <Link className="navbar-brand" to="/">
+      <div className="container-fluid d-flex align-items-center">
+        <Link className="navbar-brand me-2" to="/">
           CSC Moșnița
         </Link>
-
+        <a
+          href="#"
+          className="nav-link nav-link-lang-toggle mx-2"
+          onClick={(e) => {
+            e.preventDefault();
+            toggleLanguage();
+          }}
+          style={{ minWidth: 48, cursor: "pointer" }}
+          aria-label="Toggle language"
+        >
+          {i18n.language === "ro" ? "EN" : "RO"}
+        </a>
         <button
-          className="navbar-toggler"
+          className="navbar-toggler ms-auto"
           type="button"
           data-bs-toggle="collapse"
           data-bs-target="#mainNavbar"
@@ -76,7 +90,7 @@ export default function TopNavbar() {
                 return (
                   <li className="nav-item" key={item.label}>
                     <Link className="nav-link" to={item.path!}>
-                      {item.label}
+                      {t(item.label)}
                     </Link>
                   </li>
                 );
@@ -94,7 +108,7 @@ export default function TopNavbar() {
                       href="#"
                       data-bs-toggle="dropdown"
                     >
-                      {item.label}
+                      {t(item.label)}
                     </a>
 
                     <div className="dropdown-menu w-100 mt-0 p-4 shadow align-items-end">
@@ -111,7 +125,7 @@ export default function TopNavbar() {
                                   to={child.path!}
                                   key={child.label}
                                 >
-                                  {child.label}
+                                  {t(child.label)}
                                 </Link>
                               ))}
                             </div>
@@ -131,24 +145,24 @@ export default function TopNavbar() {
                     href="#"
                     data-bs-toggle="dropdown"
                   >
-                    {item.label}
+                    {t(item.label)}
                   </a>
 
                   <ul className="dropdown-menu dropdown-menu-end">
                     {visibleChildren?.map((child: MenuItem) =>
-                      child.label === "Logout" ? (
+                      child.label === "logout" ? (
                         <li key={child.label}>
                           <button
                             className="dropdown-item"
                             onClick={handleLogout}
                           >
-                            Logout
+                            {t(child.label)}
                           </button>
                         </li>
                       ) : (
                         <li key={child.label}>
                           <Link className="dropdown-item" to={child.path!}>
-                            {child.label}
+                            {t(child.label)}
                           </Link>
                         </li>
                       ),

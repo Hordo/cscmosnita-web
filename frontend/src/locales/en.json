@@ -1,0 +1,23 @@
+{
+  "team_info": "Team Info",
+  "age_group": "Age Group",
+  "discipline": "Discipline",
+  "players": "Players",
+  "no_players": "No players for this team.",
+  "coach": "Coach",
+  "loading": "Loading...",
+  "team_not_found": "Team not found.",
+  "logout": "Logout",
+  "login": "Login",
+  "menu.coaches": "Coaches",
+  "menu.contact": "Contact",
+  "menu.disciplines": "Disciplines",
+  "menu.football": "Football",
+  "menu.basketball": "Basketball",
+  "menu.handball": "Handball",
+  "menu.admin": "Admin",
+  "menu.manage_teams": "Manage Teams",
+  "menu.manage_coaches": "Manage Coaches",
+  "menu.manage_players": "Manage Players",
+  "menu.manage_disciplines": "Manage Disciplines"
+}

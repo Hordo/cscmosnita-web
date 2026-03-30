@@ -43,11 +43,7 @@ export const DisciplineTeamsPage: React.FC = () => {
           >
             <Card
               title={team.name}
-              subtitle={team.season ? `Season: ${team.season}` : undefined}
               imageUrl={team.photo_url}
-              description={
-                team.age_group ? `Age Group: ${team.age_group}` : undefined
-              }
               className="mb-3"
             />
           </div>

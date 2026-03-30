@@ -1,0 +1,23 @@
+{
+  "team_info": "Informații echipă",
+  "age_group": "Grupa de vârstă",
+  "discipline": "Disciplină",
+  "players": "Jucători",
+  "no_players": "Nu există jucători pentru această echipă.",
+  "coach": "Antrenor",
+  "loading": "Se încarcă...",
+  "team_not_found": "Echipa nu a fost găsită.",
+  "logout": "Ieșire",
+  "login": "Autentificare",
+  "menu.coaches": "Antrenori",
+  "menu.contact": "Contact",
+  "menu.disciplines": "Discipline",
+  "menu.football": "Fotbal",
+  "menu.basketball": "Baschet",
+  "menu.handball": "Handbal",
+  "menu.admin": "Admin",
+  "menu.manage_teams": "Administrare echipe",
+  "menu.manage_coaches": "Administrare antrenori",
+  "menu.manage_players": "Administrare jucători",
+  "menu.manage_disciplines": "Administrare discipline"
+}

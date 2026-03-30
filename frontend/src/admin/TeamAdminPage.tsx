@@ -23,8 +23,9 @@ export const TeamAdminPage: React.FC = () => {
 
   const teamColumns: AdminTableColumn[] = [
     { key: "name", label: "Team Name" },
-    { key: "age_group", label: "Age Group" },
-    { key: "season", label: "Season" },
+    { key: "name_en", label: "Team Name (EN)" },
+    { key: "year", label: "Year" },
+    { key: "discipline", label: "Discipline" },
   ];
 
   useEffect(() => {
@@ -53,8 +54,8 @@ export const TeamAdminPage: React.FC = () => {
 
   const teamFields: AdminFormField[] = [
     { name: "name", label: "Team Name", type: "text", required: true },
-    { name: "age_group", label: "Age Group", type: "text", required: false },
-    { name: "season", label: "Season", type: "text", required: false },
+    { name: "name_en", label: "Team Name (EN)", type: "text", required: false },
+    { name: "year", label: "Year", type: "number", required: false },
     {
       name: "discipline_id",
       label: "Discipline",
@@ -69,8 +70,8 @@ export const TeamAdminPage: React.FC = () => {
     setError(null);
     const payload: any = {
       name: values.name,
-      age_group: values.age_group,
-      season: values.season,
+      name_en: values.name_en,
+      year: values.year,
       discipline_id: values.discipline_id,
     };
     if (values.photo_url) payload.photo_url = values.photo_url;
@@ -103,8 +104,8 @@ export const TeamAdminPage: React.FC = () => {
     const teamId = teams[editIndex].id;
     const payload: any = {
       name: values.name,
-      age_group: values.age_group,
-      season: values.season,
+      name_en: values.name_en,
+      year: values.year,
       discipline_id: values.discipline_id,
     };
     if (values.photo_url) payload.photo_url = values.photo_url;

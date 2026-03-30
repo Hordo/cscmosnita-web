@@ -42,6 +42,7 @@ class CoachSerializer(serializers.ModelSerializer):
         queryset=Team.objects.all(), source="teams", many=True, write_only=True, required=False
     )
     photo_url = serializers.CharField(allow_blank=True, allow_null=True, required=False)
+    is_head_of_discipline = serializers.BooleanField(required=False)
 
 
     class Meta:
@@ -51,6 +52,7 @@ class CoachSerializer(serializers.ModelSerializer):
         def get_fields(self):
             fields = super().get_fields()
             fields['teams_id'] = self.fields['teams_id']
+            fields['is_head_of_discipline'] = self.fields['is_head_of_discipline']
             return fields
 
     def get_teams(self, obj):

@@ -9,16 +9,23 @@ import { useAuth } from "../context/AuthContext";
 const coachFields = [
   { name: "first_name", label: "First Name", type: "text", required: true },
   { name: "last_name", label: "Last Name", type: "text", required: true },
-  { name: "role", label: "Role", type: "text", required: false },
+  { name: "phone", label: "Phone", type: "text", required: false },
   { name: "photo", label: "Photo", type: "file", required: false },
+  {
+    name: "is_head_of_discipline",
+    label: "Head of discipline",
+    type: "checkbox",
+    required: false,
+  },
 ];
 
 const coachColumns = [
   { key: "first_name", label: "First Name" },
   { key: "last_name", label: "Last Name" },
-  { key: "role", label: "Role" },
+  { key: "phone", label: "Phone" },
   { key: "photo_url", label: "Photo" },
   { key: "teams", label: "Teams" },
+  { key: "is_head_of_discipline", label: "Head of discipline" },
 ];
 
 interface Coach {
@@ -76,10 +83,12 @@ const CoachAdminPage: React.FC = () => {
     const payload: any = {
       first_name: values.first_name,
       last_name: values.last_name,
-      role: values.role,
+      phone: values.phone,
       teams_id: values.teams_id,
     };
     if (values.photo_url) payload.photo_url = values.photo_url;
+    if (typeof values.is_head_of_discipline !== "undefined")
+      payload.is_head_of_discipline = values.is_head_of_discipline;
     try {
       const res = await api.post(API_URLS.coaches, payload);
       setCoaches((prev: Coach[]) => [...prev, res.data]);
@@ -116,8 +125,9 @@ const CoachAdminPage: React.FC = () => {
     const payload: any = {
       first_name: values.first_name,
       last_name: values.last_name,
-      role: values.role,
+      phone: values.phone,
       teams_id: values.teams_id,
+      is_head_of_discipline: values.is_head_of_discipline,
     };
     if (values.photo_url) payload.photo_url = values.photo_url;
     try {

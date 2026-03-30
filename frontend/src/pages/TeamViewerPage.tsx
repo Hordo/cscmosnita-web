@@ -3,8 +3,10 @@ import { useParams } from "react-router-dom";
 import { Card } from "../components/Card";
 import userPlaceholder from "../assets/user-placeholder.svg";
 import "../styles/adminStyles.css";
+import { useTranslation } from "react-i18next";
 
 export const TeamViewerPage: React.FC = () => {
+  const { t } = useTranslation();
   const { teamId } = useParams<{ teamId?: string }>();
   const [teams, setTeams] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
@@ -44,7 +46,7 @@ export const TeamViewerPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="text-center mt-5">Se încarcă...</div>;
+  if (loading) return <div className="text-center mt-5">{t("loading")}</div>;
   if (error) return <div className="alert alert-danger mt-3">{error}</div>;
 
   let filteredTeams = teams;
@@ -54,7 +56,7 @@ export const TeamViewerPage: React.FC = () => {
 
   if (filteredTeams.length === 0) {
     return (
-      <div className="alert alert-warning mt-4">Echipa nu a fost găsită.</div>
+      <div className="alert alert-warning mt-4">{t("team_not_found")}</div>
     );
   }
 
@@ -95,45 +97,43 @@ export const TeamViewerPage: React.FC = () => {
           <div className="col-12 col-md-6 col-lg-4" key={coach.id}>
             <Card
               title={`${coach.first_name} ${coach.last_name}`}
-              subtitle={coach.role || undefined}
+              role={coach.role || undefined}
+              number={coach.number || undefined}
               imageUrl={coach.photo_url || undefined}
-              description={"Antrenor"}
               className="coach-card"
             />
           </div>
         ))}
         <div className="col-md-8">
           <div className="card p-3 mb-3">
-            <h5>Informații echipă</h5>
+            <h5>{t("team_info")}</h5>
             <ul className="list-unstyled mb-0">
               {team.age_group && (
                 <li>
-                  <strong>Grupa de vârstă:</strong> {team.age_group}
+                  <strong>{t("age_group")}:</strong> {team.age_group}
                 </li>
               )}
               {disciplineName && (
                 <li>
-                  <strong>Disciplină:</strong> {disciplineName}
+                  <strong>{t("discipline")}:</strong> {disciplineName}
                 </li>
               )}
             </ul>
           </div>
         </div>
       </div>
-      <h4 className="mb-3">Jucători</h4>
+      <h4 className="mb-3">{t("players")}</h4>
       <div className="row g-4">
         {teamPlayers.length === 0 ? (
-          <div className="col-12 text-center">
-            Nu există jucători pentru această echipă.
-          </div>
+          <div className="col-12 text-center">{t("no_players")}</div>
         ) : (
           teamPlayers.map((player) => (
             <div className="col-12 col-md-6 col-lg-4" key={player.id}>
               <Card
                 title={`${player.first_name} ${player.last_name}`}
-                subtitle={player.position || undefined}
+                role={player.position || undefined}
+                number={player.number || undefined}
                 imageUrl={player.photo_url || undefined}
-                description={player.number ? `#${player.number}` : undefined}
                 className="player-card"
               />
             </div>

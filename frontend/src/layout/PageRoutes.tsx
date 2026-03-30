@@ -12,6 +12,11 @@ import NotFound from "../pages/NotFound";
 import { TeamViewerPage } from "../pages/TeamViewerPage";
 import { DisciplineDetailPage } from "../pages/DisciplineDetailPage";
 import DisciplineAdminPage from "../admin/DisciplineAdminPage";
+import Terms from "../pages/Terms";
+import CookiesPolicy from "../pages/CookiesPolicy";
+import About from "../pages/About";
+import Contact from "../pages/Contact";
+import GDPR from "../pages/GDPR";
 
 const router = createBrowserRouter([
   {
@@ -55,6 +60,11 @@ const router = createBrowserRouter([
       { path: "teams", element: <TeamViewerPage /> },
       { path: "teams/:teamId", element: <TeamViewerPage /> },
       { path: "disciplines/:discipline", element: <DisciplineDetailPage /> },
+      { path: "terms", element: <Terms /> },
+      { path: "cookies-policy", element: <CookiesPolicy /> },
+      { path: "about", element: <About /> },
+      { path: "contact", element: <Contact /> },
+      { path: "gdpr", element: <GDPR /> },
       { path: "*", element: <NotFound /> },
     ],
   },

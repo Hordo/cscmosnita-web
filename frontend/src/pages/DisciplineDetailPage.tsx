@@ -121,19 +121,7 @@ export const DisciplineDetailPage: React.FC = () => {
                   style={{ cursor: "pointer" }}
                   onClick={() => navigate(`/teams/${team.id}`)}
                 >
-                  <Card
-                    title={team.name}
-                    subtitle={team.season ? `Sezon: ${team.season}` : undefined}
-                    imageUrl={team.photo_url}
-                    description={
-                      (team.age_group
-                        ? `Grupa de vârstă: ${team.age_group}`
-                        : "") +
-                      (team.coaches && team.coaches.length > 0
-                        ? `${team.age_group ? "\n" : ""}Antrenor${team.coaches.length > 1 ? "i" : ""}: ${team.coaches.join(", ")}`
-                        : "")
-                    }
-                  />
+                  <Card title={team.name} imageUrl={team.photo_url} />
                 </div>
               ))
             )}

@@ -4,3 +4,18 @@
   --csc-on-primary: #fff;
   --csc-on-accent: #1e4d9b;
 }
+
+.footer {
+  background: #f8f9fa;
+  color: #222;
+  border-top: 2px solid var(--csc-accent);
+}
+.footer h5 {
+  color: var(--csc-primary);
+  font-weight: 700;
+}
+.footer a.nav-link-lang-toggle {
+  color: var(--csc-primary);
+  font-weight: 600;
+  text-decoration: underline;
+}

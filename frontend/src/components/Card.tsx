@@ -1,54 +1,52 @@
 import "./Card.css";
 import userPlaceholder from "../assets/user-placeholder.svg";
+import badgeImg from "../assets/CSCMosnita.png";
 
 export type CardProps = {
   title: string;
-  subtitle?: string;
   imageUrl?: string;
-  description?: string;
-  actions?: React.ReactNode;
   className?: string;
+  number?: string | number;
+  role?: string;
 };
 
 export const Card: React.FC<CardProps> = ({
   title,
-  subtitle,
   imageUrl,
-  description,
-  actions,
   className = "",
+  number,
+  role,
 }) => {
   return (
     <div
       className={`card team-card shadow-sm h-100 ${className}`}
-      style={{ maxWidth: 320 }}
+      style={{ maxWidth: 320, position: "relative" }}
     >
-      {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt={title}
-          className="card-img-top"
-          style={{ objectFit: "cover", maxHeight: 200 }}
-        />
-      ) : (
-        <img
-          src={userPlaceholder}
-          alt="placeholder"
-          className="card-img-top"
-          style={{
-            objectFit: "contain",
-            maxHeight: 200,
-            background: "#e3e9f7",
-          }}
-        />
-      )}
-      <div className="card-body d-flex flex-column">
-        <h5 className="card-title">{title}</h5>
-        {subtitle && (
-          <h6 className="card-subtitle mb-2 text-muted">{subtitle}</h6>
+      <div className="card-img-full-container">
+        {imageUrl ? (
+          <img src={imageUrl} alt={title} className="card-img-full" />
+        ) : (
+          <img
+            src={userPlaceholder}
+            alt="placeholder"
+            className="card-img-full"
+          />
         )}
-        {description && <p className="card-text">{description}</p>}
-        {actions && <div className="mt-auto">{actions}</div>}
+        <div className="card-bottom-bar">
+          <div className="card-bottom-bar-content">
+            {number && <span className="card-number-badge">{number}</span>}
+            {role && <span className="card-role-badge">{role}</span>}
+          </div>
+          <img src={badgeImg} alt="badge" className="card-badge-img-bottom" />
+        </div>
+      </div>
+      <div className="card-body d-flex flex-column card-body-name-only">
+        <h5
+          className="card-title"
+          style={{ textAlign: "center", width: "100%" }}
+        >
+          {title}
+        </h5>
       </div>
     </div>
   );

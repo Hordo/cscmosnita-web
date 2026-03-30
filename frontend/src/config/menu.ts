@@ -14,46 +14,45 @@ export type Column = MenuItem[];
 
 export const menuConfig: MenuItem[] = [
   {
-    label: "Antrenori",
-    path: "/coaches",
+    label: "menu.contact",
+    path: "/contact",
   },
   {
-    label: "Discipline",
+    label: "menu.disciplines",
     mega: true,
     children: [
       [],
       [],
       [
-        { label: "Fotbal", path: "/disciplines/fotbal" },
-        { label: "Baschet", path: "/disciplines/baschet" },
-        { label: "Handbal", path: "/disciplines/handbal" },
+        { label: "menu.football", path: "/disciplines/fotbal" },
+        { label: "menu.basketball", path: "/disciplines/baschet" },
+        { label: "menu.handball", path: "/disciplines/handbal" },
       ],
     ],
   },
   {
-    label: "Admin",
+    label: "menu.admin",
     mega: true,
     auth: true,
-    // Custom property to indicate admin-only
     adminOnly: true as any, // TypeScript workaround, will filter in navbar
     children: [
       [],
       [],
       [
-        { label: "Manage Teams", path: "/admin/create-team" },
-        { label: "Manage Coaches", path: "/admin/create-coach" },
-        { label: "Manage Players", path: "/admin/player" },
-        { label: "Manage Disciplines", path: "/admin/disciplines" },
+        { label: "menu.manage_teams", path: "/admin/create-team" },
+        { label: "menu.manage_coaches", path: "/admin/create-coach" },
+        { label: "menu.manage_players", path: "/admin/player" },
+        { label: "menu.manage_disciplines", path: "/admin/disciplines" },
       ],
     ],
   },
   {
-    label: "Login",
+    label: "login",
     path: "/login",
     auth: false,
   },
   {
-    label: "Logout",
+    label: "logout",
     path: "/logout",
     auth: true,
   },
