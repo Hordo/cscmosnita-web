@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
 import api from "../config/axios";
 import { API_URLS } from "../config/api";
 import type { Discipline, Team, Player } from "../../types/db";
@@ -26,7 +25,6 @@ const EventCreator: React.FC<EventCreatorProps> = ({
   onSubmit,
   selectedDate,
 }) => {
-  const { i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -163,9 +161,9 @@ const EventCreator: React.FC<EventCreatorProps> = ({
         // We need to find the team by name and compare IDs
         const playerTeamName = player.team; // This is "CSC Mosnita 2017"
         const formTeamId = formData.team; // This is "2"
-
+        console.log("Filtering players for team ID:", teams);
         // Find the team object that matches the player's team name
-        const matchingTeam = teams.find((t) => t.name === playerTeamName);
+        const matchingTeam = teams.find((t) => t.id === playerTeamName);
         const teamId = matchingTeam ? String(matchingTeam.id) : null;
 
         const matches = teamId === String(formTeamId);
