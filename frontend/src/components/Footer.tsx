@@ -1,5 +1,4 @@
 import "../styles/cscmosnita-colors.css";
-import "../styles/topnavbar.css";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 

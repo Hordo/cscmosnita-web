@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     TeamViewSet, CoachViewSet, PlayerViewSet,
     ChampionshipViewSet, MatchViewSet, DisciplineViewSet,
-    EventTypeViewSet, CalendarEventViewSet, TrainingSessionViewSet, EventAttendanceViewSet
+    EventTypeViewSet, CalendarEventViewSet, TrainingSessionViewSet, EventAttendanceViewSet,
+    PushSendNotificationsView,
 )
 from .signed_upload import (
     GeneratePlayerPhotoUploadURL, GenerateTeamPhotoUploadURL, GenerateCoachPhotoUploadURL, GenerateGeneralPhotoUploadURL
@@ -30,4 +31,6 @@ urlpatterns = [
     path('upload/team-photo/', GenerateTeamPhotoUploadURL.as_view(), name='upload_team_photo'),
     path('upload/coach-photo/', GenerateCoachPhotoUploadURL.as_view(), name='upload_coach_photo'),
     path('upload/general-photo/', GenerateGeneralPhotoUploadURL.as_view(), name='upload_general_photo'),
+    # Push notification endpoints (subscribe/unsubscribe handled by Vercel serverless)
+    path('push/send-notifications/', PushSendNotificationsView.as_view(), name='push_send_notifications'),
 ]

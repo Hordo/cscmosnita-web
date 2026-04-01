@@ -20,6 +20,7 @@ import About from "../pages/About";
 import Contact from "../pages/Contact";
 import GDPR from "../pages/GDPR";
 import Calendar from "../admin/Calendar";
+import NotificationPreferencesPage from "../pages/NotificationPreferencesPage";
 
 const router = createBrowserRouter([
   {
@@ -77,6 +78,7 @@ const router = createBrowserRouter([
       { path: "about", element: <About /> },
       { path: "contact", element: <Contact /> },
       { path: "gdpr", element: <GDPR /> },
+      { path: "notifications", element: <NotificationPreferencesPage /> },
       { path: "*", element: <NotFound /> },
     ],
   },

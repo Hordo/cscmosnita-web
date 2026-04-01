@@ -1,13 +1,16 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { menuConfig } from "../config/menu";
 import type { MenuItem, Column } from "../config/menu";
 import { useAuth } from "../context/AuthContext";
 import { useTranslation } from "react-i18next";
+import { usePushNotifications } from "../hooks/usePushNotifications";
 import "../styles/topnavbar.css";
 import "../styles/cscmosnita-colors.css";
 export default function TopNavbar() {
   const { user, logout } = useAuth();
   const { i18n, t } = useTranslation();
+  const { state: pushState } = usePushNotifications();
+  const navigate = useNavigate();
   const handleLogout = () => logout();
   const toggleLanguage = () => {
     i18n.changeLanguage(i18n.language === "ro" ? "en" : "ro");
@@ -46,6 +49,32 @@ export default function TopNavbar() {
         >
           {i18n.language === "ro" ? "EN" : "RO"}
         </a>
+        {pushState !== "unsupported" && (
+          <button
+            className="btn btn-link nav-link px-2"
+            style={{ fontSize: "1.1rem", lineHeight: 1 }}
+            title={t("notifications.enable")}
+            aria-label={t("notifications.enable")}
+            onClick={() => navigate("/notifications")}
+          >
+            {pushState === "subscribed"
+              ? "🔔"
+              : pushState === "denied"
+                ? "🔕"
+                : "🔔"}
+            {pushState === "denied" && (
+              <span
+                style={{
+                  fontSize: "0.6rem",
+                  verticalAlign: "super",
+                  color: "red",
+                }}
+              >
+                ✕
+              </span>
+            )}
+          </button>
+        )}
         <button
           className="navbar-toggler ms-auto"
           type="button"

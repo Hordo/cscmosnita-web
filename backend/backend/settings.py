@@ -120,6 +120,16 @@ REST_FRAMEWORK = {
     ],
 }
 
+# -----------------------------
+# WEB PUSH (VAPID)
+# Generate keys once with:
+#   python -c "from pywebpush import Vapid; v=Vapid(); v.generate_keys(); print('Private:', v.private_key); print('Public:', v.public_key)"
+# Then set these env vars on Koyeb and in .env locally.
+# -----------------------------
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_ADMIN_EMAIL = os.environ.get("VAPID_ADMIN_EMAIL", "admin@cscmosnita.ro")
+
 
 
 # -----------------------------

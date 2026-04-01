@@ -20,5 +20,4 @@ export const API_URLS = {
   calendarEvents: `${API_BASE}/api/calendar/events/`,
   calendarEventTypes: `${API_BASE}/api/calendar/event-types/`,
   calendarTrainings: `${API_BASE}/api/calendar/trainings/`,
-  // Add more endpoints as needed
 };

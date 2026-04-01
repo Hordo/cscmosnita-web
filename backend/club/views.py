@@ -165,7 +165,7 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
             raise
 
     def get_serializer_class(self):
-        if self.action == 'create':
+        if self.action in ('create', 'update', 'partial_update'):
             return CalendarEventCreateSerializer
         elif self.action == 'list':
             return CalendarEventListSerializer
@@ -260,13 +260,33 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
         """Mark event as cancelled"""
         event = self.get_object()
         cancellation_reason = request.data.get('cancellation_reason', '')
-        
+
         event.is_cancelled = True
         event.cancellation_reason = cancellation_reason
         event.save()
-        
+
         serializer = self.get_serializer(event)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='bulk')
+    def bulk_create(self, request):
+        """Create multiple events at once (used for recurring event series)."""
+        if not isinstance(request.data, list):
+            return Response({'error': 'Expected a list of events'}, status=status.HTTP_400_BAD_REQUEST)
+
+        created_user = request.user if request.user.is_authenticated else None
+        created_ids = []
+
+        for item in request.data:
+            serializer = CalendarEventCreateSerializer(data=item)
+            serializer.is_valid(raise_exception=True)
+            players_data = serializer.validated_data.pop('players', [])
+            event = CalendarEvent.objects.create(created_by=created_user, **serializer.validated_data)
+            if players_data:
+                event.players.set(players_data)
+            created_ids.append(event.id)
+
+        return Response({'created': len(created_ids), 'ids': created_ids}, status=status.HTTP_201_CREATED)
 
 
 class TrainingSessionViewSet(viewsets.ModelViewSet):
@@ -315,3 +335,85 @@ class EventAttendanceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Set recorded_by to current user when recording attendance"""
         serializer.save(recorded_by=self.request.user)
+
+
+# --- Web Push Notification Views ---
+
+import json
+from django.conf import settings
+from rest_framework.permissions import IsAdminUser
+from .models import PushSubscription
+
+
+def _send_push(subscription: PushSubscription, payload: dict) -> bool:
+    """Send a single push notification. Returns False if subscription is stale."""
+    try:
+        from pywebpush import webpush, WebPushException
+
+        webpush(
+            subscription_info={
+                "endpoint": subscription.endpoint,
+                "keys": {
+                    "p256dh": subscription.p256dh,
+                    "auth": subscription.auth,
+                },
+            },
+            data=json.dumps(payload),
+            vapid_private_key=settings.VAPID_PRIVATE_KEY,
+            vapid_claims={"sub": f"mailto:{settings.VAPID_ADMIN_EMAIL}"},
+        )
+        return True
+    except Exception as exc:
+        # HTTP 410 Gone → subscription expired, safe to delete
+        response = getattr(exc, "response", None)
+        if response is not None and getattr(response, "status_code", None) == 410:
+            subscription.delete()
+        return False
+
+
+class PushSendNotificationsView(APIView):
+    """Admin-only: send push notifications for upcoming calendar events (next 24h)."""
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        from django.utils import timezone
+        import datetime
+
+        hours_ahead = int(request.data.get("hours_ahead", 24))
+        now = timezone.now()
+        cutoff = now + datetime.timedelta(hours=hours_ahead)
+
+        events = CalendarEvent.objects.filter(
+            start_datetime__gte=now,
+            start_datetime__lte=cutoff,
+            is_cancelled=False,
+        ).select_related("event_type", "team", "discipline")
+
+        subscriptions = list(PushSubscription.objects.all())
+        sent = 0
+        failed = 0
+
+        for event in events:
+            details = []
+            if event.team:
+                details.append(event.team.name)
+            if event.location:
+                details.append(event.location)
+
+            payload = {
+                "title": event.title,
+                "body": (
+                    f"{event.start_datetime.strftime('%d.%m %H:%M')}"
+                    + (f" · {', '.join(details)}" if details else "")
+                ),
+                "url": "/",
+            }
+
+            for sub in subscriptions:
+                if _send_push(sub, payload):
+                    sent += 1
+                else:
+                    failed += 1
+
+        return Response({"events": events.count(), "sent": sent, "failed": failed})
+

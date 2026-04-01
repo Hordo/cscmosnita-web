@@ -16,15 +16,13 @@ Deploy steps on Koyeb:
 from django.db import migrations
 
 
-class Migration(migrations.Migration):
+def run_postgres_only(apps, schema_editor):
+    """Run the force-sync SQL only on PostgreSQL (Aiven/Koyeb).
+    Silently skips on SQLite so local development is unaffected."""
+    if schema_editor.connection.vendor != 'postgresql':
+        return
 
-    dependencies = [
-        ('club', '0002_update_match'),
-    ]
-
-    operations = [
-        migrations.RunSQL(
-            sql=[
+    statements = [
 
                 # ==============================================================
                 # TABLES — Create if missing (new databases / full reset)
@@ -243,7 +241,21 @@ class Migration(migrations.Migration):
                 "ALTER TABLE club_calendarevent ADD COLUMN IF NOT EXISTS cancellation_reason TEXT;",
                 "ALTER TABLE club_calendarevent ADD COLUMN IF NOT EXISTS discipline_id       BIGINT REFERENCES club_discipline(id) ON DELETE SET NULL;",
                 "ALTER TABLE club_calendarevent ADD COLUMN IF NOT EXISTS event_type_id       BIGINT REFERENCES club_eventtype(id)  ON DELETE SET NULL;",
-            ],
-            reverse_sql=migrations.RunSQL.noop,
-        ),
+    ]
+
+    with schema_editor.connection.cursor() as cursor:
+        for sql in statements:
+            sql = sql.strip()
+            if sql:
+                cursor.execute(sql)
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('club', '0002_update_match'),
+    ]
+
+    operations = [
+        migrations.RunPython(run_postgres_only, reverse_code=migrations.RunPython.noop),
     ]

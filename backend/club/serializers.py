@@ -181,6 +181,8 @@ class CalendarEventSerializer(serializers.ModelSerializer):
             'start_datetime', 'end_datetime', 'all_day', 'location',
             'is_cancelled', 'cancellation_reason', 'players', 'created_by',
             'created_at', 'updated_at',
+            'is_recurring', 'recurrence_rule', 'recurrence_interval',
+            'recurrence_end_date', 'recurrence_group_id',
             # Write-only fields
             'event_type_id', 'discipline_id', 'team_id', 'player_ids'
         ]
@@ -205,14 +207,15 @@ class CalendarEventSerializer(serializers.ModelSerializer):
 
 class CalendarEventCreateSerializer(serializers.ModelSerializer):
     """Simplified serializer for creating calendar events"""
-    event_type_id = serializers.PrimaryKeyRelatedField(
-        queryset=EventType.objects.all(), source="event_type", write_only=True, required=False
+    event_type_id = serializers.SlugRelatedField(
+        queryset=EventType.objects.all(), source="event_type",
+        slug_field="name", write_only=True, required=False, allow_null=True
     )
     discipline_id = serializers.PrimaryKeyRelatedField(
-        queryset=Discipline.objects.all(), source="discipline", write_only=True, required=False
+        queryset=Discipline.objects.all(), source="discipline", write_only=True, required=False, allow_null=True
     )
     team_id = serializers.PrimaryKeyRelatedField(
-        queryset=Team.objects.all(), source="team", write_only=True, required=False
+        queryset=Team.objects.all(), source="team", write_only=True, required=False, allow_null=True
     )
     player_ids = serializers.PrimaryKeyRelatedField(
         queryset=Player.objects.all(), source="players", many=True, write_only=True, required=False
@@ -223,7 +226,9 @@ class CalendarEventCreateSerializer(serializers.ModelSerializer):
         fields = [
             'title', 'description', 'event_type_id', 'discipline_id', 'team_id',
             'start_datetime', 'end_datetime', 'all_day', 'location',
-            'player_ids'
+            'player_ids',
+            'is_recurring', 'recurrence_rule', 'recurrence_interval',
+            'recurrence_end_date', 'recurrence_group_id',
         ]
 
     def __init__(self, *args, **kwargs):
@@ -284,6 +289,15 @@ class CalendarEventCreateSerializer(serializers.ModelSerializer):
             traceback.print_exc()
             raise
 
+    def update(self, instance, validated_data):
+        players_data = validated_data.pop('players', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if players_data is not None:
+            instance.players.set(players_data)
+        return instance
+
 
 class TrainingSessionSerializer(serializers.ModelSerializer):
     """Training session serializer with related calendar event"""
@@ -319,7 +333,7 @@ class CalendarEventListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'start_datetime', 'end_datetime', 'all_day',
             'location', 'is_cancelled', 'event_type', 'discipline', 'team',
-            'player_count'
+            'player_count', 'is_recurring', 'recurrence_group_id',
         ]
 
     def __init__(self, *args, **kwargs):

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card } from "../components/Card";
 import userPlaceholder from "../assets/user-placeholder.svg";
-import "../styles/adminStyles.css";
 import { useTranslation } from "react-i18next";
 
 export const TeamViewerPage: React.FC = () => {
@@ -12,12 +11,17 @@ export const TeamViewerPage: React.FC = () => {
   const [players, setPlayers] = useState<any[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
   const [disciplines, setDisciplines] = useState<any[]>([]);
+  const [weekEvents, setWeekEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
+    const eventsUrl = teamId
+      ? `/api/calendar-events?team_id=${teamId}`
+      : "/api/calendar-events";
+
     Promise.all([
       fetch("/api/teams").then(async (res) => {
         if (!res.ok) throw new Error(await res.text());
@@ -35,13 +39,26 @@ export const TeamViewerPage: React.FC = () => {
         if (!res.ok) throw new Error(await res.text());
         return res.json();
       }),
+      fetch(eventsUrl).then(async (res) => {
+        if (!res.ok) return [];
+        return res.json();
+      }),
     ])
-      .then(([teamsData, playersData, coachesData, disciplinesData]) => {
-        setTeams(teamsData);
-        setPlayers(playersData);
-        setCoaches(coachesData);
-        setDisciplines(disciplinesData);
-      })
+      .then(
+        ([
+          teamsData,
+          playersData,
+          coachesData,
+          disciplinesData,
+          eventsData,
+        ]) => {
+          setTeams(teamsData);
+          setPlayers(playersData);
+          setCoaches(coachesData);
+          setDisciplines(disciplinesData);
+          setWeekEvents(eventsData);
+        },
+      )
       .catch((err) => setError(err.message || "Unknown error"))
       .finally(() => setLoading(false));
   }, []);
@@ -92,13 +109,73 @@ export const TeamViewerPage: React.FC = () => {
         </div>
         <h2 className="mb-0 text-center flex-grow-1">{team.name}</h2>
       </div>
-      <div className="mb-4">
+      <div className="mb-4 d-flex gap-2 flex-wrap">
         <Link
           to={`/teams/${team.id}/matches`}
           className="btn btn-outline-primary"
         >
           🏆 {t("view_matches")}
         </Link>
+      </div>
+
+      {/* This week's schedule */}
+      <div className="card mb-4">
+        <div className="card-header fw-semibold">📅 {t("this_week")}</div>
+        <div className="card-body p-0">
+          {weekEvents.length === 0 ? (
+            <p className="text-muted m-3">{t("no_events_this_week")}</p>
+          ) : (
+            <ul className="list-group list-group-flush">
+              {weekEvents.map((ev) => {
+                const start = new Date(ev.start_datetime);
+                const end = new Date(ev.end_datetime);
+                const dayLabel = start.toLocaleDateString(undefined, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                });
+                const timeLabel = ev.all_day
+                  ? t("all_day")
+                  : `${start.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })} – ${end.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+                const typeColor: Record<string, string> = {
+                  training: "success",
+                  match: "danger",
+                  meeting: "primary",
+                  other: "secondary",
+                };
+                const color = typeColor[ev.event_type] ?? "secondary";
+                return (
+                  <li
+                    key={ev.id}
+                    className="list-group-item d-flex align-items-start gap-3 py-2"
+                  >
+                    <div
+                      className="text-muted"
+                      style={{ minWidth: 90, fontSize: "0.82rem" }}
+                    >
+                      <div className="fw-semibold">{dayLabel}</div>
+                      <div>{timeLabel}</div>
+                    </div>
+                    <div className="flex-grow-1">
+                      <span className={`badge bg-${color} me-2`}>
+                        {ev.event_type}
+                      </span>
+                      <span className="fw-semibold">{ev.title}</span>
+                      {ev.location && (
+                        <div
+                          className="text-muted"
+                          style={{ fontSize: "0.8rem" }}
+                        >
+                          📍 {ev.location}
+                        </div>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
       <div className="row mb-4">
         {teamCoaches.map((coach) => (
@@ -143,6 +220,7 @@ export const TeamViewerPage: React.FC = () => {
                 number={player.number || undefined}
                 imageUrl={player.photo_url || undefined}
                 className="player-card"
+                badgesOnImage
               />
             </div>
           ))

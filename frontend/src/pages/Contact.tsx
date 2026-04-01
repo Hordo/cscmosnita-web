@@ -117,21 +117,13 @@ export default function Contact() {
               {disciplines.map((discipline) => (
                 <div className="col-md-4 mb-4" key={discipline.id}>
                   {discipline.head_coach ? (
-                    <>
-                      <Card
-                        title={`${discipline.head_coach.first_name} ${discipline.head_coach.last_name}`}
-                        imageUrl={discipline.head_coach.photo_url}
-                        role={`${getHeadCoachTitle()} ${getDisciplineName(discipline)}`}
-                      />
-                      <div style={{ textAlign: "center", marginTop: 8 }}>
-                        {discipline.head_coach.phone && (
-                          <span style={{ fontWeight: 500 }}>
-                            {isRO ? "Telefon: " : "Phone: "}
-                            {discipline.head_coach.phone}
-                          </span>
-                        )}
-                      </div>
-                    </>
+                    <Card
+                      title={`${discipline.head_coach.first_name} ${discipline.head_coach.last_name}`}
+                      imageUrl={discipline.head_coach.photo_url}
+                      role={`${getHeadCoachTitle()} ${getDisciplineName(discipline)}`}
+                      phone={discipline.head_coach.phone}
+                      badgesOnImage
+                    />
                   ) : (
                     <Card
                       title={getHeadCoachTitle()}

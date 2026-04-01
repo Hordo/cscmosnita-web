@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from "react";
 import "../styles/adminStyles.css";
-import { ReusableAdminForm } from "./ReusableAdminForm";
-import type { AdminFormField } from "./ReusableAdminForm";
 import { ReusableAdminTable } from "./ReusableAdminTable";
 import type { AdminTableColumn } from "./ReusableAdminTable";
 import { API_URLS } from "../config/api";
 import api, { setAuthToken } from "../config/axios";
 import { useAuth } from "../context/AuthContext";
+
+const FormGroup: React.FC<{ label: string; children: React.ReactNode }> = ({
+  label,
+  children,
+}) => (
+  <div className="mb-2">
+    <label className="form-label">{label}</label>
+    {children}
+  </div>
+);
 
 const matchColumns: AdminTableColumn[] = [
   { key: "home_team_name", label: "Home Team" },
@@ -14,20 +22,32 @@ const matchColumns: AdminTableColumn[] = [
   { key: "away_score", label: "Away Score" },
   { key: "away_team_name", label: "Away Team" },
   { key: "date", label: "Date" },
-  { key: "team_name", label: "Our Team" },
 ];
+
+const emptyForm = {
+  discipline_id: "",
+  team_id: "",
+  home_score: "",
+  away_score: "",
+  away_team_name: "",
+  date: "",
+  youtube_link: "",
+};
 
 const MatchAdminPage: React.FC = () => {
   const { user } = useAuth();
   const [matches, setMatches] = useState<any[]>([]);
+  const [disciplines, setDisciplines] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
-  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user?.access) {
       setMatches([]);
+      setDisciplines([]);
       setTeams([]);
       setError(null);
       setLoading(false);
@@ -39,11 +59,13 @@ const MatchAdminPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const [matchesRes, teamsRes] = await Promise.all([
+        const [matchesRes, disciplinesRes, teamsRes] = await Promise.all([
           api.get(API_URLS.matches),
+          api.get(API_URLS.disciplines),
           api.get(API_URLS.teams),
         ]);
         setMatches(matchesRes.data);
+        setDisciplines(disciplinesRes.data);
         setTeams(teamsRes.data);
       } catch (err: any) {
         setError(err.response?.data?.detail || err.message || "Unknown error");
@@ -54,71 +76,43 @@ const MatchAdminPage: React.FC = () => {
     fetchAll();
   }, [user]);
 
-  const matchFields: AdminFormField[] = [
-    {
-      name: "team_id",
-      label: "Our Team (optional)",
-      type: "select",
-      required: false,
-      options: [
-        { value: "", label: "— None —" },
-        ...teams.map((t: any) => ({ value: String(t.id), label: t.name })),
-      ],
-    },
-    { name: "date", label: "Date", type: "date", required: false },
-    {
-      name: "home_team_name",
-      label: "Home Team",
-      type: "text",
-      required: true,
-    },
-    {
-      name: "home_score",
-      label: "Home Score",
-      type: "number",
-      required: false,
-    },
-    {
-      name: "away_score",
-      label: "Away Score",
-      type: "number",
-      required: false,
-    },
-    {
-      name: "away_team_name",
-      label: "Away Team",
-      type: "text",
-      required: true,
-    },
-    {
-      name: "youtube_link",
-      label: "YouTube Link",
-      type: "text",
-      required: false,
-    },
-  ];
+  const filteredTeams = form.discipline_id
+    ? teams.filter((t: any) => t.discipline === form.discipline_id)
+    : [];
 
-  const buildPayload = (values: any) => ({
-    team_id: values.team_id || null,
-    date: values.date || null,
-    home_team_name: values.home_team_name,
-    away_team_name: values.away_team_name,
-    home_score:
-      values.home_score !== "" && values.home_score !== undefined
-        ? Number(values.home_score)
-        : null,
-    away_score:
-      values.away_score !== "" && values.away_score !== undefined
-        ? Number(values.away_score)
-        : null,
-    youtube_link: values.youtube_link || "",
+  const selectedTeam = teams.find((t: any) => String(t.id) === form.team_id);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
+    const { name, value } = e.target;
+    if (name === "discipline_id") {
+      setForm((prev) => ({ ...prev, discipline_id: value, team_id: "" }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const buildPayload = () => ({
+    team_id: form.team_id || null,
+    home_team_name: selectedTeam?.name || "",
+    away_team_name: form.away_team_name,
+    home_score: form.home_score !== "" ? Number(form.home_score) : null,
+    away_score: form.away_score !== "" ? Number(form.away_score) : null,
+    date: form.date || null,
+    youtube_link: form.youtube_link || "",
   });
 
-  const handleCreate = async (values: any) => {
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.team_id) return setError("Please select a team.");
+    if (!form.away_team_name.trim())
+      return setError("Away team name is required.");
     setError(null);
     try {
-      const res = await api.post(API_URLS.matches, buildPayload(values));
+      const res = await api.post(API_URLS.matches, buildPayload());
       setMatches((prev) => [...prev, res.data]);
+      setForm(emptyForm);
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
@@ -130,33 +124,35 @@ const MatchAdminPage: React.FC = () => {
   };
 
   const handleEdit = (row: any) => {
-    setEditIndex(matches.findIndex((m) => m.id === row.id));
+    const match = matches.find((m) => m.id === row.id);
+    if (!match) return;
+    const team = teams.find((t: any) => t.id === match.team);
+    setEditId(match.id);
+    setForm({
+      discipline_id: team ? team.discipline : "",
+      team_id: match.team ? String(match.team) : "",
+      home_score: match.home_score != null ? String(match.home_score) : "",
+      away_score: match.away_score != null ? String(match.away_score) : "",
+      away_team_name: match.away_team_name || "",
+      date: match.date || "",
+      youtube_link: match.youtube_link || "",
+    });
   };
 
-  const handleDelete = async (row: any) => {
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.team_id) return setError("Please select a team.");
+    if (!form.away_team_name.trim())
+      return setError("Away team name is required.");
     setError(null);
-    try {
-      await api.delete(`${API_URLS.matches}${row.id}/`);
-      setMatches(matches.filter((m) => m.id !== row.id));
-      setEditIndex(null);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || "Unknown error");
-    }
-  };
-
-  const handleUpdate = async (values: any) => {
-    if (editIndex === null) return;
-    setError(null);
-    const matchId = matches[editIndex].id;
     try {
       const res = await api.put(
-        `${API_URLS.matches}${matchId}/`,
-        buildPayload(values),
+        `${API_URLS.matches}${editId}/`,
+        buildPayload(),
       );
-      const updated = [...matches];
-      updated[editIndex] = res.data;
-      setMatches(updated);
-      setEditIndex(null);
+      setMatches((prev) => prev.map((m) => (m.id === editId ? res.data : m)));
+      setEditId(null);
+      setForm(emptyForm);
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
@@ -167,15 +163,24 @@ const MatchAdminPage: React.FC = () => {
     }
   };
 
-  const editInitialValues =
-    editIndex !== null
-      ? {
-          ...matches[editIndex],
-          team_id: matches[editIndex].team
-            ? String(matches[editIndex].team)
-            : "",
-        }
-      : {};
+  const handleDelete = async (row: any) => {
+    setError(null);
+    try {
+      await api.delete(`${API_URLS.matches}${row.id}/`);
+      setMatches(matches.filter((m) => m.id !== row.id));
+      if (editId === row.id) {
+        setEditId(null);
+        setForm(emptyForm);
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || "Unknown error");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditId(null);
+    setForm(emptyForm);
+  };
 
   if (!user?.access) {
     return (
@@ -194,18 +199,125 @@ const MatchAdminPage: React.FC = () => {
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <h4 className="mb-3">
-                {editIndex === null ? "Create Match" : "Edit Match"}
+                {editId === null ? "Create Match" : "Edit Match"}
               </h4>
-              <ReusableAdminForm
-                fields={matchFields}
-                onSubmit={editIndex === null ? handleCreate : handleUpdate}
-                initialValues={editInitialValues}
-                submitLabel={editIndex === null ? "Create" : "Update"}
-              />
-              {editIndex !== null && (
+              <form onSubmit={editId === null ? handleCreate : handleUpdate}>
+                {/* Step 1: Discipline */}
+                <FormGroup label="Discipline">
+                  <select
+                    className="form-select"
+                    name="discipline_id"
+                    value={form.discipline_id}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">— Select discipline —</option>
+                    {disciplines.map((d: any) => (
+                      <option key={d.id} value={d.name}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormGroup>
+
+                {/* Step 2: Our Team (home team) */}
+                <FormGroup label="Our Team (Home)">
+                  <select
+                    className="form-select"
+                    name="team_id"
+                    value={form.team_id}
+                    onChange={handleChange}
+                    required
+                    disabled={!form.discipline_id}
+                  >
+                    <option value="">
+                      {form.discipline_id
+                        ? "— Select team —"
+                        : "— Select a discipline first —"}
+                    </option>
+                    {filteredTeams.map((t: any) => (
+                      <option key={t.id} value={String(t.id)}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormGroup>
+
+                {/* Scores */}
+                <div className="row mb-2">
+                  <div className="col">
+                    <label className="form-label">
+                      {selectedTeam
+                        ? `${selectedTeam.name} Score`
+                        : "Home Score"}
+                    </label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      name="home_score"
+                      value={form.home_score}
+                      onChange={handleChange}
+                      min={0}
+                    />
+                  </div>
+                  <div className="col">
+                    <label className="form-label">Away Score</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      name="away_score"
+                      value={form.away_score}
+                      onChange={handleChange}
+                      min={0}
+                    />
+                  </div>
+                </div>
+
+                {/* Opponent */}
+                <FormGroup label="Away Team (Opponent)">
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="away_team_name"
+                    value={form.away_team_name}
+                    onChange={handleChange}
+                    required
+                    placeholder="Opponent team name"
+                  />
+                </FormGroup>
+
+                {/* Date */}
+                <FormGroup label="Date (optional)">
+                  <input
+                    type="date"
+                    className="form-control"
+                    name="date"
+                    value={form.date}
+                    onChange={handleChange}
+                  />
+                </FormGroup>
+
+                {/* YouTube link */}
+                <div className="mb-3">
+                  <label className="form-label">YouTube Link (optional)</label>
+                  <input
+                    type="url"
+                    className="form-control"
+                    name="youtube_link"
+                    value={form.youtube_link}
+                    onChange={handleChange}
+                    placeholder="https://youtube.com/..."
+                  />
+                </div>
+
+                <button type="submit" className="btn btn-primary w-100">
+                  {editId === null ? "Create" : "Update"}
+                </button>
+              </form>
+              {editId !== null && (
                 <button
                   className="btn btn-secondary mt-2 w-100"
-                  onClick={() => setEditIndex(null)}
+                  onClick={handleCancelEdit}
                 >
                   Cancel Edit
                 </button>

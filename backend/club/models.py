@@ -132,6 +132,28 @@ class CalendarEvent(models.Model):
     is_cancelled = models.BooleanField(default=False)
     cancellation_reason = models.TextField(blank=True, null=True)
     
+    # Recurrence
+    is_recurring = models.BooleanField(default=False)
+    recurrence_rule = models.CharField(max_length=10, blank=True, null=True, choices=[
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+    ])
+    recurrence_interval = models.PositiveIntegerField(default=1, null=True, blank=True)
+    recurrence_end_date = models.DateField(blank=True, null=True)
+    recurrence_group_id = models.UUIDField(blank=True, null=True, db_index=True)
+
+    # Recurrence
+    is_recurring = models.BooleanField(default=False)
+    recurrence_rule = models.CharField(max_length=10, blank=True, null=True, choices=[
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+    ])
+    recurrence_interval = models.PositiveIntegerField(default=1, null=True, blank=True)
+    recurrence_end_date = models.DateField(blank=True, null=True)
+    recurrence_group_id = models.UUIDField(blank=True, null=True, db_index=True)
+
     # Attendance tracking
     players = models.ManyToManyField(Player, blank=True, related_name="calendar_events")
     
@@ -197,3 +219,24 @@ class EventAttendance(models.Model):
         verbose_name = "Event Attendance"
         verbose_name_plural = "Event Attendance"
         unique_together = ['calendar_event', 'player']
+
+
+class PushSubscription(models.Model):
+    """Stores browser Web Push subscriptions for sending notifications."""
+    endpoint = models.TextField(unique=True)
+    p256dh = models.TextField()
+    auth = models.TextField()
+    user = models.ForeignKey(
+        'auth.User', on_delete=models.CASCADE,
+        null=True, blank=True, related_name='push_subscriptions'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    discipline_ids = models.TextField(default='[]', help_text='JSON array of discipline IDs the subscriber wants notifications for')
+    team_ids = models.TextField(default='[]', help_text='JSON array of team IDs the subscriber wants notifications for')
+
+    def __str__(self):
+        return f"PushSubscription({self.endpoint[:60]}…)"
+
+    class Meta:
+        verbose_name = "Push Subscription"
+        verbose_name_plural = "Push Subscriptions"

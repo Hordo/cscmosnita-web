@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -22,15 +22,17 @@ interface CalendarEvent {
     event_type: string;
     discipline: string | null;
     team: string | null;
+    teamId: number | null;
     players: any[];
     location: string | null;
     description: string | null;
+    recurrence_group_id: string | null;
   };
 }
 
 const Calendar: React.FC = () => {
   const { i18n } = useTranslation();
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEventModal, setShowEventModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -38,16 +40,62 @@ const Calendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null,
   );
+  const [deleting, setDeleting] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+
+  // Filter state
+  const [filterDiscipline, setFilterDiscipline] = useState("");
+  const [filterTeam, setFilterTeam] = useState("");
+  const [filterType, setFilterType] = useState("");
+
+  // Derived filter options
+  const disciplines = useMemo(() => {
+    const names = allEvents
+      .map((e) => e.extendedProps?.discipline)
+      .filter(Boolean) as string[];
+    return [...new Set(names)].sort();
+  }, [allEvents]);
+
+  const teams = useMemo(() => {
+    const base = allEvents.filter(
+      (e) =>
+        !filterDiscipline || e.extendedProps?.discipline === filterDiscipline,
+    );
+    const names = base
+      .map((e) => e.extendedProps?.team)
+      .filter(Boolean) as string[];
+    return [...new Set(names)].sort();
+  }, [allEvents, filterDiscipline]);
+
+  const eventTypes = useMemo(() => {
+    const types = allEvents
+      .map((e) => e.extendedProps?.event_type)
+      .filter(Boolean) as string[];
+    return [...new Set(types)].sort();
+  }, [allEvents]);
+
+  // Filtered events passed to FullCalendar
+  const events = useMemo(
+    () =>
+      allEvents.filter((e) => {
+        if (!e.extendedProps) return true;
+        if (filterDiscipline && e.extendedProps.discipline !== filterDiscipline)
+          return false;
+        if (filterTeam && e.extendedProps.team !== filterTeam) return false;
+        if (filterType && e.extendedProps.event_type !== filterType)
+          return false;
+        return true;
+      }),
+    [allEvents, filterDiscipline, filterTeam, filterType],
+  );
 
   // Fetch events from API
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
-
       const response = await api.get(API_URLS.calendarEvents);
       const eventsData = response.data;
 
-      // Transform events for FullCalendar
       const transformedEvents = eventsData.map((event: any) => ({
         id: event.id.toString(),
         title: event.title,
@@ -60,16 +108,17 @@ const Calendar: React.FC = () => {
           event_type: event.event_type?.name || "Other",
           discipline: event.discipline?.name || null,
           team: event.team?.name || null,
+          teamId: event.team?.id || null,
           players: event.players || [],
           location: event.location,
           description: event.description,
+          recurrence_group_id: event.recurrence_group_id || null,
         },
       }));
 
-      setEvents(transformedEvents);
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      setEvents([]);
+      setAllEvents(transformedEvents);
+    } catch {
+      setAllEvents([]);
     } finally {
       setLoading(false);
     }
@@ -81,40 +130,33 @@ const Calendar: React.FC = () => {
   }, [fetchEvents]);
 
   const handleDateClick = useCallback((arg: any) => {
-    const clickedDate = new Date(arg.date);
-
-    // For month view, only pick the date, let user choose time
-    const dateStr = clickedDate.toISOString().split("T")[0];
+    // arg.dateStr is local-timezone: "YYYY-MM-DD" in month view,
+    // "YYYY-MM-DDTHH:MM:SS" in week/day view — no UTC offset issues
+    const parts = (arg.dateStr as string).split("T");
+    const dateStr = parts[0];
+    const timeStr = parts[1] ? parts[1].slice(0, 5) : "";
 
     setSelectedDate(dateStr);
     setShowEventModal(true);
 
-    // Store only the date, no time suggestion for month view
     sessionStorage.setItem(
       "suggestedDateTime",
-      JSON.stringify({
-        date: dateStr,
-        time: "", // No time pre-selection for month view
-      }),
+      JSON.stringify({ date: dateStr, time: timeStr }),
     );
   }, []);
 
   const handleSlotClick = useCallback((arg: any) => {
-    // Handle time slot clicks in week/day views
-    const clickedDateTime = new Date(arg.date);
-    const dateStr = clickedDateTime.toISOString().split("T")[0];
-    const timeStr = `${clickedDateTime.getHours().toString().padStart(2, "0")}:${clickedDateTime.getMinutes().toString().padStart(2, "0")}`;
+    // arg.startStr is local-timezone YYYY-MM-DDTHH:MM:SS
+    const parts = (arg.startStr as string).split("T");
+    const dateStr = parts[0];
+    const timeStr = parts[1] ? parts[1].slice(0, 5) : "";
 
     setSelectedDate(dateStr);
     setShowEventModal(true);
 
-    // Store the exact time slot that was clicked
     sessionStorage.setItem(
       "suggestedDateTime",
-      JSON.stringify({
-        date: dateStr,
-        time: timeStr,
-      }),
+      JSON.stringify({ date: dateStr, time: timeStr }),
     );
   }, []);
 
@@ -124,12 +166,46 @@ const Calendar: React.FC = () => {
   }, []);
 
   const handleNewEvent = () => {
+    setEditingEvent(null);
     setSelectedDate("");
     setShowEventModal(true);
   };
 
+  const handleEditEvent = () => {
+    setShowDetailsModal(false);
+    setEditingEvent(selectedEvent);
+    setShowEventModal(true);
+  };
+
+  const handleDeleteEvent = async (deleteAll: boolean) => {
+    if (!selectedEvent) return;
+    setDeleting(true);
+    try {
+      if (deleteAll && selectedEvent.extendedProps.recurrence_group_id) {
+        // delete all events sharing the same recurrence_group_id
+        const groupId = selectedEvent.extendedProps.recurrence_group_id;
+        const toDelete = allEvents.filter(
+          (e) => e.extendedProps.recurrence_group_id === groupId,
+        );
+        await Promise.all(
+          toDelete.map((e) => api.delete(`${API_URLS.calendarEvents}${e.id}/`)),
+        );
+      } else {
+        await api.delete(`${API_URLS.calendarEvents}${selectedEvent.id}/`);
+      }
+      setShowDetailsModal(false);
+      setSelectedEvent(null);
+      fetchEvents();
+    } catch {
+      // silently refresh to get current state
+      fetchEvents();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleCreateEvent = (newEvent: any) => {
-    setEvents([...events, newEvent]);
+    setAllEvents((prev) => [...prev, newEvent]);
     setShowEventModal(false);
 
     // Refresh events to get the latest data
@@ -160,11 +236,72 @@ const Calendar: React.FC = () => {
           </p>
         </div>
         <div className="calendar-actions">
-          <button className="btn btn-primary" onClick={handleNewEvent}>
-            <span className="btn-icon">+</span>
+          <button className="cal-btn cal-btn-primary" onClick={handleNewEvent}>
+            <span className="cal-btn-icon">+</span>
             New Event
           </button>
         </div>
+      </div>
+
+      {/* Filters */}
+      <div className="calendar-filters">
+        <div className="filter-group">
+          <label>Discipline</label>
+          <select
+            value={filterDiscipline}
+            onChange={(e) => {
+              setFilterDiscipline(e.target.value);
+              setFilterTeam("");
+            }}
+          >
+            <option value="">All disciplines</option>
+            {disciplines.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label>Team</label>
+          <select
+            value={filterTeam}
+            onChange={(e) => setFilterTeam(e.target.value)}
+          >
+            <option value="">All teams</option>
+            {teams.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label>Event type</label>
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            <option value="">All types</option>
+            {eventTypes.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        {(filterDiscipline || filterTeam || filterType) && (
+          <button
+            className="btn btn-sm btn-outline-secondary align-self-end"
+            onClick={() => {
+              setFilterDiscipline("");
+              setFilterTeam("");
+              setFilterType("");
+            }}
+          >
+            ✕ Clear filters
+          </button>
+        )}
       </div>
 
       <div className="calendar-wrapper">
@@ -187,8 +324,10 @@ const Calendar: React.FC = () => {
             dateClick={handleDateClick}
             select={handleSlotClick}
             eventClick={handleEventClick}
-            height="auto"
-            contentHeight={600}
+            height="100%"
+            scrollTime="08:00:00"
+            slotMinTime="06:00:00"
+            slotMaxTime="23:00:00"
             displayEventTime={true}
             eventTimeFormat={{
               hour: "2-digit",
@@ -274,9 +413,13 @@ const Calendar: React.FC = () => {
       {/* Event Creation Modal */}
       <EventCreator
         isOpen={showEventModal}
-        onClose={() => setShowEventModal(false)}
+        onClose={() => {
+          setShowEventModal(false);
+          setEditingEvent(null);
+        }}
         onSubmit={handleCreateEvent}
         selectedDate={selectedDate}
+        editEvent={editingEvent}
       />
 
       {/* Event Details Modal */}
@@ -368,6 +511,25 @@ const Calendar: React.FC = () => {
             </div>
 
             <div className="modal-footer">
+              {selectedEvent.extendedProps.recurrence_group_id && (
+                <button
+                  className="btn btn-outline-danger me-auto"
+                  onClick={() => handleDeleteEvent(true)}
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting…" : "Delete all in series"}
+                </button>
+              )}
+              <button className="btn btn-primary" onClick={handleEditEvent}>
+                Edit
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => handleDeleteEvent(false)}
+                disabled={deleting}
+              >
+                {deleting ? "Deleting…" : "Delete this event"}
+              </button>
               <button
                 className="btn btn-secondary"
                 onClick={() => setShowDetailsModal(false)}
