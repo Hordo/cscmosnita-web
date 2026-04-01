@@ -43,6 +43,7 @@ export const menuConfig: MenuItem[] = [
         { label: "menu.manage_coaches", path: "/admin/create-coach" },
         { label: "menu.manage_players", path: "/admin/player" },
         { label: "menu.manage_disciplines", path: "/admin/disciplines" },
+        { label: "menu.manage_matches", path: "/admin/matches" },
       ],
     ],
   },

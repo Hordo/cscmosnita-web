@@ -20,5 +20,16 @@
   "menu.manage_coaches": "Manage Coaches",
   "menu.manage_players": "Manage Players",
   "menu.manage_disciplines": "Manage Disciplines",
-  "menu.calendar": "Calendar"
+  "menu.manage_matches": "Manage Matches",
+  "menu.calendar": "Calendar",
+  "view_matches": "View Matches",
+  "matches": "Matches",
+  "no_matches": "No matches found for this team.",
+  "back_to_team": "Back to Team",
+  "home_team": "Home Team",
+  "away_team": "Away Team",
+  "score": "Score",
+  "video": "Video",
+  "watch_video": "Watch Video",
+  "date": "Date"
 }

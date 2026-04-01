@@ -76,20 +76,17 @@ class Championship(models.Model):
 
 
 class Match(models.Model):
-    championship = models.ForeignKey(Championship, on_delete=models.CASCADE, related_name="matches")
-    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="matches")
-
-    date = models.DateField()
-    home = models.BooleanField(default=True)
-
-    opponent_name = models.CharField(max_length=150)
-    our_score = models.IntegerField(null=True, blank=True)
-    opponent_score = models.IntegerField(null=True, blank=True)
-
+    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name="matches")
+    date = models.DateField(null=True, blank=True)
+    home_team_name = models.CharField(max_length=150)
+    away_team_name = models.CharField(max_length=150)
+    home_score = models.IntegerField(null=True, blank=True)
+    away_score = models.IntegerField(null=True, blank=True)
     youtube_link = models.URLField(blank=True)
 
     def __str__(self):
-        return f"{self.team.name} vs {self.opponent_name} ({self.date})"
+        score = f"{self.home_score}-{self.away_score}" if self.home_score is not None else "vs"
+        return f"{self.home_team_name} {score} {self.away_team_name} ({self.date or 'no date'})"
 
 
 # Calendar Models

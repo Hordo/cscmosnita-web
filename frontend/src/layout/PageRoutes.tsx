@@ -8,8 +8,10 @@ import PlayerAdminPage from "../admin/PlayerAdminPage";
 import TeamAdminPage from "../admin/TeamAdminPage";
 import AdminOnlyRoute from "../admin/AdminOnlyRoute";
 import CoachAdminPage from "../admin/CoachAdminPage";
+import MatchAdminPage from "../admin/MatchAdminPage";
 import NotFound from "../pages/NotFound";
 import { TeamViewerPage } from "../pages/TeamViewerPage";
+import { TeamMatchesPage } from "../pages/TeamMatchesPage";
 import { DisciplineDetailPage } from "../pages/DisciplineDetailPage";
 import DisciplineAdminPage from "../admin/DisciplineAdminPage";
 import Terms from "../pages/Terms";
@@ -60,10 +62,15 @@ const router = createBrowserRouter([
             path: "calendar",
             element: <Calendar />,
           },
+          {
+            path: "matches",
+            element: <MatchAdminPage />,
+          },
         ],
       },
       { path: "teams", element: <TeamViewerPage /> },
       { path: "teams/:teamId", element: <TeamViewerPage /> },
+      { path: "teams/:teamId/matches", element: <TeamMatchesPage /> },
       { path: "disciplines/:discipline", element: <DisciplineDetailPage /> },
       { path: "terms", element: <Terms /> },
       { path: "cookies-policy", element: <CookiesPolicy /> },

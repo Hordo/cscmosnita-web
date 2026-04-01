@@ -52,8 +52,14 @@ class ChampionshipViewSet(viewsets.ModelViewSet):
 
 
 class MatchViewSet(viewsets.ModelViewSet):
-    queryset = Match.objects.all()
     serializer_class = MatchSerializer
+
+    def get_queryset(self):
+        queryset = Match.objects.select_related('team').order_by('-date')
+        team_id = self.request.query_params.get('team')
+        if team_id:
+            queryset = queryset.filter(team_id=team_id)
+        return queryset
 
 
 # --- User Registration API View ---

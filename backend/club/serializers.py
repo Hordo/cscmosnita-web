@@ -102,9 +102,21 @@ class ChampionshipSerializer(serializers.ModelSerializer):
 
 
 class MatchSerializer(serializers.ModelSerializer):
+    team_name = serializers.SerializerMethodField(read_only=True)
+    team_id = serializers.PrimaryKeyRelatedField(
+        queryset=Team.objects.all(), source='team', write_only=True, required=False, allow_null=True
+    )
+
     class Meta:
         model = Match
-        fields = '__all__'
+        fields = [
+            'id', 'team', 'team_id', 'team_name',
+            'date', 'home_team_name', 'away_team_name',
+            'home_score', 'away_score', 'youtube_link',
+        ]
+
+    def get_team_name(self, obj):
+        return obj.team.name if obj.team else None
 
 
 # --- User Registration Serializer ---

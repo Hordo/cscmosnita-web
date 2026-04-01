@@ -20,5 +20,16 @@
   "menu.manage_coaches": "Administrare antrenori",
   "menu.manage_players": "Administrare jucători",
   "menu.manage_disciplines": "Administrare discipline",
-  "menu.calendar": "Calendar"
+  "menu.manage_matches": "Administrare meciuri",
+  "menu.calendar": "Calendar",
+  "view_matches": "Vezi meciuri",
+  "matches": "Meciuri",
+  "no_matches": "Nu există meciuri pentru această echipă.",
+  "back_to_team": "Înapoi la echipă",
+  "home_team": "Echipă gazdă",
+  "away_team": "Echipă oaspete",
+  "score": "Scor",
+  "video": "Video",
+  "watch_video": "Vizionează",
+  "date": "Dată"
 }

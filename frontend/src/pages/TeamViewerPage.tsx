@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Card } from "../components/Card";
 import userPlaceholder from "../assets/user-placeholder.svg";
 import "../styles/adminStyles.css";
@@ -91,6 +91,14 @@ export const TeamViewerPage: React.FC = () => {
           />
         </div>
         <h2 className="mb-0 text-center flex-grow-1">{team.name}</h2>
+      </div>
+      <div className="mb-4">
+        <Link
+          to={`/teams/${team.id}/matches`}
+          className="btn btn-outline-primary"
+        >
+          🏆 {t("view_matches")}
+        </Link>
       </div>
       <div className="row mb-4">
         {teamCoaches.map((coach) => (
