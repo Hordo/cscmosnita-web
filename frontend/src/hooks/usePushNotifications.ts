@@ -75,7 +75,7 @@ export function usePushNotifications() {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
       const prefs = loadStoredPrefs();
-      await fetch("/api/push-subscribe", {
+      await fetch("/api/push?action=subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...sub.toJSON(), ...prefs }),
@@ -95,7 +95,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (!sub) return null;
-      const res = await fetch("/api/push-get-prefs", {
+      const res = await fetch("/api/push?action=get-prefs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endpoint: sub.endpoint }),
@@ -112,7 +112,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (!sub) return;
-      await fetch("/api/push-update-prefs", {
+      await fetch("/api/push?action=update-prefs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,7 +132,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await fetch("/api/push-unsubscribe", {
+        await fetch("/api/push", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: sub.endpoint }),
