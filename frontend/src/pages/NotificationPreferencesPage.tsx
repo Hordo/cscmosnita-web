@@ -18,13 +18,21 @@ interface Team {
 interface Prefs {
   discipline_ids: number[];
   team_ids: number[];
+  follow_all: boolean;
 }
 
 function loadPrefs(): Prefs {
   try {
-    return JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+    const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+    return {
+      discipline_ids: Array.isArray(saved.discipline_ids)
+        ? saved.discipline_ids
+        : [],
+      team_ids: Array.isArray(saved.team_ids) ? saved.team_ids : [],
+      follow_all: saved.follow_all !== false, // default true
+    };
   } catch {
-    return { discipline_ids: [], team_ids: [] };
+    return { discipline_ids: [], team_ids: [], follow_all: true };
   }
 }
 
@@ -34,13 +42,15 @@ function savePrefs(prefs: Prefs) {
 
 const NotificationPreferencesPage: React.FC = () => {
   const { t } = useTranslation();
-  const { state, subscribe, unsubscribe } = usePushNotifications();
+  const { state, subscribe, unsubscribe, updatePrefs, fetchPrefs } =
+    usePushNotifications();
 
   const [disciplines, setDisciplines] = useState<Discipline[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [prefs, setPrefs] = useState<Prefs>({
     discipline_ids: [],
     team_ids: [],
+    follow_all: true,
   });
   const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
@@ -58,6 +68,26 @@ const NotificationPreferencesPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // When already subscribed, sync preferences from the server back to local state.
+  // This handles: page refresh, cleared localStorage, new browser on same device.
+  useEffect(() => {
+    if (state !== "subscribed") return;
+    fetchPrefs().then((serverPrefs) => {
+      if (!serverPrefs) return;
+      const follow_all =
+        serverPrefs.discipline_ids.length === 0 &&
+        serverPrefs.team_ids.length === 0;
+      const synced: Prefs = {
+        discipline_ids: serverPrefs.discipline_ids,
+        team_ids: serverPrefs.team_ids,
+        follow_all,
+      };
+      setPrefs(synced);
+      savePrefs(synced);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
   const toggleDisc = (id: number) => {
     setPrefs((prev) => {
       const has = prev.discipline_ids.includes(id);
@@ -72,7 +102,7 @@ const NotificationPreferencesPage: React.FC = () => {
             return t?.discipline !== discName;
           })
         : prev.team_ids;
-      return { discipline_ids, team_ids };
+      return { ...prev, discipline_ids, team_ids };
     });
     setSaved(false);
   };
@@ -90,8 +120,14 @@ const NotificationPreferencesPage: React.FC = () => {
     setSaved(false);
   };
 
-  const handleSave = () => {
+  const effectiveDisciplineIds = prefs.follow_all ? [] : prefs.discipline_ids;
+  const effectiveTeamIds = prefs.follow_all ? [] : prefs.team_ids;
+
+  const handleSave = async () => {
     savePrefs(prefs);
+    if (state === "subscribed") {
+      await updatePrefs(effectiveDisciplineIds, effectiveTeamIds);
+    }
     setSaved(true);
   };
 
@@ -107,9 +143,6 @@ const NotificationPreferencesPage: React.FC = () => {
       </div>
     );
   }
-
-  const isAllSelected =
-    prefs.discipline_ids.length === 0 && prefs.team_ids.length === 0;
 
   return (
     <div className="container py-4" style={{ maxWidth: 700 }}>
@@ -176,9 +209,12 @@ const NotificationPreferencesPage: React.FC = () => {
               className="form-check-input"
               type="checkbox"
               id="followAll"
-              checked={isAllSelected}
+              checked={prefs.follow_all}
               onChange={() => {
-                setPrefs({ discipline_ids: [], team_ids: [] });
+                setPrefs((prev) => ({
+                  ...prev,
+                  follow_all: !prev.follow_all,
+                }));
                 setSaved(false);
               }}
             />
@@ -199,7 +235,7 @@ const NotificationPreferencesPage: React.FC = () => {
       </div>
 
       {/* Disciplines & Teams */}
-      {!isAllSelected && (
+      {!prefs.follow_all && (
         <div className="mb-4">
           {disciplines.map((disc) => {
             const discSelected = prefs.discipline_ids.includes(disc.id);

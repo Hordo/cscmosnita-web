@@ -47,48 +47,18 @@ export const DisciplineDetailPage: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    // Fetch disciplines first, then teams
-    fetch("/api/disciplines")
-      .then((res) => res.json())
-      .then((discData) => {
-        setDbDisciplines(discData);
-        // Find best match
-        let best: any = null;
-        let bestSim = 0;
-        for (const d of discData) {
-          const sim = similarity(discipline || "", d.name);
-          if (sim > bestSim) {
-            best = d;
-            bestSim = sim;
-          }
-        }
-        if (best && bestSim > 0.8) {
-          // Fetch teams for this discipline id
-          fetch(`/api/teams`)
-            .then((res) => res.json())
-            .then((allTeams) => {
-              if (!Array.isArray(allTeams)) {
-                setError("API /api/teams did not return an array.");
-                setTeams([]);
-                return;
-              }
-              setTeams(
-                allTeams.filter(
-                  (t: any) => String(t.discipline_id) === String(best.id),
-                ),
-              );
-            })
-            .catch((err) => setError(err.message || "Unknown error"))
-            .finally(() => setLoading(false));
-        } else {
-          setTeams([]);
-          setLoading(false);
-        }
+    Promise.all([
+      fetch(
+        `/api/teams?discipline=${encodeURIComponent(discipline || "")}`,
+      ).then((res) => res.json()),
+      fetch("/api/disciplines").then((res) => res.json()),
+    ])
+      .then(([teamsData, discData]) => {
+        setTeams(Array.isArray(teamsData) ? teamsData : []);
+        setDbDisciplines(Array.isArray(discData) ? discData : []);
       })
-      .catch((err) => {
-        setError(err.message || "Unknown error");
-        setLoading(false);
-      });
+      .catch((err) => setError(err.message || "Unknown error"))
+      .finally(() => setLoading(false));
     // eslint-disable-next-line
   }, [discipline]);
 

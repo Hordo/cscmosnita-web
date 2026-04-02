@@ -4,52 +4,53 @@ export interface Player {
   last_name: string;
   number: number | null;
   position: string;
-  photo: string | null;
-  team: number; // team id
+  photo_url: string | null;
+  team_id: number | null;
 }
 
 export interface Team {
   id: number;
   name: string;
-  age_group: string;
-  season: string;
-  photo: string | null;
-  discipline: number | null; // discipline id
+  name_en: string;
+  year: number | null;
+  photo_url: string | null;
+  discipline_id: number | null;
+  discipline: string | null; // discipline name string
 }
 
 export interface Coach {
   id: number;
   first_name: string;
   last_name: string;
-  role: string;
-  photo: string | null;
+  phone: string | null;
+  photo_url: string | null;
   teams: number[]; // array of team ids
 }
 
-// CoachTeam is not needed, as Coach.teams and Team.coaches are M2M
-
 export interface Match {
   id: number;
-  championship: number; // championship id
-  team: number; // team id
-  date: string;
-  home: boolean;
-  opponent_name: string;
-  our_score: number | null;
-  opponent_score: number | null;
-  youtube_link: string;
-}
-
-export interface Championship {
-  id: number;
-  name: string;
-  season: string;
-  team: number; // team id
+  home_team_name: string;
+  away_team_name: string;
+  home_score: number | null;
+  away_score: number | null;
+  youtube_link: string | null;
+  date: string | null;
+  team_id: number | null;
 }
 
 export interface Discipline {
   id: number;
   name: string;
+  name_en: string;
+  description: string | null;
+  description_en: string | null;
+  head_coach: {
+    id: number;
+    first_name: string;
+    last_name: string;
+    phone: string | null;
+    photo_url: string | null;
+  } | null;
 }
 
 export interface CoachTeam {

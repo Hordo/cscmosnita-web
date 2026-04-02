@@ -5,11 +5,8 @@ import { API_URLS } from "../config/api";
 import type { Discipline, Team } from "../../types/db";
 import "../styles/Calendar.css";
 
-interface TeamWithDiscipline extends Omit<Team, "discipline"> {
-  discipline: string;
+interface TeamWithDiscipline extends Team {
   coaches: string[];
-  name_en: string;
-  year?: number;
 }
 
 interface EventCreatorProps {

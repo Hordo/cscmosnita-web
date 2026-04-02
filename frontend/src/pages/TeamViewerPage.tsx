@@ -10,7 +10,6 @@ export const TeamViewerPage: React.FC = () => {
   const [teams, setTeams] = useState<any[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
-  const [disciplines, setDisciplines] = useState<any[]>([]);
   const [weekEvents, setWeekEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,30 +34,17 @@ export const TeamViewerPage: React.FC = () => {
         if (!res.ok) throw new Error(await res.text());
         return res.json();
       }),
-      fetch("/api/disciplines").then(async (res) => {
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
-      }),
       fetch(eventsUrl).then(async (res) => {
         if (!res.ok) return [];
         return res.json();
       }),
     ])
-      .then(
-        ([
-          teamsData,
-          playersData,
-          coachesData,
-          disciplinesData,
-          eventsData,
-        ]) => {
-          setTeams(teamsData);
-          setPlayers(playersData);
-          setCoaches(coachesData);
-          setDisciplines(disciplinesData);
-          setWeekEvents(eventsData);
-        },
-      )
+      .then(([teamsData, playersData, coachesData, eventsData]) => {
+        setTeams(teamsData);
+        setPlayers(playersData);
+        setCoaches(coachesData);
+        setWeekEvents(eventsData);
+      })
       .catch((err) => setError(err.message || "Unknown error"))
       .finally(() => setLoading(false));
   }, []);
@@ -86,10 +72,7 @@ export const TeamViewerPage: React.FC = () => {
   const teamCoaches = coaches.filter(
     (c) => c.teams && c.teams.includes(team.id),
   );
-  const disciplineName = team.discipline_id
-    ? disciplines.find((d) => String(d.id) === String(team.discipline_id))
-        ?.name || ""
-    : "";
+  const disciplineName = team.discipline || "";
 
   return (
     <div className="container py-4">

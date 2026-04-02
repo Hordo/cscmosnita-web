@@ -20,6 +20,25 @@ export type PushState =
   | "unsubscribed"
   | "loading";
 
+const PREFS_KEY = "push_preferences";
+
+function loadStoredPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || "{}");
+    // follow_all=true (default) means no filter — send empty arrays to server
+    const followAll = saved.follow_all !== false;
+    if (followAll) return { discipline_ids: [], team_ids: [] };
+    return {
+      discipline_ids: Array.isArray(saved.discipline_ids)
+        ? saved.discipline_ids
+        : [],
+      team_ids: Array.isArray(saved.team_ids) ? saved.team_ids : [],
+    };
+  } catch {
+    return { discipline_ids: [], team_ids: [] };
+  }
+}
+
 export function usePushNotifications() {
   const [state, setState] = useState<PushState>("loading");
 
@@ -55,15 +74,55 @@ export function usePushNotifications() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
+      const prefs = loadStoredPrefs();
       await fetch("/api/push-subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sub.toJSON()),
+        body: JSON.stringify({ ...sub.toJSON(), ...prefs }),
       });
       setState("subscribed");
     } catch (err) {
       console.error("Push subscribe failed:", err);
       setState("unsubscribed");
+    }
+  };
+
+  const fetchPrefs = async (): Promise<{
+    discipline_ids: number[];
+    team_ids: number[];
+  } | null> => {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) return null;
+      const res = await fetch("/api/push-get-prefs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  };
+
+  const updatePrefs = async (discipline_ids: number[], team_ids: number[]) => {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) return;
+      await fetch("/api/push-update-prefs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          endpoint: sub.endpoint,
+          discipline_ids,
+          team_ids,
+        }),
+      });
+    } catch (err) {
+      console.error("Push update prefs failed:", err);
     }
   };
 
@@ -87,5 +146,5 @@ export function usePushNotifications() {
     }
   };
 
-  return { state, subscribe, unsubscribe };
+  return { state, subscribe, unsubscribe, updatePrefs, fetchPrefs };
 }

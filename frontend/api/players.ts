@@ -1,22 +1,33 @@
 import { sql } from "../lib/db.js";
-import type { Player } from "../types/db.ts";
 
 export default async function handler(req: any, res: any) {
   try {
-    const players = await sql<Player[]>`
-      SELECT 
-        p.id,
-        p.first_name,
-        p.last_name,
-        p.number,
-        p.position,
-        p.photo_url,
-        p.team_id
-      FROM club_player p
-      ORDER BY p.id;
-    `;
+    const teamId = req.query?.team_id;
 
-    res.status(200).json(players);
+    const players = teamId
+      ? await sql<any[]>`
+          SELECT id, first_name, last_name, number, position, photo_url, team_id
+          FROM club_player
+          WHERE team_id = ${Number(teamId)}
+          ORDER BY id;
+        `
+      : await sql<any[]>`
+          SELECT id, first_name, last_name, number, position, photo_url, team_id
+          FROM club_player
+          ORDER BY id;
+        `;
+
+    const mapped = players.map((p) => ({
+      id: p.id,
+      first_name: p.first_name,
+      last_name: p.last_name,
+      number: p.number,
+      position: p.position,
+      photo_url: p.photo_url || null,
+      team_id: p.team_id ? Number(p.team_id) : null,
+    }));
+
+    res.status(200).json(mapped);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

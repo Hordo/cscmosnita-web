@@ -43,6 +43,8 @@ const MatchAdminPage: React.FC = () => {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filterDiscipline, setFilterDiscipline] = useState("");
+  const [filterTeam, setFilterTeam] = useState("");
 
   useEffect(() => {
     if (!user?.access) {
@@ -79,6 +81,21 @@ const MatchAdminPage: React.FC = () => {
   const filteredTeams = form.discipline_id
     ? teams.filter((t: any) => t.discipline === form.discipline_id)
     : [];
+
+  const filterTeamOptions = filterDiscipline
+    ? teams.filter((t: any) => t.discipline === filterDiscipline)
+    : teams;
+
+  const filteredMatches = matches.filter((m: any) => {
+    if (filterTeam) return String(m.team) === filterTeam;
+    if (filterDiscipline) {
+      const disciplineTeamIds = teams
+        .filter((t: any) => t.discipline === filterDiscipline)
+        .map((t: any) => t.id);
+      return disciplineTeamIds.includes(m.team);
+    }
+    return true;
+  });
 
   const selectedTeam = teams.find((t: any) => String(t.id) === form.team_id);
 
@@ -328,10 +345,51 @@ const MatchAdminPage: React.FC = () => {
         <div className="col-md-8 mb-3">
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
-              <h4 className="mb-3">All Matches</h4>
+              <div className="d-flex gap-2 mb-3 flex-wrap align-items-end">
+                <h4 className="mb-0 me-auto">All Matches</h4>
+                <select
+                  className="form-select form-select-sm w-auto"
+                  value={filterDiscipline}
+                  onChange={(e) => {
+                    setFilterDiscipline(e.target.value);
+                    setFilterTeam("");
+                  }}
+                >
+                  <option value="">All disciplines</option>
+                  {disciplines.map((d: any) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="form-select form-select-sm w-auto"
+                  value={filterTeam}
+                  onChange={(e) => setFilterTeam(e.target.value)}
+                  disabled={!filterDiscipline}
+                >
+                  <option value="">All teams</option>
+                  {filterTeamOptions.map((t: any) => (
+                    <option key={t.id} value={String(t.id)}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                {(filterDiscipline || filterTeam) && (
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => {
+                      setFilterDiscipline("");
+                      setFilterTeam("");
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
               <ReusableAdminTable
                 columns={matchColumns}
-                data={matches}
+                data={filteredMatches}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />

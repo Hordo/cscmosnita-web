@@ -8,7 +8,7 @@ import PlayerAdminPage from "../admin/PlayerAdminPage";
 import TeamAdminPage from "../admin/TeamAdminPage";
 import AdminOnlyRoute from "../admin/AdminOnlyRoute";
 import CoachAdminPage from "../admin/CoachAdminPage";
-import MatchAdminPage from "../admin/MatchAdminPage";
+import ChampionshipAdminPage from "../admin/ChampionshipAdminPage";
 import NotFound from "../pages/NotFound";
 import { TeamViewerPage } from "../pages/TeamViewerPage";
 import { TeamMatchesPage } from "../pages/TeamMatchesPage";
@@ -21,11 +21,13 @@ import Contact from "../pages/Contact";
 import GDPR from "../pages/GDPR";
 import Calendar from "../admin/Calendar";
 import NotificationPreferencesPage from "../pages/NotificationPreferencesPage";
+import RouteError from "./RouteError";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
+    errorElement: <RouteError />,
     children: [
       { index: true, element: <Home /> },
       { path: "login", element: <Login /> },
@@ -64,8 +66,8 @@ const router = createBrowserRouter([
             element: <Calendar />,
           },
           {
-            path: "matches",
-            element: <MatchAdminPage />,
+            path: "championship",
+            element: <ChampionshipAdminPage />,
           },
         ],
       },
