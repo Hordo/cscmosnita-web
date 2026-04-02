@@ -1,12 +1,12 @@
 from rest_framework import viewsets
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor
 from .serializers import (
     TeamSerializer, CoachSerializer, PlayerSerializer,
     ChampionshipSerializer, MatchSerializer, DisciplineSerializer,
     EventTypeSerializer, CalendarEventSerializer, CalendarEventCreateSerializer,
     TrainingSessionSerializer, EventAttendanceSerializer, CalendarEventListSerializer,
     TournamentListSerializer, TournamentSerializer, TournamentGroupSerializer,
-    GroupTeamSerializer, TournamentMatchSerializer
+    GroupTeamSerializer, TournamentMatchSerializer, SponsorSerializer
 )
 
 # Discipline ViewSet
@@ -572,3 +572,14 @@ class TournamentMatchViewSet(viewsets.ModelViewSet):
                 gt.goals_for = s['gf']; gt.goals_against = s['ga']; gt.points = s['pts']
                 gt.save()
 
+
+class SponsorViewSet(viewsets.ModelViewSet):
+    queryset = Sponsor.objects.all()
+    serializer_class = SponsorSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        active_only = self.request.query_params.get('active')
+        if active_only == '1':
+            qs = qs.filter(is_active=True)
+        return qs.order_by('order', 'name')

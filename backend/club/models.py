@@ -66,6 +66,20 @@ class Player(models.Model):
         return f"{self.first_name} {self.last_name} ({self.team.name})"
 
 
+class Sponsor(models.Model):
+    name = models.CharField(max_length=150)
+    logo_url = models.CharField(max_length=500, blank=True, null=True, help_text="URL to logo image")
+    website_url = models.URLField(blank=True, null=True, help_text="Optional sponsor website")
+    order = models.PositiveIntegerField(default=0, help_text="Display order (lower = first)")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Championship(models.Model):
     name = models.CharField(max_length=150)  # e.g. "Liga Juniori U10"
     season = models.CharField(max_length=20, blank=True)

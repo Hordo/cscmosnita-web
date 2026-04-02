@@ -25,4 +25,5 @@ export const API_URLS = {
   tournamentGroups: `${API_BASE}/api/tournament-groups/`,
   groupTeams: `${API_BASE}/api/group-teams/`,
   tournamentMatches: `${API_BASE}/api/tournament-matches/`,
+  sponsors: `${API_BASE}/api/sponsors/`,
 };

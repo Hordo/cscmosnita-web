@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor
 
 # Discipline Serializer
 class DisciplineSerializer(serializers.ModelSerializer):
@@ -411,3 +411,11 @@ class TournamentSerializer(serializers.ModelSerializer):
     def get_knockout_matches(self, obj):
         qs = obj.tournament_matches.filter(group__isnull=True).order_by('match_order')
         return TournamentMatchSerializer(qs, many=True).data
+
+
+# ── Sponsor serializer ────────────────────────────────────────────────────────
+
+class SponsorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sponsor
+        fields = ['id', 'name', 'logo_url', 'website_url', 'order', 'is_active']

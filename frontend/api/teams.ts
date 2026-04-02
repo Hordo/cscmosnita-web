@@ -42,7 +42,7 @@ export default async function handler(req: any, res: any) {
     }
 
     const mapped = teams.map((t) => ({
-      id: t.id,
+      id: Number(t.id),
       name: t.name,
       name_en: t.name_en || t.name,
       year: t.year,

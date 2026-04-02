@@ -23,6 +23,7 @@ import Calendar from "../admin/Calendar";
 import NotificationPreferencesPage from "../pages/NotificationPreferencesPage";
 import RouteError from "./RouteError";
 import TournamentAdminPage from "../admin/TournamentAdminPage";
+import SponsorAdminPage from "../admin/SponsorAdminPage";
 import { TeamTournamentsPage } from "../pages/TeamTournamentsPage";
 import { TournamentViewPage } from "../pages/TournamentViewPage";
 
@@ -75,6 +76,10 @@ const router = createBrowserRouter([
           {
             path: "tournaments",
             element: <TournamentAdminPage />,
+          },
+          {
+            path: "sponsors",
+            element: <SponsorAdminPage />,
           },
         ],
       },

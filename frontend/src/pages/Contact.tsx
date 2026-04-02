@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { Card } from "../components/Card";
+import "../styles/Contact.css";
 
 interface DisciplineWithHeadCoach {
   id: number;
@@ -18,7 +19,7 @@ interface DisciplineWithHeadCoach {
 }
 
 export default function Contact() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isRO = i18n.language === "ro";
   const [disciplines, setDisciplines] = useState<DisciplineWithHeadCoach[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,119 +28,85 @@ export default function Contact() {
   useEffect(() => {
     setLoading(true);
     fetch("/api/disciplines")
-      .then((res) => {
-        return res.json();
-      })
+      .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) {
-          setDisciplines(data);
-        } else {
-          setDisciplines([]);
-          setError(
-            isRO
-              ? "Nu s-au putut încărca disciplinele"
-              : "Failed to load disciplines",
-          );
-        }
+        setDisciplines(Array.isArray(data) ? data : []);
+        if (!Array.isArray(data)) setError(t("contact.load_error"));
         setLoading(false);
       })
-      .catch((err) => {
-        console.error("Error loading disciplines:", err);
-        setError(
-          isRO
-            ? "Nu s-au putut încărca disciplinele"
-            : "Failed to load disciplines",
-        );
+      .catch(() => {
+        setError(t("contact.load_error"));
         setDisciplines([]);
         setLoading(false);
       });
-  }, [isRO]);
+  }, [t]);
 
-  const getDisciplineName = (discipline: DisciplineWithHeadCoach) => {
-    return isRO ? discipline.name : discipline.name_en || discipline.name;
-  };
-
-  const getHeadCoachTitle = () => {
-    return isRO ? "Șef secție" : "Head Coach";
-  };
-
-  const getUnassignedLabel = (discipline: DisciplineWithHeadCoach) => {
-    const disciplineName = getDisciplineName(discipline);
-    return isRO
-      ? `${disciplineName} - Necompletat`
-      : `${disciplineName} - To be assigned`;
-  };
-
-  const getContactHours = () => {
-    return isRO
-      ? "Program de contact: Luni-Vineri, 09:00-20:00."
-      : "Contact hours: Monday to Friday, 09:00-20:00.";
-  };
-
-  const getFreeSportText = () => {
-    return isRO
-      ? "Sportul în cadrul clubului nostru este gratuit."
-      : "Sports at our club are free of charge.";
-  };
-
-  const getIntroText = () => {
-    return isRO
-      ? "Pentru informații suplimentare, contactați șefii de secție la numerele de telefon de mai jos."
-      : "For more information, please contact the Head Coaches at the phone numbers below.";
-  };
+  const coachDisciplines = disciplines.filter((d) => d.head_coach !== null);
 
   return (
-    <div className="container py-4">
-      <h2>{isRO ? "Contact" : "Contact"}</h2>
-      <div style={{ maxWidth: 700 }}>
+    <div className="contact-page">
+      {/* Hero */}
+      <div className="contact-hero">
+        <div className="contact-hero-inner">
+          <h1>{t("contact.title")}</h1>
+          <p>{t("contact.intro")}</p>
+        </div>
+      </div>
+
+      <div className="container contact-body">
+        {/* Info cards row */}
+        <div className="contact-info-row">
+          <div className="contact-info-card">
+            <span className="contact-info-icon">🕐</span>
+            <div>
+              <strong>{t("contact.hours_label")}</strong>
+              <p>{t("contact.hours_value")}</p>
+            </div>
+          </div>
+          <div className="contact-info-card">
+            <span className="contact-info-icon">🆓</span>
+            <div>
+              <strong>{t("contact.free_label")}</strong>
+              <p>{t("contact.free_value")}</p>
+            </div>
+          </div>
+          <div className="contact-info-card">
+            <span className="contact-info-icon">📍</span>
+            <div>
+              <strong>{t("contact.location_label")}</strong>
+              <p>{t("contact.location_value")}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Coaches section */}
+        <h2 className="contact-section-title">{t("contact.coaches_title")}</h2>
+        <p className="contact-section-subtitle">
+          {t("contact.coaches_subtitle")}
+        </p>
+
         {loading ? (
-          <div>{isRO ? "Se încarcă..." : "Loading..."}</div>
+          <div className="contact-loading">
+            <div className="spinner-border text-primary" role="status" />
+          </div>
         ) : error ? (
           <div className="alert alert-danger">{error}</div>
+        ) : coachDisciplines.length === 0 ? (
+          <p className="text-muted">{t("contact.no_coaches")}</p>
         ) : (
-          <>
-            <p>{getIntroText()}</p>
-
-            {/* Debug info - remove in production */}
-            {import.meta.env.DEV && (
-              <div
-                className="alert alert-info"
-                style={{ fontSize: "12px", marginBottom: "20px" }}
-              >
-                <strong>Debug Info:</strong> Found {disciplines.length}{" "}
-                disciplines,
-                {disciplines.filter((d) => d.head_coach).length} with head
-                coaches assigned
+          <div className="row g-4 justify-content-center">
+            {coachDisciplines.map((discipline) => (
+              <div className="col-sm-6 col-md-4 col-lg-3" key={discipline.id}>
+                <Card
+                  title={`${discipline.head_coach!.first_name} ${discipline.head_coach!.last_name}`}
+                  imageUrl={discipline.head_coach!.photo_url}
+                  role={`${t("contact.head_coach")} ${isRO ? discipline.name : discipline.name_en || discipline.name}`}
+                  phone={discipline.head_coach!.phone}
+                  badgesOnImage
+                />
               </div>
-            )}
-
-            <div className="row">
-              {disciplines.map((discipline) => (
-                <div className="col-md-4 mb-4" key={discipline.id}>
-                  {discipline.head_coach ? (
-                    <Card
-                      title={`${discipline.head_coach.first_name} ${discipline.head_coach.last_name}`}
-                      imageUrl={discipline.head_coach.photo_url}
-                      role={`${getHeadCoachTitle()} ${getDisciplineName(discipline)}`}
-                      phone={discipline.head_coach.phone}
-                      badgesOnImage
-                    />
-                  ) : (
-                    <Card
-                      title={getHeadCoachTitle()}
-                      imageUrl={undefined}
-                      role={getUnassignedLabel(discipline)}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-            <div style={{ fontSize: 13, marginTop: 20 }}>
-              <b>{getContactHours()}</b>
-              <br />
-              <b>{getFreeSportText()}</b>
-            </div>
-          </>
+            ))}
+          </div>
         )}
       </div>
     </div>
