@@ -17,6 +17,7 @@ const FormGroup: React.FC<{ label: string; children: React.ReactNode }> = ({
 );
 
 const matchColumns: AdminTableColumn[] = [
+  { key: "season", label: "Season" },
   { key: "home_team_name", label: "Home Team" },
   { key: "home_score", label: "Home Score" },
   { key: "away_score", label: "Away Score" },
@@ -27,6 +28,7 @@ const matchColumns: AdminTableColumn[] = [
 const emptyForm = {
   discipline_id: "",
   team_id: "",
+  season: "",
   home_score: "",
   away_score: "",
   away_team_name: "",
@@ -45,6 +47,7 @@ const MatchAdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [filterDiscipline, setFilterDiscipline] = useState("");
   const [filterTeam, setFilterTeam] = useState("");
+  const [filterSeason, setFilterSeason] = useState("");
 
   useEffect(() => {
     if (!user?.access) {
@@ -86,7 +89,12 @@ const MatchAdminPage: React.FC = () => {
     ? teams.filter((t: any) => t.discipline === filterDiscipline)
     : teams;
 
+  const allSeasons = Array.from(
+    new Set(matches.map((m: any) => m.season).filter(Boolean)),
+  ).sort((a: any, b: any) => b.localeCompare(a)) as string[];
+
   const filteredMatches = matches.filter((m: any) => {
+    if (filterSeason && m.season !== filterSeason) return false;
     if (filterTeam) return String(m.team) === filterTeam;
     if (filterDiscipline) {
       const disciplineTeamIds = teams
@@ -114,6 +122,7 @@ const MatchAdminPage: React.FC = () => {
     team_id: form.team_id || null,
     home_team_name: selectedTeam?.name || "",
     away_team_name: form.away_team_name,
+    season: form.season || "",
     home_score: form.home_score !== "" ? Number(form.home_score) : null,
     away_score: form.away_score !== "" ? Number(form.away_score) : null,
     date: form.date || null,
@@ -148,6 +157,7 @@ const MatchAdminPage: React.FC = () => {
     setForm({
       discipline_id: team ? team.discipline : "",
       team_id: match.team ? String(match.team) : "",
+      season: match.season || "",
       home_score: match.home_score != null ? String(match.home_score) : "",
       away_score: match.away_score != null ? String(match.away_score) : "",
       away_team_name: match.away_team_name || "",
@@ -258,6 +268,18 @@ const MatchAdminPage: React.FC = () => {
                       </option>
                     ))}
                   </select>
+                </FormGroup>
+
+                {/* Season */}
+                <FormGroup label="Season (e.g. 2025-2026)">
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="season"
+                    value={form.season}
+                    onChange={handleChange}
+                    placeholder="2025-2026"
+                  />
                 </FormGroup>
 
                 {/* Scores */}
@@ -375,12 +397,25 @@ const MatchAdminPage: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                {(filterDiscipline || filterTeam) && (
+                <select
+                  className="form-select form-select-sm w-auto"
+                  value={filterSeason}
+                  onChange={(e) => setFilterSeason(e.target.value)}
+                >
+                  <option value="">All seasons</option>
+                  {allSeasons.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                {(filterDiscipline || filterTeam || filterSeason) && (
                   <button
                     className="btn btn-sm btn-outline-secondary"
                     onClick={() => {
                       setFilterDiscipline("");
                       setFilterTeam("");
+                      setFilterSeason("");
                     }}
                   >
                     Clear

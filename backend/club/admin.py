@@ -33,7 +33,7 @@ class TournamentMatchAdmin(admin.ModelAdmin):
 
 @admin.register(Match)
 class MatchAdmin(admin.ModelAdmin):
-	list_display = ("home_team_name", "home_score", "away_score", "away_team_name", "date", "team")
-	list_filter = ("team",)
-	search_fields = ("home_team_name", "away_team_name")
-	fields = ("team", "date", "home_team_name", "home_score", "away_score", "away_team_name", "youtube_link")
+	list_display = ("home_team_name", "home_score", "away_score", "away_team_name", "season", "date", "team")
+	list_filter = ("team", "season")
+	search_fields = ("home_team_name", "away_team_name", "season")
+	fields = ("team", "season", "date", "home_team_name", "home_score", "away_score", "away_team_name", "youtube_link")

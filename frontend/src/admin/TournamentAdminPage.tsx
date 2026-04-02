@@ -1,18 +1,11 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/adminStyles.css";
 import { API_URLS } from "../config/api";
 import api, { setAuthToken } from "../config/axios";
 import { useAuth } from "../context/AuthContext";
 
-const STAGES = [
-  { value: "group", label: "Group Stage" },
-  { value: "r32", label: "Round of 32" },
-  { value: "r16", label: "Round of 16" },
-  { value: "r8", label: "Quarterfinal" },
-  { value: "semi", label: "Semifinal" },
-  { value: "third", label: "3rd Place" },
-  { value: "final", label: "Final" },
-];
+const KNOCKOUT_STAGE_VALUES = ["r32", "r16", "r8", "semi", "third", "final"];
 
 const emptyTournament = {
   name: "",
@@ -24,6 +17,7 @@ const emptyTournament = {
 };
 
 const TournamentAdminPage: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [disciplines, setDisciplines] = useState<any[]>([]);
@@ -145,7 +139,7 @@ const TournamentAdminPage: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Delete this tournament and all its data?")) return;
+    if (!confirm(t("tour.confirm_delete"))) return;
     await api.delete(`${API_URLS.tournaments}${id}/`);
     setTournaments((prev) => prev.filter((t) => t.id !== id));
     if (activeTournament?.id === id) setActiveTournament(null);
@@ -207,7 +201,7 @@ const TournamentAdminPage: React.FC = () => {
   };
 
   const deleteGroup = async (groupId: number) => {
-    if (!confirm("Delete this group and all its matches?")) return;
+    if (!confirm(t("tour.confirm_delete_group"))) return;
     await api.delete(`${API_URLS.tournamentGroups}${groupId}/`);
     loadTournament(activeTournament.id);
   };
@@ -247,7 +241,7 @@ const TournamentAdminPage: React.FC = () => {
   };
 
   const deleteMatch = async (matchId: number) => {
-    if (!confirm("Delete this match?")) return;
+    if (!confirm(t("tour.confirm_delete_match"))) return;
     await api.delete(`${API_URLS.tournamentMatches}${matchId}/`);
     loadTournament(activeTournament.id);
   };
@@ -265,21 +259,21 @@ const TournamentAdminPage: React.FC = () => {
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
 
-  if (loading) return <div className="text-center mt-5">Loading...</div>;
+  if (loading) return <div className="text-center mt-5">{t("loading")}</div>;
 
   return (
     <div className="admin-page container-fluid py-4">
-      <h2 className="mb-4">🏆 Manage Tournaments</h2>
+      <h2 className="mb-4">🏆 {t("tour.page_title")}</h2>
       {error && <div className="alert alert-danger">{error}</div>}
 
       {/* ── Tournament form ── */}
       <div className="admin-form-card mb-4">
         <h5 className="mb-3">
-          {editId ? "Edit Tournament" : "New Tournament"}
+          {editId ? t("tour.form_edit") : t("tour.form_new")}
         </h5>
         <form onSubmit={handleSave} className="row g-2">
           <div className="col-md-4">
-            <label className="form-label">Name</label>
+            <label className="form-label">{t("tour.label_name")}</label>
             <input
               className="form-control"
               value={form.name}
@@ -289,7 +283,7 @@ const TournamentAdminPage: React.FC = () => {
             />
           </div>
           <div className="col-md-2">
-            <label className="form-label">Season</label>
+            <label className="form-label">{t("tour.label_season")}</label>
             <input
               className="form-control"
               value={form.season}
@@ -298,7 +292,7 @@ const TournamentAdminPage: React.FC = () => {
             />
           </div>
           <div className="col-md-2">
-            <label className="form-label">Date</label>
+            <label className="form-label">{t("date")}</label>
             <input
               type="date"
               className="form-control"
@@ -307,7 +301,7 @@ const TournamentAdminPage: React.FC = () => {
             />
           </div>
           <div className="col-md-2">
-            <label className="form-label">Discipline</label>
+            <label className="form-label">{t("discipline")}</label>
             <select
               className="form-select"
               value={form.discipline_id}
@@ -315,7 +309,7 @@ const TournamentAdminPage: React.FC = () => {
                 setForm({ ...form, discipline_id: e.target.value, team_id: "" })
               }
             >
-              <option value="">All disciplines</option>
+              <option value="">{t("tour.label_all_disciplines")}</option>
               {disciplines.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
@@ -325,7 +319,7 @@ const TournamentAdminPage: React.FC = () => {
           </div>
           <div className="col-md-2">
             <label className="form-label">
-              Our Team <span className="text-danger">*</span>
+              {t("tour.label_our_team")} <span className="text-danger">*</span>
             </label>
             <select
               className="form-select"
@@ -333,7 +327,7 @@ const TournamentAdminPage: React.FC = () => {
               onChange={(e) => setForm({ ...form, team_id: e.target.value })}
               required
             >
-              <option value="">Select team</option>
+              <option value="">{t("ec.select_team")}</option>
               {filteredTeams.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -353,13 +347,13 @@ const TournamentAdminPage: React.FC = () => {
                 }
               />
               <label className="form-check-label" htmlFor="hasGroup">
-                Groups
+                {t("tour.label_groups")}
               </label>
             </div>
           </div>
           <div className="col-md-1 d-flex align-items-end gap-2">
             <button className="btn btn-primary btn-sm w-100" type="submit">
-              {editId ? "Update" : "Create"}
+              {editId ? t("tour.btn_update") : t("tour.btn_create")}
             </button>
             {editId && (
               <button
@@ -382,41 +376,43 @@ const TournamentAdminPage: React.FC = () => {
         <table className="table table-hover admin-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Season</th>
-              <th>Team</th>
-              <th>Discipline</th>
-              <th>Groups?</th>
+              <th>{t("tour.col_name")}</th>
+              <th>{t("tour.col_season")}</th>
+              <th>{t("tour.col_team")}</th>
+              <th>{t("tour.col_discipline")}</th>
+              <th>{t("tour.col_groups")}</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {tournaments.map((t) => (
+            {tournaments.map((tour) => (
               <tr
-                key={t.id}
-                className={activeTournament?.id === t.id ? "table-active" : ""}
+                key={tour.id}
+                className={
+                  activeTournament?.id === tour.id ? "table-active" : ""
+                }
               >
-                <td>{t.name}</td>
-                <td>{t.season}</td>
-                <td>{t.team_name}</td>
-                <td>{t.discipline_name}</td>
-                <td>{t.has_group_stage ? "Yes" : "No"}</td>
+                <td>{tour.name}</td>
+                <td>{tour.season}</td>
+                <td>{tour.team_name}</td>
+                <td>{tour.discipline_name}</td>
+                <td>{tour.has_group_stage ? "✓" : "–"}</td>
                 <td className="d-flex gap-1">
                   <button
                     className="btn btn-sm btn-success"
-                    onClick={() => handleManage(t)}
+                    onClick={() => handleManage(tour)}
                   >
-                    Manage
+                    {t("tour.btn_manage")}
                   </button>
                   <button
                     className="btn btn-sm btn-outline-secondary"
-                    onClick={() => handleEdit(t)}
+                    onClick={() => handleEdit(tour)}
                   >
-                    Edit
+                    {t("tour.btn_edit")}
                   </button>
                   <button
                     className="btn btn-sm btn-outline-danger"
-                    onClick={() => handleDelete(t.id)}
+                    onClick={() => handleDelete(tour.id)}
                   >
                     ✕
                   </button>
@@ -426,7 +422,7 @@ const TournamentAdminPage: React.FC = () => {
             {tournaments.length === 0 && (
               <tr>
                 <td colSpan={6} className="text-center text-muted">
-                  No tournaments yet
+                  {t("tour.none_yet")}
                 </td>
               </tr>
             )}
@@ -446,27 +442,31 @@ const TournamentAdminPage: React.FC = () => {
               className="btn btn-sm btn-outline-secondary"
               onClick={() => setActiveTournament(null)}
             >
-              Close
+              {t("tour.btn_close")}
             </button>
           </div>
           <div className="card-body">
-            {tourLoading && <div className="text-center py-3">Loading...</div>}
+            {tourLoading && (
+              <div className="text-center py-3">{t("loading")}</div>
+            )}
 
             {/* ── Group Stage ── */}
             {activeTournament.has_group_stage && (
               <div className="mb-4">
-                <h6 className="border-bottom pb-2 mb-3">Group Stage</h6>
+                <h6 className="border-bottom pb-2 mb-3">
+                  {t("tour.section_groups")}
+                </h6>
 
                 {/* Add group */}
                 <div className="d-flex gap-2 mb-3" style={{ maxWidth: 400 }}>
                   <input
                     className="form-control form-control-sm"
-                    placeholder="Group name (e.g. Group A)"
+                    placeholder={t("tour.ph_group_name")}
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
                   />
                   <button className="btn btn-sm btn-primary" onClick={addGroup}>
-                    Add Group
+                    {t("tour.btn_add_group")}
                   </button>
                 </div>
 
@@ -478,7 +478,7 @@ const TournamentAdminPage: React.FC = () => {
                         className="btn btn-sm btn-outline-danger"
                         onClick={() => deleteGroup(group.id)}
                       >
-                        Delete Group
+                        {t("tour.btn_delete_group")}
                       </button>
                     </div>
 
@@ -489,7 +489,7 @@ const TournamentAdminPage: React.FC = () => {
                     >
                       <input
                         className="form-control form-control-sm"
-                        placeholder="Team names (comma separated, e.g. CSC Moșnița, FC Timișoara)"
+                        placeholder={t("tour.ph_team_names")}
                         value={newTeamNames[group.id] || ""}
                         onChange={(e) =>
                           setNewTeamNames((prev) => ({
@@ -502,7 +502,7 @@ const TournamentAdminPage: React.FC = () => {
                         className="btn btn-sm btn-success"
                         onClick={() => addTeamsToGroup(group.id)}
                       >
-                        Add Teams
+                        {t("tour.btn_add_teams")}
                       </button>
                     </div>
 
@@ -510,7 +510,7 @@ const TournamentAdminPage: React.FC = () => {
                     {group.group_teams.length > 0 && (
                       <div className="mb-3">
                         <h6 className="small text-muted text-uppercase mb-1">
-                          Standings
+                          {t("tour.standings")}
                         </h6>
                         <div className="table-responsive">
                           <table
@@ -519,14 +519,14 @@ const TournamentAdminPage: React.FC = () => {
                           >
                             <thead className="table-light">
                               <tr>
-                                <th>Team</th>
-                                <th>P</th>
-                                <th>W</th>
-                                <th>D</th>
-                                <th>L</th>
-                                <th>GF</th>
-                                <th>GA</th>
-                                <th>Pts</th>
+                                <th>{t("tour.col_team")}</th>
+                                <th>{t("tour.col_p")}</th>
+                                <th>{t("tour.col_w")}</th>
+                                <th>{t("tour.col_d")}</th>
+                                <th>{t("tour.col_l")}</th>
+                                <th>{t("tour.col_gf")}</th>
+                                <th>{t("tour.col_ga")}</th>
+                                <th>{t("tour.col_pts")}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -574,7 +574,7 @@ const TournamentAdminPage: React.FC = () => {
                     {group.matches.length > 0 && (
                       <div>
                         <h6 className="small text-muted text-uppercase mb-1">
-                          Matches
+                          {t("matches")}
                         </h6>
                         <div className="table-responsive">
                           <table
@@ -583,10 +583,10 @@ const TournamentAdminPage: React.FC = () => {
                           >
                             <thead className="table-light">
                               <tr>
-                                <th>Home</th>
-                                <th>Score</th>
-                                <th>Away</th>
-                                <th>Video</th>
+                                <th>{t("tour.col_home")}</th>
+                                <th>{t("tour.col_score")}</th>
+                                <th>{t("tour.col_away")}</th>
+                                <th>{t("tour.col_video")}</th>
                                 <th></th>
                               </tr>
                             </thead>
@@ -702,19 +702,19 @@ const TournamentAdminPage: React.FC = () => {
             {/* ── Knockout Stage ── */}
             <div className="mb-3">
               <h6 className="border-bottom pb-2 mb-3">
-                Knockout Stage Matches
+                {t("tour.section_knockout")}
               </h6>
 
               {/* Existing knockout matches grouped by stage */}
-              {STAGES.filter((s) => s.value !== "group").map((stageInfo) => {
+              {KNOCKOUT_STAGE_VALUES.map((stageVal) => {
                 const stageMatches = activeTournament.knockout_matches.filter(
-                  (m: any) => m.stage === stageInfo.value,
+                  (m: any) => m.stage === stageVal,
                 );
                 if (stageMatches.length === 0) return null;
                 return (
-                  <div key={stageInfo.value} className="mb-3">
+                  <div key={stageVal} className="mb-3">
                     <h6 className="small text-muted text-uppercase mb-1">
-                      {stageInfo.label}
+                      {t(`stage.${stageVal}`)}
                     </h6>
                     <div className="table-responsive">
                       <table
@@ -723,10 +723,10 @@ const TournamentAdminPage: React.FC = () => {
                       >
                         <thead className="table-light">
                           <tr>
-                            <th>Home</th>
-                            <th>Score</th>
-                            <th>Away</th>
-                            <th>Video</th>
+                            <th>{t("tour.col_home")}</th>
+                            <th>{t("tour.col_score")}</th>
+                            <th>{t("tour.col_away")}</th>
+                            <th>{t("tour.col_video")}</th>
                             <th></th>
                           </tr>
                         </thead>
@@ -777,7 +777,9 @@ const TournamentAdminPage: React.FC = () => {
               {/* Add / Edit knockout match form */}
               <div className="border rounded p-3 mt-2">
                 <h6 className="mb-2">
-                  {editMatchId ? "✏️ Edit Match" : "➕ Add Knockout Match"}
+                  {editMatchId
+                    ? `✏️ ${t("tour.form_edit_match")}`
+                    : `➕ ${t("tour.form_add_match")}`}
                 </h6>
                 <form onSubmit={saveKnockoutMatch} className="row g-2">
                   <div className="col-md-2">
@@ -791,9 +793,9 @@ const TournamentAdminPage: React.FC = () => {
                         })
                       }
                     >
-                      {STAGES.filter((s) => s.value !== "group").map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
+                      {KNOCKOUT_STAGE_VALUES.map((s) => (
+                        <option key={s} value={s}>
+                          {t(`stage.${s}`)}
                         </option>
                       ))}
                     </select>
@@ -838,7 +840,7 @@ const TournamentAdminPage: React.FC = () => {
                   <div className="col-md-2">
                     <input
                       className="form-control form-control-sm"
-                      placeholder="Away team"
+                      placeholder={t("tour.ph_away_team")}
                       value={knockoutForm.away_team_name}
                       onChange={(e) =>
                         setKnockoutForm({
@@ -852,7 +854,7 @@ const TournamentAdminPage: React.FC = () => {
                   <div className="col-md-2">
                     <input
                       className="form-control form-control-sm"
-                      placeholder="YouTube URL (optional)"
+                      placeholder={t("tour.ph_youtube")}
                       value={knockoutForm.youtube_link}
                       onChange={(e) =>
                         setKnockoutForm({
@@ -864,7 +866,7 @@ const TournamentAdminPage: React.FC = () => {
                   </div>
                   <div className="col-auto d-flex gap-1">
                     <button className="btn btn-sm btn-primary" type="submit">
-                      {editMatchId ? "Update" : "Add"}
+                      {editMatchId ? t("tour.btn_update") : t("tour.btn_add")}
                     </button>
                     {editMatchId && (
                       <button

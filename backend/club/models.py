@@ -77,6 +77,7 @@ class Championship(models.Model):
 
 class Match(models.Model):
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name="matches")
+    season = models.CharField(max_length=20, blank=True, help_text="e.g. 2025-2026")
     date = models.DateField(null=True, blank=True)
     home_team_name = models.CharField(max_length=150)
     away_team_name = models.CharField(max_length=150)

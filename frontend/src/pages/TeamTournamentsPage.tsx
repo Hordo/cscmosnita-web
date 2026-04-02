@@ -18,8 +18,12 @@ export const TeamTournamentsPage: React.FC = () => {
       fetch("/api/teams").then((r) => r.json()),
     ])
       .then(([tours, teams]) => {
+        if (!Array.isArray(tours))
+          throw new Error(tours?.error ?? "Failed to load tournaments");
         setTournaments(tours);
-        const team = teams.find((t: any) => String(t.id) === String(teamId));
+        const team = (Array.isArray(teams) ? teams : []).find(
+          (t: any) => String(t.id) === String(teamId),
+        );
         if (team) setTeamName(team.name);
       })
       .catch((e) => setError(e.message))
@@ -59,12 +63,24 @@ export const TeamTournamentsPage: React.FC = () => {
                     {tour.season && (
                       <div className="text-muted small mb-1">{tour.season}</div>
                     )}
-                    <div>
-                      <span className="badge bg-primary me-1">
+                    {tour.date && (
+                      <div className="text-muted small mb-2">
+                        📅 {new Date(tour.date).toLocaleDateString()}
+                      </div>
+                    )}
+                    <div className="d-flex flex-wrap gap-1">
+                      <span className="badge bg-primary">
                         {tour.discipline_name}
                       </span>
                       {tour.has_group_stage && (
-                        <span className="badge bg-success">Groups</span>
+                        <span className="badge bg-success">
+                          {t("has_groups")}
+                        </span>
+                      )}
+                      {tour.placement && (
+                        <span className={`badge bg-${tour.placement.color}`}>
+                          {tour.placement.label}
+                        </span>
                       )}
                     </div>
                   </div>

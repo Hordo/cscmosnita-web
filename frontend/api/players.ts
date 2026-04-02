@@ -9,12 +9,12 @@ export default async function handler(req: any, res: any) {
           SELECT id, first_name, last_name, number, position, photo_url, team_id
           FROM club_player
           WHERE team_id = ${Number(teamId)}
-          ORDER BY id;
+          ORDER BY last_name;
         `
       : await sql<any[]>`
           SELECT id, first_name, last_name, number, position, photo_url, team_id
           FROM club_player
-          ORDER BY id;
+          ORDER BY last_name;
         `;
 
     const mapped = players.map((p) => ({

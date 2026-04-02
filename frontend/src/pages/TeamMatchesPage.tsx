@@ -10,6 +10,7 @@ interface Match {
   away_score: number | null;
   youtube_link: string;
   date: string | null;
+  season: string;
   team_id: number | null;
 }
 
@@ -17,41 +18,63 @@ export const TeamMatchesPage: React.FC = () => {
   const { t } = useTranslation();
   const { teamId } = useParams<{ teamId: string }>();
   const [matches, setMatches] = useState<Match[]>([]);
+  const [seasons, setSeasons] = useState<string[]>([]);
+  const [activeSeason, setActiveSeason] = useState<string | null>(null);
   const [teamName, setTeamName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch team name once
+  useEffect(() => {
+    if (!teamId) return;
+    fetch("/api/teams")
+      .then((r) => r.json())
+      .then((teams: any[]) => {
+        const team = teams.find((t: any) => String(t.id) === String(teamId));
+        if (team) setTeamName(team.name);
+      })
+      .catch(() => {});
+  }, [teamId]);
+
+  // Fetch matches whenever teamId or activeSeason changes
   useEffect(() => {
     if (!teamId) return;
     setLoading(true);
     setError(null);
-    Promise.all([
-      fetch(`/api/matches?team_id=${teamId}`).then(async (res) => {
+    const url = activeSeason
+      ? `/api/matches?team_id=${teamId}&season=${encodeURIComponent(activeSeason)}`
+      : `/api/matches?team_id=${teamId}`;
+    fetch(url)
+      .then(async (res) => {
         if (!res.ok) throw new Error(await res.text());
         return res.json();
-      }),
-      fetch("/api/teams").then(async (res) => {
-        if (!res.ok) throw new Error(await res.text());
-        return res.json();
-      }),
-    ])
-      .then(([matchesData, teamsData]) => {
-        setMatches(matchesData);
-        const team = teamsData.find(
-          (t: any) => String(t.id) === String(teamId),
-        );
-        if (team) setTeamName(team.name);
+      })
+      .then((data) => {
+        // New API returns { matches, seasons, activeSeason }
+        if (data && Array.isArray(data.matches)) {
+          setMatches(data.matches);
+          setSeasons(data.seasons ?? []);
+          // Only set activeSeason from server on first load (when activeSeason is null)
+          if (activeSeason === null) {
+            setActiveSeason(data.activeSeason ?? null);
+          }
+        } else {
+          // Fallback: old flat array
+          setMatches(Array.isArray(data) ? data : []);
+        }
       })
       .catch((err) => setError(err.message || "Unknown error"))
       .finally(() => setLoading(false));
-  }, [teamId]);
+  }, [teamId, activeSeason]);
 
-  if (loading) return <div className="text-center mt-5">{t("loading")}</div>;
-  if (error) return <div className="alert alert-danger mt-3">{error}</div>;
+  const seasonIndex = activeSeason ? seasons.indexOf(activeSeason) : -1;
+  const prevSeason =
+    seasonIndex < seasons.length - 1 ? seasons[seasonIndex + 1] : null;
+  const nextSeason = seasonIndex > 0 ? seasons[seasonIndex - 1] : null;
 
   return (
     <div className="container py-4">
-      <div className="d-flex align-items-center mb-4 gap-3">
+      <div className="d-flex align-items-center mb-4 gap-3 flex-wrap">
         <Link
           to={`/teams/${teamId}`}
           className="btn btn-outline-secondary btn-sm"
@@ -63,7 +86,34 @@ export const TeamMatchesPage: React.FC = () => {
         </h2>
       </div>
 
-      {matches.length === 0 ? (
+      {/* Season navigation */}
+      {seasons.length > 0 && (
+        <div className="d-flex align-items-center gap-2 mb-4">
+          <button
+            className="btn btn-outline-primary btn-sm"
+            disabled={!prevSeason}
+            onClick={() => prevSeason && setActiveSeason(prevSeason)}
+          >
+            ← {prevSeason ?? ""}
+          </button>
+          <span className="fw-bold fs-5 px-3">
+            {activeSeason ?? t("all_seasons")}
+          </span>
+          <button
+            className="btn btn-outline-primary btn-sm"
+            disabled={!nextSeason}
+            onClick={() => nextSeason && setActiveSeason(nextSeason)}
+          >
+            {nextSeason ?? ""} →
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-center mt-5">{t("loading")}</div>
+      ) : error ? (
+        <div className="alert alert-danger mt-3">{error}</div>
+      ) : matches.length === 0 ? (
         <div className="alert alert-info">{t("no_matches")}</div>
       ) : (
         <div className="table-responsive">

@@ -8,6 +8,7 @@ export default async function handler(req: any, res: any) {
     // Tournament header
     const [tournament] = await sql<any[]>`
       SELECT t.id, t.name, t.season, t.date, t.has_group_stage, t.created_at,
+             t.team_id,
              tm.name AS team_name,
              d.name  AS discipline_name
       FROM   club_tournament t

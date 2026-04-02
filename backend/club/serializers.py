@@ -111,7 +111,7 @@ class MatchSerializer(serializers.ModelSerializer):
         model = Match
         fields = [
             'id', 'team', 'team_id', 'team_name',
-            'date', 'home_team_name', 'away_team_name',
+            'season', 'date', 'home_team_name', 'away_team_name',
             'home_score', 'away_score', 'youtube_link',
         ]
 

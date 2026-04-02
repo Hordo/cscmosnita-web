@@ -2,17 +2,76 @@ import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
-const STAGE_LABEL: Record<string, string> = {
-  group: "Group Stage",
-  r32: "Round of 32",
-  r16: "Round of 16",
-  r8: "Quarterfinal",
-  semi: "Semifinal",
-  third: "3rd Place",
-  final: "Final",
-};
+const STAGE_ORDER = ["r32", "r16", "r8", "semi", "third", "final"];
 
-const MatchRow: React.FC<{ m: any }> = ({ m }) => (
+type TFunc = (key: string, opts?: Record<string, unknown>) => string;
+
+function computePlacement(
+  tour: any,
+  t: TFunc,
+): { label: string; color: string } | null {
+  const teamName: string = tour.team_name;
+  const knockouts: any[] = tour.knockout_matches || [];
+
+  if (knockouts.length > 0) {
+    const finalMatch = knockouts.find((m) => m.stage === "final");
+    if (
+      finalMatch &&
+      finalMatch.home_score !== null &&
+      finalMatch.away_score !== null
+    ) {
+      if (finalMatch.home_score > finalMatch.away_score)
+        return { label: t("placement.1st"), color: "warning text-dark" };
+      if (finalMatch.home_score < finalMatch.away_score)
+        return { label: t("placement.2nd"), color: "secondary" };
+      return { label: t("placement.draw_final"), color: "secondary" };
+    }
+    const thirdMatch = knockouts.find((m) => m.stage === "third");
+    if (
+      thirdMatch &&
+      thirdMatch.home_score !== null &&
+      thirdMatch.away_score !== null
+    ) {
+      if (thirdMatch.home_score > thirdMatch.away_score)
+        return { label: t("placement.3rd"), color: "warning text-dark" };
+      return { label: t("placement.4th"), color: "light text-dark border" };
+    }
+    for (const stage of [...STAGE_ORDER].reverse()) {
+      const m = knockouts.find(
+        (x) => x.stage === stage && x.home_score !== null,
+      );
+      if (m)
+        return {
+          label: t("placement.reached", { stage: t(`stage.${stage}`) }),
+          color: "info text-dark",
+        };
+    }
+    for (const stage of [...STAGE_ORDER].reverse()) {
+      if (knockouts.some((x) => x.stage === stage))
+        return {
+          label: t("placement.reached", { stage: t(`stage.${stage}`) }),
+          color: "info text-dark",
+        };
+    }
+  }
+
+  for (const group of tour.groups || []) {
+    const idx = (group.group_teams || []).findIndex(
+      (gt: any) => gt.team_name === teamName,
+    );
+    if (idx >= 0)
+      return {
+        label: t("placement.group", { name: group.name, pos: idx + 1 }),
+        color: idx === 0 ? "success" : "secondary",
+      };
+  }
+  return null;
+}
+
+const MatchRow: React.FC<{ m: any; videoLabel: string }> = ({
+  m,
+  videoLabel,
+}) => (
   <div className="d-flex align-items-center justify-content-between py-2 border-bottom">
     <div className="text-end" style={{ flex: 1 }}>
       <span className="fw-semibold">{m.home_team_name}</span>
@@ -34,7 +93,7 @@ const MatchRow: React.FC<{ m: any }> = ({ m }) => (
             className="btn btn-sm btn-outline-danger py-0"
             style={{ fontSize: "0.75rem" }}
           >
-            ▶ Video
+            ▶ {videoLabel}
           </a>
         </div>
       )}
@@ -68,19 +127,22 @@ export const TournamentViewPage: React.FC = () => {
   if (error) return <div className="alert alert-danger mt-3">{error}</div>;
   if (!tour) return null;
 
+  const myTeam: string = tour.team_name || "";
+
   // Group knockout matches by stage
   const knockoutByStage: Record<string, any[]> = {};
   for (const m of tour.knockout_matches || []) {
     if (!knockoutByStage[m.stage]) knockoutByStage[m.stage] = [];
     knockoutByStage[m.stage].push(m);
   }
-  const stageOrder = ["r32", "r16", "r8", "semi", "third", "final"];
+
+  const placement = computePlacement(tour, t);
 
   return (
     <div className="container py-4">
       <div className="d-flex align-items-center mb-2 gap-3">
         <Link
-          to={`/teams/${tour.team || ""}/tournaments`}
+          to={`/teams/${tour.team_id || ""}/tournaments`}
           className="btn btn-outline-secondary btn-sm"
         >
           ← {t("back")}
@@ -104,12 +166,17 @@ export const TournamentViewPage: React.FC = () => {
             {tour.team_name}
           </span>
         )}
+        {placement && (
+          <span className={`badge bg-${placement.color} ms-2 fs-6`}>
+            {placement.label}
+          </span>
+        )}
       </div>
 
       {/* Group Stage */}
       {tour.has_group_stage && tour.groups?.length > 0 && (
         <div className="mb-5">
-          <h5 className="border-bottom pb-2 mb-3">{t("group_stage")}</h5>
+          <h5 className="border-bottom pb-2 mb-3">{t("stage.group")}</h5>
           {tour.groups.map((group: any) => (
             <div key={group.id} className="mb-4">
               <h6 className="fw-bold mb-2">{group.name}</h6>
@@ -123,42 +190,99 @@ export const TournamentViewPage: React.FC = () => {
                   >
                     <thead className="table-light">
                       <tr>
-                        <th>Team</th>
-                        <th>P</th>
-                        <th>W</th>
-                        <th>D</th>
-                        <th>L</th>
-                        <th>GF</th>
-                        <th>GA</th>
-                        <th>GD</th>
-                        <th>Pts</th>
+                        <th>{t("tour.col_team")}</th>
+                        <th>{t("tour.col_p")}</th>
+                        <th>{t("tour.col_w")}</th>
+                        <th>{t("tour.col_d")}</th>
+                        <th>{t("tour.col_l")}</th>
+                        <th>{t("tour.col_gf")}</th>
+                        <th>{t("tour.col_ga")}</th>
+                        <th>{t("tour.col_gd")}</th>
+                        <th>{t("tour.col_pts")}</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {group.group_teams.map((gt: any) => (
-                        <tr key={gt.id}>
-                          <td className="fw-semibold">{gt.team_name}</td>
-                          <td>{gt.played}</td>
-                          <td>{gt.won}</td>
-                          <td>{gt.drawn}</td>
-                          <td>{gt.lost}</td>
-                          <td>{gt.goals_for}</td>
-                          <td>{gt.goals_against}</td>
-                          <td>{gt.goals_for - gt.goals_against}</td>
-                          <td className="fw-bold">{gt.points}</td>
-                        </tr>
-                      ))}
+                      {group.group_teams.map((gt: any) => {
+                        const isMyTeam = gt.team_name === myTeam;
+                        return (
+                          <tr
+                            key={gt.id}
+                            className={isMyTeam ? "table-primary" : ""}
+                          >
+                            <td className="fw-semibold">
+                              {isMyTeam ? (
+                                <strong>{gt.team_name}</strong>
+                              ) : (
+                                gt.team_name
+                              )}
+                            </td>
+                            <td>{gt.played}</td>
+                            <td>
+                              {isMyTeam ? (
+                                gt.won
+                              ) : (
+                                <span className="text-muted">–</span>
+                              )}
+                            </td>
+                            <td>
+                              {isMyTeam ? (
+                                gt.drawn
+                              ) : (
+                                <span className="text-muted">–</span>
+                              )}
+                            </td>
+                            <td>
+                              {isMyTeam ? (
+                                gt.lost
+                              ) : (
+                                <span className="text-muted">–</span>
+                              )}
+                            </td>
+                            <td>
+                              {isMyTeam ? (
+                                gt.goals_for
+                              ) : (
+                                <span className="text-muted">–</span>
+                              )}
+                            </td>
+                            <td>
+                              {isMyTeam ? (
+                                gt.goals_against
+                              ) : (
+                                <span className="text-muted">–</span>
+                              )}
+                            </td>
+                            <td>
+                              {isMyTeam ? (
+                                gt.goals_for - gt.goals_against
+                              ) : (
+                                <span className="text-muted">–</span>
+                              )}
+                            </td>
+                            <td className="fw-bold">{gt.points}</td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               )}
 
-              {/* Group Matches */}
-              {group.matches?.length > 0 && (
+              {/* Group Matches — only my team's games */}
+              {group.matches?.filter(
+                (m: any) =>
+                  m.home_team_name === myTeam || m.away_team_name === myTeam,
+              ).length > 0 && (
                 <div className="card border-0 bg-light p-2">
-                  {group.matches.map((m: any) => (
-                    <MatchRow key={m.id} m={m} />
-                  ))}
+                  {group.matches
+                    .filter(
+                      (m: any) =>
+                        m.home_team_name === myTeam ||
+                        m.away_team_name === myTeam,
+                    )
+                    .map((m: any) => (
+                      <MatchRow key={m.id} m={m} videoLabel={t("video")} />
+                    ))}
                 </div>
               )}
             </div>
@@ -167,15 +291,15 @@ export const TournamentViewPage: React.FC = () => {
       )}
 
       {/* Knockout Stages */}
-      {stageOrder.map((stage) => {
+      {STAGE_ORDER.map((stage) => {
         const stageMatches = knockoutByStage[stage];
         if (!stageMatches?.length) return null;
         return (
           <div key={stage} className="mb-4">
-            <h5 className="border-bottom pb-2 mb-3">{STAGE_LABEL[stage]}</h5>
+            <h5 className="border-bottom pb-2 mb-3">{t(`stage.${stage}`)}</h5>
             <div className="card border-0 bg-light p-2">
               {stageMatches.map((m: any) => (
-                <MatchRow key={m.id} m={m} />
+                <MatchRow key={m.id} m={m} videoLabel={t("video")} />
               ))}
             </div>
           </div>
