@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../config/axios";
 import { API_URLS } from "../config/api";
@@ -27,6 +27,8 @@ export default function SponsorAdminPage() {
   const [form, setForm] = useState({ ...empty });
   const [editId, setEditId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -35,6 +37,30 @@ export default function SponsorAdminPage() {
   const flash = (type: "success" | "error", text: string) => {
     setMsg({ type, text });
     setTimeout(() => setMsg(null), 3000);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const ext = file.name.split(".").pop() ?? "png";
+    setUploading(true);
+    try {
+      const { data } = await api.post(API_URLS.uploadSponsorLogo, {
+        ext,
+        contentType: file.type || "image/png",
+      });
+      await fetch(data.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "image/png" },
+        body: file,
+      });
+      setForm((prev) => ({ ...prev, logo_url: data.finalUrl }));
+      flash("success", t("sp.logo_uploaded"));
+    } catch {
+      flash("error", t("sp.logo_upload_error"));
+    } finally {
+      setUploading(false);
+    }
   };
 
   const load = async () => {
@@ -156,13 +182,35 @@ export default function SponsorAdminPage() {
             </div>
             <div className="col-md-4">
               <label className="form-label">{t("sp.logo_url")}</label>
-              <input
-                className="form-control"
-                name="logo_url"
-                value={form.logo_url ?? ""}
-                onChange={handleChange}
-                placeholder="https://example.com/logo.png"
-              />
+              <div className="d-flex gap-2 align-items-center">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? t("sp.logo_uploading") : t("sp.logo_upload_btn")}
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={handleLogoUpload}
+                />
+                {form.logo_url && (
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger btn-sm"
+                    onClick={() => {
+                      setForm((prev) => ({ ...prev, logo_url: "" }));
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
             <div className="col-md-4">
               <label className="form-label">{t("sp.website")}</label>
@@ -241,6 +289,7 @@ export default function SponsorAdminPage() {
                 onClick={() => {
                   setForm({ ...empty });
                   setEditId(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
                 }}
               >
                 {t("cancel")}
