@@ -171,6 +171,75 @@ class CalendarEvent(models.Model):
         ordering = ['-start_datetime']
 
 
+TOURNAMENT_STAGE_CHOICES = [
+    ('group', 'Group Stage'),
+    ('r32', 'Round of 32'),
+    ('r16', 'Round of 16'),
+    ('r8', 'Quarterfinal'),
+    ('semi', 'Semifinal'),
+    ('third', '3rd Place'),
+    ('final', 'Final'),
+]
+
+
+class Tournament(models.Model):
+    name = models.CharField(max_length=200)
+    season = models.CharField(max_length=20, blank=True)
+    date = models.DateField(null=True, blank=True)
+    discipline = models.ForeignKey(Discipline, on_delete=models.SET_NULL, null=True, blank=True)
+    team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name='tournaments')
+    has_group_stage = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.season}) - {self.team}"
+
+
+class TournamentGroup(models.Model):
+    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name='groups')
+    name = models.CharField(max_length=50)  # e.g. "Group A"
+
+    def __str__(self):
+        return f"{self.tournament.name} - {self.name}"
+
+
+class GroupTeam(models.Model):
+    group = models.ForeignKey(TournamentGroup, on_delete=models.CASCADE, related_name='group_teams')
+    team_name = models.CharField(max_length=150)
+    played = models.IntegerField(default=0)
+    won = models.IntegerField(default=0)
+    drawn = models.IntegerField(default=0)
+    lost = models.IntegerField(default=0)
+    goals_for = models.IntegerField(default=0)
+    goals_against = models.IntegerField(default=0)
+    points = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['-points', '-goals_for']
+
+    def __str__(self):
+        return f"{self.team_name} ({self.group})"
+
+
+class TournamentMatch(models.Model):
+    tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name='tournament_matches')
+    group = models.ForeignKey(TournamentGroup, on_delete=models.SET_NULL, null=True, blank=True, related_name='matches')
+    stage = models.CharField(max_length=10, choices=TOURNAMENT_STAGE_CHOICES, default='group')
+    home_team_name = models.CharField(max_length=150)
+    away_team_name = models.CharField(max_length=150)
+    home_score = models.IntegerField(null=True, blank=True)
+    away_score = models.IntegerField(null=True, blank=True)
+    youtube_link = models.URLField(blank=True)
+    match_order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['match_order']
+
+    def __str__(self):
+        score = f"{self.home_score}-{self.away_score}" if self.home_score is not None else "vs"
+        return f"[{self.get_stage_display()}] {self.home_team_name} {score} {self.away_team_name}"
+
+
 class TrainingSession(models.Model):
     """Specific model for training sessions with additional fields"""
     calendar_event = models.OneToOneField(CalendarEvent, on_delete=models.CASCADE, related_name="training_session")

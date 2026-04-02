@@ -20,4 +20,9 @@ export const API_URLS = {
   calendarEvents: `${API_BASE}/api/calendar/events/`,
   calendarEventTypes: `${API_BASE}/api/calendar/event-types/`,
   calendarTrainings: `${API_BASE}/api/calendar/trainings/`,
+  // Tournament endpoints
+  tournaments: `${API_BASE}/api/tournaments/`,
+  tournamentGroups: `${API_BASE}/api/tournament-groups/`,
+  groupTeams: `${API_BASE}/api/group-teams/`,
+  tournamentMatches: `${API_BASE}/api/tournament-matches/`,
 };

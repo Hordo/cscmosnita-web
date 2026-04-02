@@ -5,6 +5,7 @@ from .views import (
     ChampionshipViewSet, MatchViewSet, DisciplineViewSet,
     EventTypeViewSet, CalendarEventViewSet, TrainingSessionViewSet, EventAttendanceViewSet,
     PushSendNotificationsView,
+    TournamentViewSet, TournamentGroupViewSet, GroupTeamViewSet, TournamentMatchViewSet,
 )
 from .signed_upload import (
     GeneratePlayerPhotoUploadURL, GenerateTeamPhotoUploadURL, GenerateCoachPhotoUploadURL, GenerateGeneralPhotoUploadURL
@@ -17,6 +18,12 @@ router.register(r'players', PlayerViewSet, basename='players')
 router.register(r'championships', ChampionshipViewSet, basename='championships')
 router.register(r'matches', MatchViewSet, basename='matches')
 router.register(r'disciplines', DisciplineViewSet, basename='disciplines')
+
+# Tournament endpoints
+router.register(r'tournaments', TournamentViewSet, basename='tournaments')
+router.register(r'tournament-groups', TournamentGroupViewSet, basename='tournament-groups')
+router.register(r'group-teams', GroupTeamViewSet, basename='group-teams')
+router.register(r'tournament-matches', TournamentMatchViewSet, basename='tournament-matches')
 
 # Calendar endpoints
 router.register(r'calendar/events', CalendarEventViewSet, basename='calendar-events')

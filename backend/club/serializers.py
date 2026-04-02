@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch
 
 # Discipline Serializer
 class DisciplineSerializer(serializers.ModelSerializer):
@@ -358,3 +358,56 @@ class CalendarEventListSerializer(serializers.ModelSerializer):
             import traceback
             traceback.print_exc()
             raise
+
+
+# ── Tournament serializers ────────────────────────────────────────────────────
+
+class GroupTeamSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GroupTeam
+        fields = ['id', 'team_name', 'played', 'won', 'drawn', 'lost',
+                  'goals_for', 'goals_against', 'points']
+
+
+class TournamentMatchSerializer(serializers.ModelSerializer):
+    stage_display = serializers.CharField(source='get_stage_display', read_only=True)
+
+    class Meta:
+        model = TournamentMatch
+        fields = ['id', 'tournament', 'group', 'stage', 'stage_display', 'home_team_name',
+                  'away_team_name', 'home_score', 'away_score', 'youtube_link', 'match_order']
+
+
+class TournamentGroupSerializer(serializers.ModelSerializer):
+    group_teams = GroupTeamSerializer(many=True, read_only=True)
+    matches = TournamentMatchSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = TournamentGroup
+        fields = ['id', 'tournament', 'name', 'group_teams', 'matches']
+
+
+class TournamentListSerializer(serializers.ModelSerializer):
+    team_name = serializers.CharField(source='team.name', read_only=True)
+    discipline_name = serializers.CharField(source='discipline.name', read_only=True)
+
+    class Meta:
+        model = Tournament
+        fields = ['id', 'name', 'season', 'date', 'has_group_stage', 'team', 'team_name',
+                  'discipline', 'discipline_name', 'created_at']
+
+
+class TournamentSerializer(serializers.ModelSerializer):
+    team_name = serializers.CharField(source='team.name', read_only=True)
+    discipline_name = serializers.CharField(source='discipline.name', read_only=True)
+    groups = TournamentGroupSerializer(many=True, read_only=True)
+    knockout_matches = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Tournament
+        fields = ['id', 'name', 'season', 'date', 'has_group_stage', 'team', 'team_name',
+                  'discipline', 'discipline_name', 'groups', 'knockout_matches', 'created_at']
+
+    def get_knockout_matches(self, obj):
+        qs = obj.tournament_matches.filter(group__isnull=True).order_by('match_order')
+        return TournamentMatchSerializer(qs, many=True).data

@@ -22,6 +22,9 @@ import GDPR from "../pages/GDPR";
 import Calendar from "../admin/Calendar";
 import NotificationPreferencesPage from "../pages/NotificationPreferencesPage";
 import RouteError from "./RouteError";
+import TournamentAdminPage from "../admin/TournamentAdminPage";
+import { TeamTournamentsPage } from "../pages/TeamTournamentsPage";
+import { TournamentViewPage } from "../pages/TournamentViewPage";
 
 const router = createBrowserRouter([
   {
@@ -69,11 +72,17 @@ const router = createBrowserRouter([
             path: "championship",
             element: <ChampionshipAdminPage />,
           },
+          {
+            path: "tournaments",
+            element: <TournamentAdminPage />,
+          },
         ],
       },
       { path: "teams", element: <TeamViewerPage /> },
       { path: "teams/:teamId", element: <TeamViewerPage /> },
       { path: "teams/:teamId/matches", element: <TeamMatchesPage /> },
+      { path: "teams/:teamId/tournaments", element: <TeamTournamentsPage /> },
+      { path: "tournaments/:tournamentId", element: <TournamentViewPage /> },
       { path: "disciplines/:discipline", element: <DisciplineDetailPage /> },
       { path: "terms", element: <Terms /> },
       { path: "cookies-policy", element: <CookiesPolicy /> },

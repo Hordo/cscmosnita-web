@@ -1,10 +1,12 @@
 from rest_framework import viewsets
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch
 from .serializers import (
     TeamSerializer, CoachSerializer, PlayerSerializer,
     ChampionshipSerializer, MatchSerializer, DisciplineSerializer,
     EventTypeSerializer, CalendarEventSerializer, CalendarEventCreateSerializer,
-    TrainingSessionSerializer, EventAttendanceSerializer, CalendarEventListSerializer
+    TrainingSessionSerializer, EventAttendanceSerializer, CalendarEventListSerializer,
+    TournamentListSerializer, TournamentSerializer, TournamentGroupSerializer,
+    GroupTeamSerializer, TournamentMatchSerializer
 )
 
 # Discipline ViewSet
@@ -416,4 +418,157 @@ class PushSendNotificationsView(APIView):
                     failed += 1
 
         return Response({"events": events.count(), "sent": sent, "failed": failed})
+
+
+# ── Tournament ViewSets ───────────────────────────────────────────────────────
+
+from rest_framework.decorators import action
+
+class TournamentViewSet(viewsets.ModelViewSet):
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return TournamentSerializer
+        return TournamentListSerializer
+
+    def get_queryset(self):
+        qs = Tournament.objects.select_related('team', 'discipline')
+        team_id = self.request.query_params.get('team')
+        if team_id:
+            qs = qs.filter(team_id=team_id)
+        return qs.order_by('-created_at')
+
+
+class TournamentGroupViewSet(viewsets.ModelViewSet):
+    queryset = TournamentGroup.objects.prefetch_related('group_teams', 'matches')
+    serializer_class = TournamentGroupSerializer
+
+    @action(detail=True, methods=['post'])
+    def add_teams(self, request, pk=None):
+        """Add teams to group and auto-create all round-robin 0-0 matches."""
+        group = self.get_object()
+        team_names = request.data.get('team_names', [])
+
+        # Always ensure the tournament's own club team is in the group
+        club_team_name = group.tournament.team.name if group.tournament.team else None
+        if club_team_name:
+            GroupTeam.objects.get_or_create(group=group, team_name=club_team_name)
+
+        for name in team_names:
+            GroupTeam.objects.get_or_create(group=group, team_name=name.strip())
+
+        # Build round-robin matches for all teams in the group
+        all_teams = list(GroupTeam.objects.filter(group=group))
+        existing_pairs = set(
+            TournamentMatch.objects.filter(group=group)
+            .values_list('home_team_name', 'away_team_name')
+        )
+        order = TournamentMatch.objects.filter(group=group).count()
+        for i, team_a in enumerate(all_teams):
+            for team_b in all_teams[i + 1:]:
+                if (team_a.team_name, team_b.team_name) not in existing_pairs:
+                    TournamentMatch.objects.create(
+                        tournament=group.tournament,
+                        group=group,
+                        stage='group',
+                        home_team_name=team_a.team_name,
+                        away_team_name=team_b.team_name,
+                        home_score=0,
+                        away_score=0,
+                        match_order=order,
+                    )
+                    existing_pairs.add((team_a.team_name, team_b.team_name))
+                    order += 1
+
+        group.refresh_from_db()
+        return Response(TournamentGroupSerializer(group).data)
+
+    @action(detail=True, methods=['post'])
+    def recalculate_standings(self, request, pk=None):
+        """Recompute W/D/L/GF/GA/Pts for every team in this group from match results."""
+        group = self.get_object()
+        stats: dict = {}
+        for gt in GroupTeam.objects.filter(group=group):
+            stats[gt.team_name] = {'obj': gt, 'p': 0, 'w': 0, 'd': 0, 'l': 0, 'gf': 0, 'ga': 0, 'pts': 0}
+
+        for match in TournamentMatch.objects.filter(group=group):
+            if match.home_score is None or match.away_score is None:
+                continue
+            hs, as_ = match.home_score, match.away_score
+            for team_name, is_home in [(match.home_team_name, True), (match.away_team_name, False)]:
+                if team_name not in stats:
+                    continue
+                s = stats[team_name]
+                s['p'] += 1
+                s['gf'] += hs if is_home else as_
+                s['ga'] += as_ if is_home else hs
+                if hs == as_:
+                    s['d'] += 1; s['pts'] += 1
+                elif (is_home and hs > as_) or (not is_home and as_ > hs):
+                    s['w'] += 1; s['pts'] += 3
+                else:
+                    s['l'] += 1
+
+        for s in stats.values():
+            gt = s['obj']
+            gt.played = s['p']; gt.won = s['w']; gt.drawn = s['d']; gt.lost = s['l']
+            gt.goals_for = s['gf']; gt.goals_against = s['ga']; gt.points = s['pts']
+            gt.save()
+
+        group.refresh_from_db()
+        return Response(TournamentGroupSerializer(group).data)
+
+
+class GroupTeamViewSet(viewsets.ModelViewSet):
+    queryset = GroupTeam.objects.all()
+    serializer_class = GroupTeamSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        group_id = self.request.query_params.get('group')
+        if group_id:
+            qs = qs.filter(group_id=group_id)
+        return qs
+
+
+class TournamentMatchViewSet(viewsets.ModelViewSet):
+    queryset = TournamentMatch.objects.all()
+    serializer_class = TournamentMatchSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        tournament_id = self.request.query_params.get('tournament')
+        if tournament_id:
+            qs = qs.filter(tournament_id=tournament_id)
+        return qs
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        # Auto-recalculate group standings when a group match score changes
+        if instance.group_id and ('home_score' in serializer.validated_data or 'away_score' in serializer.validated_data):
+            group = instance.group
+            stats: dict = {}
+            for gt in GroupTeam.objects.filter(group=group):
+                stats[gt.team_name] = {'obj': gt, 'p': 0, 'w': 0, 'd': 0, 'l': 0, 'gf': 0, 'ga': 0, 'pts': 0}
+            for match in TournamentMatch.objects.filter(group=group):
+                if match.home_score is None or match.away_score is None:
+                    continue
+                hs, as_ = match.home_score, match.away_score
+                for team_name, is_home in [(match.home_team_name, True), (match.away_team_name, False)]:
+                    if team_name not in stats:
+                        continue
+                    s = stats[team_name]
+                    s['p'] += 1
+                    s['gf'] += hs if is_home else as_
+                    s['ga'] += as_ if is_home else hs
+                    if hs == as_:
+                        s['d'] += 1; s['pts'] += 1
+                    elif (is_home and hs > as_) or (not is_home and as_ > hs):
+                        s['w'] += 1; s['pts'] += 3
+                    else:
+                        s['l'] += 1
+            for s in stats.values():
+                gt = s['obj']
+                gt.played = s['p']; gt.won = s['w']; gt.drawn = s['d']; gt.lost = s['l']
+                gt.goals_for = s['gf']; gt.goals_against = s['ga']; gt.points = s['pts']
+                gt.save()
 
