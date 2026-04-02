@@ -6,18 +6,82 @@ import logo from "../assets/CSCMosnita.png";
 import { clubStats } from "../config/sponsors";
 
 const DISCIPLINE_ICONS: Record<string, string> = {
+  // Football / Soccer
   fotbal: "⚽",
   football: "⚽",
+  soccer: "⚽",
+  // Basketball
   baschet: "🏀",
   basketball: "🏀",
+  // Handball
   handbal: "🤾",
   handball: "🤾",
+  // Tennis
   tenis: "🎾",
   tennis: "🎾",
+  // Volleyball
   volei: "🏐",
   volleyball: "🏐",
+  // Swimming
   natatie: "🏊",
+  inot: "🏊",
   swimming: "🏊",
+  // Athletics / Running
+  atletism: "🏃",
+  alergare: "🏃",
+  athletics: "🏃",
+  running: "🏃",
+  // Cycling
+  ciclism: "🚴",
+  cycling: "🚴",
+  // Gymnastics
+  gimnastica: "🤸",
+  gymnastics: "🤸",
+  // Martial arts
+  judo: "🥋",
+  karate: "🥋",
+  lupte: "🤼",
+  wrestling: "🤼",
+  // Boxing
+  box: "🥊",
+  boxing: "🥊",
+  // Rugby
+  rugby: "🏉",
+  // Hockey
+  hochei: "🏒",
+  hockey: "🏒",
+  // Table tennis
+  "tenis de masa": "🏓",
+  "table tennis": "🏓",
+  ping: "🏓",
+  // Badminton
+  badminton: "🏸",
+  // Chess
+  sah: "♟️",
+  șah: "♟️",
+  chess: "♟️",
+  // Kempo / Kenpō
+  kempo: "🥋",
+  kenpō: "🥋",
+  kenpo: "🥋",
+  // Weightlifting
+  haltere: "🏋️",
+  weightlifting: "🏋️",
+  // Archery
+  tir: "🎯",
+  archery: "🎯",
+  // Skiing
+  ski: "⛷️",
+  schi: "⛷️",
+  // Baseball
+  baseball: "⚾",
+  // American football
+  "fotbal american": "🏈",
+  // Golf
+  golf: "⛳",
+  // Climbing
+  escalada: "🧗",
+  climbing: "🧗",
 };
 
 const EVENT_TYPE_DOT: Record<string, string> = {

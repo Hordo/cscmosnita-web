@@ -111,6 +111,8 @@
   "back": "Înapoi",
   "this_week": "Program săptămâna aceasta",
   "no_events_this_week": "Nu există evenimente programate pentru această săptămână.",
+  "upcoming_events": "Evenimente viitoare (7 zile)",
+  "no_upcoming_events": "Nu sunt evenimente programate.",
   "all_day": "Toată ziua",
   "all_seasons": "Toate sezoanele",
   "matches": "Meciuri",

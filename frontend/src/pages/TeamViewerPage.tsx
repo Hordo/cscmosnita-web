@@ -36,7 +36,8 @@ export const TeamViewerPage: React.FC = () => {
       }),
       fetch(eventsUrl).then(async (res) => {
         if (!res.ok) return [];
-        return res.json();
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
       }),
     ])
       .then(([teamsData, playersData, coachesData, eventsData]) => {
@@ -47,7 +48,7 @@ export const TeamViewerPage: React.FC = () => {
       })
       .catch((err) => setError(err.message || "Unknown error"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [teamId]);
 
   if (loading) return <div className="text-center mt-5">{t("loading")}</div>;
   if (error) return <div className="alert alert-danger mt-3">{error}</div>;
@@ -109,10 +110,10 @@ export const TeamViewerPage: React.FC = () => {
 
       {/* This week's schedule */}
       <div className="card mb-4">
-        <div className="card-header fw-semibold">📅 {t("this_week")}</div>
+        <div className="card-header fw-semibold">📅 {t("upcoming_events")}</div>
         <div className="card-body p-0">
           {weekEvents.length === 0 ? (
-            <p className="text-muted m-3">{t("no_events_this_week")}</p>
+            <p className="text-muted m-3">{t("no_upcoming_events")}</p>
           ) : (
             <ul className="list-group list-group-flush">
               {weekEvents.map((ev) => {

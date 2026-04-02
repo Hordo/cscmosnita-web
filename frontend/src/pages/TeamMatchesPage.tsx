@@ -130,7 +130,11 @@ export const TeamMatchesPage: React.FC = () => {
             <tbody>
               {matches.map((match) => (
                 <tr key={match.id}>
-                  <td>{match.date || "—"}</td>
+                  <td>
+                    {match.date
+                      ? new Date(match.date).toISOString().slice(0, 10)
+                      : "—"}
+                  </td>
                   <td className="text-end fw-semibold">
                     {match.home_team_name}
                   </td>
