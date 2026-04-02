@@ -88,7 +88,6 @@ export default function Home() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
-  const [carouselIdx, setCarouselIdx] = useState(0);
 
   useEffect(() => {
     fetch("/api/disciplines")
@@ -113,20 +112,6 @@ export default function Home() {
       .then((d) => Array.isArray(d) && setSponsors(d))
       .catch(() => {});
   }, []);
-
-  // Auto-advance carousel every 3s when there are sponsors
-  useEffect(() => {
-    if (sponsors.length < 2) return;
-    const id = setInterval(
-      () => setCarouselIdx((i) => (i + 1) % sponsors.length),
-      3000,
-    );
-    return () => clearInterval(id);
-  }, [sponsors.length]);
-
-  const prevSponsor = () =>
-    setCarouselIdx((i) => (i - 1 + sponsors.length) % sponsors.length);
-  const nextSponsor = () => setCarouselIdx((i) => (i + 1) % sponsors.length);
 
   const disciplineIcon = (name: string) =>
     DISCIPLINE_ICONS[name.toLowerCase()] ?? "🏅";
@@ -295,32 +280,23 @@ export default function Home() {
       </section>
 
       {/* SPONSORS */}
-      {sponsors.length > 0 && (
-        <section className="csc-sponsors-strip">
-          <h2 className="csc-section-title" style={{ marginBottom: "1.5rem" }}>
-            {t("home.sponsors_title")}
-          </h2>
-          <div className="csc-sponsors-carousel">
-            <button
-              className="csc-sponsors-arrow csc-sponsors-arrow--prev"
-              onClick={prevSponsor}
-              aria-label="Previous sponsor"
-            >
-              ‹
-            </button>
-            <div className="csc-sponsors-track-wrap">
-              <div
-                className="csc-sponsors-track"
-                style={{ transform: `translateX(-${carouselIdx * 100}%)` }}
-              >
-                {sponsors.map((s) => (
-                  <div key={s.id} className="csc-sponsors-slide">
+      {sponsors.length > 0 &&
+        (() => {
+          // Multiply until we have at least 12 items, then double for seamless loop
+          let filled = [...sponsors];
+          while (filled.length < 12) filled = [...filled, ...sponsors];
+          const marqueeItems = [...filled, ...filled];
+          return (
+            <section className="csc-sponsors-strip">
+              <h2 className="csc-sponsors-title">{t("home.sponsors_title")}</h2>
+              <div className="csc-sponsors-marquee">
+                {marqueeItems.map((s, i) => (
+                  <div key={i} className="csc-sponsors-item">
                     {s.website_url ? (
                       <a
                         href={s.website_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="csc-sponsor-item"
                       >
                         {s.logo_url ? (
                           <img
@@ -333,10 +309,9 @@ export default function Home() {
                             {s.name.substring(0, 2).toUpperCase()}
                           </div>
                         )}
-                        <span className="csc-sponsor-name">{s.name}</span>
                       </a>
                     ) : (
-                      <div className="csc-sponsor-item">
+                      <>
                         {s.logo_url ? (
                           <img
                             src={s.logo_url}
@@ -348,33 +323,14 @@ export default function Home() {
                             {s.name.substring(0, 2).toUpperCase()}
                           </div>
                         )}
-                        <span className="csc-sponsor-name">{s.name}</span>
-                      </div>
+                      </>
                     )}
                   </div>
                 ))}
               </div>
-            </div>
-            <button
-              className="csc-sponsors-arrow csc-sponsors-arrow--next"
-              onClick={nextSponsor}
-              aria-label="Next sponsor"
-            >
-              ›
-            </button>
-          </div>
-          <div className="csc-sponsors-dots">
-            {sponsors.map((_, i) => (
-              <button
-                key={i}
-                className={`csc-sponsors-dot${i === carouselIdx ? " active" : ""}`}
-                onClick={() => setCarouselIdx(i)}
-                aria-label={`Sponsor ${i + 1}`}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+            </section>
+          );
+        })()}
 
       {/* CTA BANNER */}
       <section className="csc-cta-banner">

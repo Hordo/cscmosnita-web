@@ -486,139 +486,117 @@
 .csc-sponsors-strip {
   background: var(--csc-white);
   border-top: 1px solid #eee;
-  padding: 3rem 0 2.5rem;
+  padding: 2.5rem 0 2rem;
   overflow: hidden;
+  position: relative;
+  /* viewport breakout — escapes any parent padding/container */
+  width: 100vw;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
 }
 
-/* outer wrapper: arrows + track side-by-side */
-.csc-sponsors-carousel {
+/* gradient fade masks on left & right edges */
+.csc-sponsors-strip::before,
+.csc-sponsors-strip::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 120px;
+  z-index: 2;
+  pointer-events: none;
+}
+.csc-sponsors-strip::before {
+  left: 0;
+  background: linear-gradient(to right, var(--csc-white) 20%, transparent 100%);
+}
+.csc-sponsors-strip::after {
+  right: 0;
+  background: linear-gradient(to left, var(--csc-white) 20%, transparent 100%);
+}
+
+/* ── infinite marquee ticker ───────────────────────────── */
+@keyframes csc-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* the track — full viewport width, no side padding */
+.csc-sponsors-marquee {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  max-width: 600px;
-  margin: 0 auto;
+  gap: 4rem;
+  animation: csc-marquee 20s linear infinite;
+  width: max-content;
+  /* start flush with the left edge */
+  padding: 0.5rem 0;
+  will-change: transform;
+}
+
+/* pause on hover so users can read */
+.csc-sponsors-strip:hover .csc-sponsors-marquee {
+  animation-play-state: paused;
+}
+
+/* section title — padded so it doesn't touch edges */
+.csc-sponsors-title {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 800;
+  color: var(--csc-blue);
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding: 0 1rem;
+  position: relative;
+  z-index: 3;
+}
+
+/* each logo slot */
+.csc-sponsors-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
   padding: 0 1rem;
 }
 
-/* masks the sliding track */
-.csc-sponsors-track-wrap {
-  flex: 1;
-  overflow: hidden;
-  border-radius: 12px;
-}
-
-/* the sliding strip — one slide = 100% of the wrap */
-.csc-sponsors-track {
-  display: flex;
-  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* each card */
-.csc-sponsors-slide {
-  flex: 0 0 100%;
-  display: flex;
-  justify-content: center;
-  padding: 1.25rem 0;
-}
-
-/* arrow buttons */
-.csc-sponsors-arrow {
-  background: none;
-  border: 2px solid var(--csc-blue);
-  color: var(--csc-blue);
-  border-radius: 50%;
-  width: 38px;
-  height: 38px;
-  font-size: 1.3rem;
-  line-height: 1;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    background 0.2s,
-    color 0.2s;
+.csc-sponsors-item a {
   display: flex;
   align-items: center;
-  justify-content: center;
-}
-
-.csc-sponsors-arrow:hover {
-  background: var(--csc-blue);
-  color: #fff;
-}
-
-/* pagination dots */
-.csc-sponsors-dots {
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.csc-sponsors-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: none;
-  background: #ccc;
-  cursor: pointer;
-  padding: 0;
-  transition:
-    background 0.2s,
-    transform 0.2s;
-}
-
-.csc-sponsors-dot.active {
-  background: var(--csc-blue);
-  transform: scale(1.35);
-}
-
-/* sponsor card content */
-.csc-sponsor-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
   text-decoration: none;
-  transition: transform 0.2s;
 }
 
-.csc-sponsor-item:hover {
-  transform: translateY(-3px);
-}
-
+/* transparent PNG logos — no background, no border, full color */
 .csc-sponsor-logo {
-  height: 72px;
+  height: 64px;
   width: auto;
-  max-width: 180px;
+  max-width: 160px;
   object-fit: contain;
-  filter: grayscale(40%);
-  transition: filter 0.25s;
+  transition: transform 0.25s;
 }
 
-.csc-sponsor-item:hover .csc-sponsor-logo {
-  filter: grayscale(0%);
+.csc-sponsors-item:hover .csc-sponsor-logo {
+  transform: scale(1.08);
 }
 
 /* initials badge when no logo */
 .csc-sponsor-initials {
-  width: 72px;
-  height: 72px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: var(--csc-blue);
   color: #fff;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.csc-sponsor-name {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--csc-blue);
-  text-align: center;
-  letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
 .csc-sponsors-empty {
