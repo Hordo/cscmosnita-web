@@ -42,6 +42,7 @@ const Calendar: React.FC = () => {
   );
   const [deleting, setDeleting] = useState(false);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [editSeriesIds, setEditSeriesIds] = useState<string[]>([]);
 
   // Filter state
   const [filterDiscipline, setFilterDiscipline] = useState("");
@@ -173,6 +174,19 @@ const Calendar: React.FC = () => {
 
   const handleEditEvent = () => {
     setShowDetailsModal(false);
+    setEditSeriesIds([]);
+    setEditingEvent(selectedEvent);
+    setShowEventModal(true);
+  };
+
+  const handleEditAllInSeries = () => {
+    if (!selectedEvent?.extendedProps.recurrence_group_id) return;
+    const groupId = selectedEvent.extendedProps.recurrence_group_id;
+    const ids = allEvents
+      .filter((e) => e.extendedProps.recurrence_group_id === groupId)
+      .map((e) => e.id);
+    setShowDetailsModal(false);
+    setEditSeriesIds(ids);
     setEditingEvent(selectedEvent);
     setShowEventModal(true);
   };
@@ -416,10 +430,12 @@ const Calendar: React.FC = () => {
         onClose={() => {
           setShowEventModal(false);
           setEditingEvent(null);
+          setEditSeriesIds([]);
         }}
         onSubmit={handleCreateEvent}
         selectedDate={selectedDate}
         editEvent={editingEvent}
+        editSeriesIds={editSeriesIds}
       />
 
       {/* Event Details Modal */}
@@ -520,8 +536,16 @@ const Calendar: React.FC = () => {
                   {deleting ? "Deleting…" : "Delete all in series"}
                 </button>
               )}
+              {selectedEvent.extendedProps.recurrence_group_id && (
+                <button
+                  className="btn btn-outline-primary"
+                  onClick={handleEditAllInSeries}
+                >
+                  Edit all in series
+                </button>
+              )}
               <button className="btn btn-primary" onClick={handleEditEvent}>
-                Edit
+                Edit this
               </button>
               <button
                 className="btn btn-danger"

@@ -41,6 +41,9 @@ export const PlayerAdminPage: React.FC = () => {
   const { user } = useAuth();
   const [players, setPlayers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  const [disciplines, setDisciplines] = useState<any[]>([]);
+  const [filterDiscipline, setFilterDiscipline] = useState("");
+  const [filterTeam, setFilterTeam] = useState("");
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,12 +62,14 @@ export const PlayerAdminPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const [playersRes, teamsRes] = await Promise.all([
+        const [playersRes, teamsRes, disciplinesRes] = await Promise.all([
           api.get(API_URLS.players),
           api.get(API_URLS.teams),
+          api.get(API_URLS.disciplines),
         ]);
         setPlayers(playersRes.data);
         setTeams(teamsRes.data);
+        setDisciplines(disciplinesRes.data);
       } catch (err: any) {
         setError(err.response?.data?.detail || err.message || "Unknown error");
       } finally {
@@ -73,6 +78,19 @@ export const PlayerAdminPage: React.FC = () => {
     };
     fetchAll();
   }, [user]);
+
+  const disciplineTeams = filterDiscipline
+    ? teams.filter((t: any) => t.discipline === filterDiscipline)
+    : teams;
+
+  const filteredPlayers = players.filter((p: any) => {
+    if (filterDiscipline) {
+      const team = teams.find((t: any) => t.name === p.team);
+      if (!team || team.discipline !== filterDiscipline) return false;
+    }
+    if (filterTeam && p.team !== filterTeam) return false;
+    return true;
+  });
 
   const playerFields: AdminFormField[] = [
     ...basePlayerFields,
@@ -183,14 +201,57 @@ export const PlayerAdminPage: React.FC = () => {
         <div className="col-md-8 mb-3">
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
-              <h4 className="mb-3">Players</h4>
+              <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
+                <h4 className="mb-0 me-auto">Players</h4>
+                <select
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={filterDiscipline}
+                  onChange={(e) => {
+                    setFilterDiscipline(e.target.value);
+                    setFilterTeam("");
+                  }}
+                >
+                  <option value="">All disciplines</option>
+                  {disciplines.map((d: any) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="form-select form-select-sm"
+                  style={{ width: "auto" }}
+                  value={filterTeam}
+                  onChange={(e) => setFilterTeam(e.target.value)}
+                  disabled={!filterDiscipline}
+                >
+                  <option value="">All teams</option>
+                  {disciplineTeams.map((t: any) => (
+                    <option key={t.id} value={t.name}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                {(filterDiscipline || filterTeam) && (
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => {
+                      setFilterDiscipline("");
+                      setFilterTeam("");
+                    }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
               {loading ? (
                 <div>Loading...</div>
               ) : (
                 <div className="admin-min-width">
                   <ReusableAdminTable
                     columns={playerColumns}
-                    data={players}
+                    data={filteredPlayers}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     renderCell={(row, col) => {

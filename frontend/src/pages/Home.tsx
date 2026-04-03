@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "../styles/HomePage.css";
 import logo from "../assets/CSCMosnita.png";
-import { clubStats } from "../config/sponsors";
+const FOUNDED_YEAR = 2019;
 
 const DISCIPLINE_ICONS: Record<string, string> = {
   // Football / Soccer
@@ -152,6 +152,8 @@ export default function Home() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
+  const [teamsCount, setTeamsCount] = useState<number>(0);
+  const [playersCount, setPlayersCount] = useState<number>(0);
 
   useEffect(() => {
     fetch("/api/disciplines")
@@ -174,6 +176,17 @@ export default function Home() {
     fetch("/api/sponsors")
       .then((r) => r.json())
       .then((d) => Array.isArray(d) && setSponsors(d))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/teams")
+      .then((r) => r.json())
+      .then((d) => Array.isArray(d) && setTeamsCount(d.length))
+      .catch(() => {});
+    fetch("/api/players")
+      .then((r) => r.json())
+      .then((d) => Array.isArray(d) && setPlayersCount(d.length))
       .catch(() => {});
   }, []);
 
@@ -220,20 +233,20 @@ export default function Home() {
         <div className="csc-stats-inner">
           <div className="csc-stat-item">
             <div className="csc-stat-number">
-              {new Date().getFullYear() - clubStats.foundedYear}+
+              {new Date().getFullYear() - FOUNDED_YEAR}+
             </div>
             <div className="csc-stat-label">{t("home.stats_years")}</div>
           </div>
           <div className="csc-stat-item">
-            <div className="csc-stat-number">{clubStats.teamsCount}+</div>
+            <div className="csc-stat-number">{teamsCount}+</div>
             <div className="csc-stat-label">{t("home.stats_teams")}</div>
           </div>
           <div className="csc-stat-item">
-            <div className="csc-stat-number">{clubStats.playersCount}+</div>
+            <div className="csc-stat-number">{playersCount}+</div>
             <div className="csc-stat-label">{t("home.stats_players")}</div>
           </div>
           <div className="csc-stat-item">
-            <div className="csc-stat-number">{clubStats.disciplinesCount}</div>
+            <div className="csc-stat-number">{disciplines.length}</div>
             <div className="csc-stat-label">{t("home.stats_disciplines")}</div>
           </div>
         </div>

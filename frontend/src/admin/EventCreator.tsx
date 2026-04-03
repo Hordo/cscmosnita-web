@@ -29,6 +29,7 @@ interface EventCreatorProps {
       recurrence_group_id: string | null;
     };
   } | null;
+  editSeriesIds?: string[];
 }
 
 const RECURRENCE_RULE_VALUES = ["daily", "weekly", "monthly"] as const;
@@ -72,6 +73,7 @@ const EventCreator: React.FC<EventCreatorProps> = ({
   onSubmit,
   selectedDate,
   editEvent = null,
+  editSeriesIds = [],
 }) => {
   const { t } = useTranslation();
   const isTitleAuto = useRef(true);
@@ -225,11 +227,7 @@ const EventCreator: React.FC<EventCreatorProps> = ({
     }));
   };
 
-  const buildEventPayload = (
-    start: Date,
-    end: Date,
-    groupId?: string,
-  ): object => ({
+  const buildEventPayload = (start: Date, end: Date, groupId?: string) => ({
     title: formData.title,
     event_type_id: formData.event_type || undefined,
     discipline_id: formData.discipline
@@ -264,21 +262,42 @@ const EventCreator: React.FC<EventCreatorProps> = ({
 
     try {
       if (editEvent) {
-        // Edit mode — PATCH single event
         const start = new Date(`${formData.date}T${formData.time}`);
         const end = new Date(
-          start.getTime() + parseInt(formData.duration) * 3600 * 1000,
+          start.getTime() + parseFloat(formData.duration) * 3600 * 1000,
         );
-        const response = await api.patch(
-          `${API_URLS.calendarEvents}${editEvent.id}/`,
-          buildEventPayload(start, end),
-        );
-        onSubmit({
-          ...response.data,
-          backgroundColor: formData.color,
-          borderColor: formData.color,
-          textColor: "white",
-        });
+        const payload = buildEventPayload(start, end);
+
+        if (editSeriesIds.length > 1) {
+          // Edit all in series — PATCH every event, preserving each event's
+          // own start/end time (only metadata fields are overwritten)
+          const metaPayload = {
+            event_type_id: payload.event_type_id,
+            discipline_id: payload.discipline_id,
+            team_id: payload.team_id,
+            location: payload.location,
+            description: payload.description,
+            title: payload.title,
+          };
+          await Promise.all(
+            editSeriesIds.map((id) =>
+              api.patch(`${API_URLS.calendarEvents}${id}/`, metaPayload),
+            ),
+          );
+          onSubmit({ seriesUpdated: true, count: editSeriesIds.length });
+        } else {
+          // Edit single event — PATCH with full date/time
+          const response = await api.patch(
+            `${API_URLS.calendarEvents}${editEvent.id}/`,
+            payload,
+          );
+          onSubmit({
+            ...response.data,
+            backgroundColor: formData.color,
+            borderColor: formData.color,
+            textColor: "white",
+          });
+        }
       } else if (formData.is_recurring) {
         if (!formData.recurrence_end_date) {
           setError(t("ec.err_no_end_date"));
@@ -361,7 +380,13 @@ const EventCreator: React.FC<EventCreatorProps> = ({
           <div className="modal-header-content">
             <div className="event-creator-icon">📅</div>
             <div>
-              <h2>{editEvent ? t("ec.title_edit") : t("ec.title_create")}</h2>
+              <h2>
+                {editSeriesIds.length > 1
+                  ? t("ec.title_edit_series", { count: editSeriesIds.length })
+                  : editEvent
+                    ? t("ec.title_edit")
+                    : t("ec.title_create")}
+              </h2>
               <p className="modal-subtitle">{t("ec.subtitle")}</p>
             </div>
           </div>
@@ -671,8 +696,14 @@ const EventCreator: React.FC<EventCreatorProps> = ({
                 {loading ? (
                   <>
                     <span className="btn-spinner"></span>
-                    {editEvent ? t("ec.btn_saving") : t("ec.btn_creating")}
+                    {editSeriesIds.length > 1
+                      ? t("ec.btn_saving_series")
+                      : editEvent
+                        ? t("ec.btn_saving")
+                        : t("ec.btn_creating")}
                   </>
+                ) : editSeriesIds.length > 1 ? (
+                  t("ec.btn_save_series", { count: editSeriesIds.length })
                 ) : editEvent ? (
                   t("ec.btn_save")
                 ) : formData.is_recurring ? (

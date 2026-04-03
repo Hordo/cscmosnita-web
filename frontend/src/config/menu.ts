@@ -21,12 +21,18 @@ export const menuConfig: MenuItem[] = [
     label: "menu.disciplines",
     mega: true,
     children: [
-      [],
-      [],
       [
-        { label: "menu.football", path: "/disciplines/fotbal" },
-        { label: "menu.basketball", path: "/disciplines/baschet" },
-        { label: "menu.handball", path: "/disciplines/handbal" },
+        { label: "menu.atletism", path: "/disciplines/atletism" },
+        { label: "menu.sah", path: "/disciplines/șah" },
+      ],
+      [
+        { label: "menu.karate", path: "/disciplines/karate" },
+        { label: "menu.kempo", path: "/disciplines/kempo" },
+      ],
+      [
+        { label: "menu.fotbal", path: "/disciplines/fotbal" },
+        { label: "menu.baschet", path: "/disciplines/baschet" },
+        { label: "menu.handbal", path: "/disciplines/handbal" },
       ],
     ],
   },

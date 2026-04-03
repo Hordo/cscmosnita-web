@@ -1,11 +1,11 @@
 /* adminStyles.css - shared styles for admin forms and tables */
 
 .admin-min-height {
-  min-height: 90vh;
+  min-height: 60vh;
 }
 
 .admin-max-height {
-  max-height: 500px;
+  max-height: 90vh;
   overflow: auto;
 }
 

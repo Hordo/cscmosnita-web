@@ -19,3 +19,109 @@
   font-weight: 600;
   text-decoration: underline;
 }
+
+/* ── New footer ─────────────────────────────────────────── */
+.csc-footer {
+  background: #0d1f4e;
+  color: #c8d4ef;
+  margin-top: auto;
+  font-size: 0.9rem;
+}
+.csc-footer-main {
+  padding: 3rem 1rem 2rem;
+}
+.csc-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.csc-footer-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(246, 195, 30, 0.4));
+}
+.csc-footer-club-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+.csc-footer-tagline {
+  font-size: 0.78rem;
+  color: var(--csc-accent);
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.csc-footer-desc {
+  color: #8fa0c8;
+  font-size: 0.83rem;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+}
+.csc-footer-fb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #1877f2;
+  color: #fff !important;
+  padding: 0.35rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  transition: background 0.2s;
+}
+.csc-footer-fb:hover {
+  background: #0d5dcc;
+}
+.csc-footer-heading {
+  color: var(--csc-accent);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 0.6rem;
+}
+.csc-footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.csc-footer-links li {
+  margin-bottom: 0.35rem;
+}
+.csc-footer-links a,
+.csc-footer-links a:visited {
+  color: #8fa0c8;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.csc-footer-links a:hover {
+  color: #fff;
+}
+.csc-footer-bottom {
+  background: #070f26;
+  border-top: 1px solid #1a2d5a;
+  padding: 0.85rem 1rem;
+}
+.csc-footer-bottom .container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #5a6e99;
+  font-size: 0.8rem;
+}
+.csc-footer-free-badge {
+  background: var(--csc-accent);
+  color: #0d1f4e;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
