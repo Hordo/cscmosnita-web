@@ -86,9 +86,7 @@ export default function NewsDetailPage() {
             />
           )}
 
-          <h1 className="mb-2" style={{ wordBreak: "break-word" }}>
-            {title}
-          </h1>
+          <h1 className="mb-2">{title}</h1>
           <p className="text-muted small mb-4">
             {formatDate(article.published_at)}
           </p>

@@ -36,7 +36,6 @@
 
 /* News article body – rendered HTML from Quill */
 .news-article-body {
-  word-break: break-word;
   overflow-wrap: break-word;
   min-width: 0;
 }
@@ -46,7 +45,7 @@
   border-radius: 6px;
 }
 .news-article-body a {
-  word-break: break-all;
+  overflow-wrap: break-word;
 }
 .news-article-body pre,
 .news-article-body code {
