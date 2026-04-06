@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
-import { API_URLS } from "../config/api";
 
 interface NewsArticle {
   id: number;
@@ -26,10 +25,15 @@ export default function NewsDetailPage() {
   useEffect(() => {
     if (!slug) return;
     axios
-      .get(`${API_URLS.news}?slug=${slug}`)
+      .get(`/api/news?slug=${slug}`)
       .then((res) => {
-        const items: NewsArticle[] = res.data;
-        const found = items.find((a) => a.slug === slug);
+        // serverless returns a single object when queried by slug
+        const data = res.data;
+        const found: NewsArticle | null = Array.isArray(data)
+          ? (data.find((a: NewsArticle) => a.slug === slug) ?? null)
+          : data?.slug
+            ? data
+            : null;
         if (found) {
           setArticle(found);
         } else {

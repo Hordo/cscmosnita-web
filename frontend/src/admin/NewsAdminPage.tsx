@@ -129,7 +129,10 @@ export default function NewsAdminPage() {
       const translated: string = data.responseData?.translatedText;
       if (translated) {
         const field = target === "title" ? "title_en" : "body_en";
-        setForm((prev) => ({ ...prev, [field]: translated }));
+        setForm((prev) => ({
+          ...prev,
+          [field]: translated.replace(/&nbsp;/g, " "),
+        }));
       } else {
         flash("error", t("news.translate_error"));
       }

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { API_URLS } from "../config/api";
 
 interface NewsArticle {
   id: number;
@@ -24,7 +23,7 @@ export default function NewsPage() {
 
   useEffect(() => {
     axios
-      .get(API_URLS.news)
+      .get("/api/news")
       .then((res) => {
         setArticles(res.data);
         setLoading(false);

@@ -36,8 +36,14 @@
 
 /* News article body – rendered HTML from Quill */
 .news-article-body {
+  word-break: normal;
   overflow-wrap: break-word;
+  white-space: normal;
   min-width: 0;
+}
+.news-article-body * {
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 .news-article-body img {
   max-width: 100%;
