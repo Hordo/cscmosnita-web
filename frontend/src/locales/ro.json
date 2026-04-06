@@ -324,5 +324,9 @@
   "news.delete_confirm": "Ștergi acest articol?",
   "news.deleted": "Articol șters.",
   "news.delete_error": "Eroare la ștergerea articolului.",
-  "news.list_title": "Toate articolele"
+  "news.list_title": "Toate articolele",
+  "news.translate_btn": "🌐 Traducere RO → EN",
+  "news.translating": "Se traduce...",
+  "news.translate_hint": "Traducere automată din română",
+  "news.translate_error": "Traducerea a eșuat. Încearcă din nou."
 }

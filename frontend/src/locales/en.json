@@ -323,5 +323,9 @@
   "news.delete_confirm": "Delete this article?",
   "news.deleted": "Article deleted.",
   "news.delete_error": "Failed to delete article.",
-  "news.list_title": "All Articles"
+  "news.list_title": "All Articles",
+  "news.translate_btn": "🌐 Translate RO → EN",
+  "news.translating": "Translating...",
+  "news.translate_hint": "Auto-translate from Romanian",
+  "news.translate_error": "Translation failed. Try again."
 }

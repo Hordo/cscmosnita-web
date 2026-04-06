@@ -42,8 +42,16 @@ export default function NewsPage() {
       year: "numeric",
     });
 
-  const excerpt = (text: string, max = 180) =>
-    text.length > max ? text.slice(0, max) + "…" : text;
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
+  const excerpt = (text: string, max = 180) => {
+    const plain = stripHtml(text);
+    return plain.length > max ? plain.slice(0, max) + "…" : plain;
+  };
 
   if (loading)
     return <div className="container py-5 text-center">{t("loading")}</div>;

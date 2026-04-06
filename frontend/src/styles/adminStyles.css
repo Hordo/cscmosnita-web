@@ -27,3 +27,35 @@
 .admin-no-teams {
   color: #888;
 }
+
+/* Quill editor height in news admin */
+.ql-container {
+  min-height: 180px;
+  font-size: 1rem;
+}
+
+/* News article body – rendered HTML from Quill */
+.news-article-body h2 {
+  font-size: 1.4rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.news-article-body h3 {
+  font-size: 1.2rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.4rem;
+}
+.news-article-body p {
+  margin-bottom: 0.9rem;
+}
+.news-article-body ul,
+.news-article-body ol {
+  padding-left: 1.5rem;
+  margin-bottom: 0.9rem;
+}
+.news-article-body blockquote {
+  border-left: 4px solid #dee2e6;
+  padding-left: 1rem;
+  color: #6c757d;
+  margin: 1rem 0;
+}

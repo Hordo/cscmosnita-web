@@ -1,8 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
 import api from "../config/axios";
 import { API_URLS } from "../config/api";
 import "../styles/adminStyles.css";
+
+const quillModules = {
+  toolbar: [
+    [{ header: [2, 3, false] }],
+    ["bold", "italic", "underline"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["link", "blockquote"],
+    ["clean"],
+  ],
+};
+
+const isQuillEmpty = (val: string) =>
+  !val || val === "<p><br></p>" || val.trim() === "";
+
+const stripHtml = (html: string) => {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  return tmp.textContent || tmp.innerText || "";
+};
 
 interface NewsArticle {
   id: number;
@@ -32,6 +53,7 @@ export default function NewsAdminPage() {
   const [editId, setEditId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [translating, setTranslating] = useState<"title" | "body" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [msg, setMsg] = useState<{
     type: "success" | "error";
@@ -91,10 +113,37 @@ export default function NewsAdminPage() {
     }));
   };
 
+  const handleQuillChange = (field: "body" | "body_en", value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleTranslate = async (target: "title" | "body") => {
+    const sourceText = target === "title" ? form.title : stripHtml(form.body);
+    if (!sourceText.trim()) return;
+    setTranslating(target);
+    try {
+      const res = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(sourceText)}&langpair=ro|en`,
+      );
+      const data = await res.json();
+      const translated: string = data.responseData?.translatedText;
+      if (translated) {
+        const field = target === "title" ? "title_en" : "body_en";
+        setForm((prev) => ({ ...prev, [field]: translated }));
+      } else {
+        flash("error", t("news.translate_error"));
+      }
+    } catch {
+      flash("error", t("news.translate_error"));
+    } finally {
+      setTranslating(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) return flash("error", t("news.title_required"));
-    if (!form.body.trim()) return flash("error", t("news.body_required"));
+    if (isQuillEmpty(form.body)) return flash("error", t("news.body_required"));
     setLoading(true);
     try {
       const payload = {
@@ -185,7 +234,20 @@ export default function NewsAdminPage() {
               />
             </div>
             <div className="col-12 col-md-6">
-              <label className="form-label">{t("news.title_en")}</label>
+              <div className="d-flex align-items-center justify-content-between mb-1">
+                <label className="form-label mb-0">{t("news.title_en")}</label>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => handleTranslate("title")}
+                  disabled={translating === "title" || !form.title.trim()}
+                  title={t("news.translate_hint")}
+                >
+                  {translating === "title"
+                    ? t("news.translating")
+                    : t("news.translate_btn")}
+                </button>
+              </div>
               <input
                 className="form-control"
                 name="title_en"
@@ -195,23 +257,33 @@ export default function NewsAdminPage() {
             </div>
             <div className="col-12">
               <label className="form-label">{t("news.body_ro")} *</label>
-              <textarea
-                className="form-control"
-                name="body"
-                rows={6}
+              <ReactQuill
+                theme="snow"
                 value={form.body}
-                onChange={handleChange}
-                required
+                onChange={(value) => handleQuillChange("body", value)}
+                modules={quillModules}
               />
             </div>
             <div className="col-12">
-              <label className="form-label">{t("news.body_en")}</label>
-              <textarea
-                className="form-control"
-                name="body_en"
-                rows={6}
+              <div className="d-flex align-items-center justify-content-between mb-1">
+                <label className="form-label mb-0">{t("news.body_en")}</label>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={() => handleTranslate("body")}
+                  disabled={translating === "body" || isQuillEmpty(form.body)}
+                  title={t("news.translate_hint")}
+                >
+                  {translating === "body"
+                    ? t("news.translating")
+                    : t("news.translate_btn")}
+                </button>
+              </div>
+              <ReactQuill
+                theme="snow"
                 value={form.body_en ?? ""}
-                onChange={handleChange}
+                onChange={(value) => handleQuillChange("body_en", value)}
+                modules={quillModules}
               />
             </div>
             <div className="col-12">

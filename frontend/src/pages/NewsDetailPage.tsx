@@ -89,7 +89,11 @@ export default function NewsDetailPage() {
         {formatDate(article.published_at)}
       </p>
 
-      <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.8 }}>{body}</div>
+      <div
+        className="news-article-body"
+        dangerouslySetInnerHTML={{ __html: body }}
+        style={{ lineHeight: 1.8 }}
+      />
     </div>
   );
 }
