@@ -35,6 +35,25 @@
 }
 
 /* News article body – rendered HTML from Quill */
+.news-article-body {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+.news-article-body img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+.news-article-body a {
+  word-break: break-all;
+}
+.news-article-body pre,
+.news-article-body code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
 .news-article-body h2 {
   font-size: 1.4rem;
   margin-top: 1.5rem;

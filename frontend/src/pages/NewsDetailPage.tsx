@@ -67,33 +67,39 @@ export default function NewsDetailPage() {
     });
 
   return (
-    <div className="container py-4" style={{ maxWidth: 800 }}>
-      <Link to="/news" className="btn btn-link ps-0 mb-3">
-        ← {t("back")}
-      </Link>
+    <div className="container py-3 py-md-4">
+      <div className="row justify-content-center">
+        <div className="col-12 col-md-10 col-lg-8">
+          <Link to="/news" className="btn btn-link ps-0 mb-3">
+            ← {t("back")}
+          </Link>
 
-      {article.cover_url && (
-        <img
-          src={article.cover_url}
-          alt={title}
-          className="img-fluid rounded mb-4"
-          style={{ width: "100%", maxHeight: 400, objectFit: "cover" }}
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
-      )}
+          {article.cover_url && (
+            <img
+              src={article.cover_url}
+              alt={title}
+              className="img-fluid rounded mb-4"
+              style={{ width: "100%", maxHeight: 400, objectFit: "cover" }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
+            />
+          )}
 
-      <h1 className="mb-2">{title}</h1>
-      <p className="text-muted small mb-4">
-        {formatDate(article.published_at)}
-      </p>
+          <h1 className="mb-2" style={{ wordBreak: "break-word" }}>
+            {title}
+          </h1>
+          <p className="text-muted small mb-4">
+            {formatDate(article.published_at)}
+          </p>
 
-      <div
-        className="news-article-body"
-        dangerouslySetInnerHTML={{ __html: body }}
-        style={{ lineHeight: 1.8 }}
-      />
+          <div
+            className="news-article-body"
+            dangerouslySetInnerHTML={{ __html: body }}
+            style={{ lineHeight: 1.8 }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
