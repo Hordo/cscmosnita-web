@@ -324,3 +324,37 @@ class PushSubscription(models.Model):
     class Meta:
         verbose_name = "Push Subscription"
         verbose_name_plural = "Push Subscriptions"
+
+
+
+
+class NewsArticle(models.Model):
+    title = models.CharField(max_length=300)
+    title_en = models.CharField(max_length=300, blank=True, null=True)
+    body = models.TextField()
+    body_en = models.TextField(blank=True, null=True)
+    cover_url = models.CharField(max_length=500, blank=True, null=True, help_text="URL to cover image")
+    published_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_published = models.BooleanField(default=True)
+    slug = models.SlugField(max_length=350, unique=True, blank=True)
+
+    class Meta:
+        ordering = ['-published_at']
+        verbose_name = "News Article"
+        verbose_name_plural = "News Articles"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            from django.utils.text import slugify
+            base_slug = slugify(self.title)
+            slug = base_slug
+            n = 1
+            while NewsArticle.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{n}"
+                n += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title

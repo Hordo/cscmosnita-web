@@ -6,11 +6,11 @@ from .views import (
     EventTypeViewSet, CalendarEventViewSet, TrainingSessionViewSet, EventAttendanceViewSet,
     PushSendNotificationsView,
     TournamentViewSet, TournamentGroupViewSet, GroupTeamViewSet, TournamentMatchViewSet,
-    SponsorViewSet,
+    SponsorViewSet, NewsArticleViewSet,
 )
 from .signed_upload import (
     GeneratePlayerPhotoUploadURL, GenerateTeamPhotoUploadURL, GenerateCoachPhotoUploadURL,
-    GenerateGeneralPhotoUploadURL, GenerateSponsorLogoUploadURL
+    GenerateGeneralPhotoUploadURL, GenerateSponsorLogoUploadURL, GenerateNewsArticleCoverUploadURL
 )
 
 router = DefaultRouter()
@@ -28,6 +28,9 @@ router.register(r'group-teams', GroupTeamViewSet, basename='group-teams')
 router.register(r'tournament-matches', TournamentMatchViewSet, basename='tournament-matches')
 router.register(r'sponsors', SponsorViewSet, basename='sponsors')
 
+# News/Articles endpoint
+router.register(r'news', NewsArticleViewSet, basename='news')
+
 # Calendar endpoints
 router.register(r'calendar/events', CalendarEventViewSet, basename='calendar-events')
 router.register(r'calendar/event-types', EventTypeViewSet, basename='event-types')
@@ -42,6 +45,7 @@ urlpatterns = [
     path('upload/coach-photo/', GenerateCoachPhotoUploadURL.as_view(), name='upload_coach_photo'),
     path('upload/general-photo/', GenerateGeneralPhotoUploadURL.as_view(), name='upload_general_photo'),
     path('upload/sponsor-logo/', GenerateSponsorLogoUploadURL.as_view(), name='upload_sponsor_logo'),
+    path('upload/news-cover/', GenerateNewsArticleCoverUploadURL.as_view(), name='upload_news_cover'),
     # Push notification endpoints (subscribe/unsubscribe handled by Vercel serverless)
     path('push/send-notifications/', PushSendNotificationsView.as_view(), name='push_send_notifications'),
 ]

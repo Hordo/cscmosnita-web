@@ -27,4 +27,6 @@ export const API_URLS = {
   groupTeams: `${API_BASE}/api/group-teams/`,
   tournamentMatches: `${API_BASE}/api/tournament-matches/`,
   sponsors: `${API_BASE}/api/sponsors/`,
+  news: `${API_BASE}/api/news/`,
+  uploadNewsCover: `${API_BASE}/api/upload/news-cover/`,
 };

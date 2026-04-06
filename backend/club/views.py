@@ -1,12 +1,13 @@
 from rest_framework import viewsets
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle
 from .serializers import (
     TeamSerializer, CoachSerializer, PlayerSerializer,
     ChampionshipSerializer, MatchSerializer, DisciplineSerializer,
     EventTypeSerializer, CalendarEventSerializer, CalendarEventCreateSerializer,
     TrainingSessionSerializer, EventAttendanceSerializer, CalendarEventListSerializer,
     TournamentListSerializer, TournamentSerializer, TournamentGroupSerializer,
-    GroupTeamSerializer, TournamentMatchSerializer, SponsorSerializer
+    GroupTeamSerializer, TournamentMatchSerializer, SponsorSerializer,
+    NewsArticleSerializer
 )
 
 # Discipline ViewSet
@@ -298,15 +299,17 @@ class TrainingSessionViewSet(viewsets.ModelViewSet):
     filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['objectives', 'notes']
     ordering_fields = ['calendar_event__start_datetime']
-    ordering = ['-calendar_event__start_datetime']
+
+
+# --- NewsArticle ViewSet ---
+class NewsArticleViewSet(viewsets.ModelViewSet):
+    serializer_class = NewsArticleSerializer
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        training_type = self.request.query_params.get('training_type')
-        
-        if training_type:
-            queryset = queryset.filter(training_type=training_type)
-            
+        queryset = NewsArticle.objects.all()
+        # Public endpoint: non-admin users only see published articles
+        if not (self.request.user and self.request.user.is_staff):
+            queryset = queryset.filter(is_published=True)
         return queryset
 
 

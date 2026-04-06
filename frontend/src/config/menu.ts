@@ -14,6 +14,10 @@ export type Column = MenuItem[];
 
 export const menuConfig: MenuItem[] = [
   {
+    label: "menu.news",
+    path: "/news",
+  },
+  {
     label: "menu.contact",
     path: "/contact",
   },
@@ -42,7 +46,7 @@ export const menuConfig: MenuItem[] = [
     auth: true,
     adminOnly: true as any, // TypeScript workaround, will filter in navbar
     children: [
-      [],
+      [{ label: "menu.manage_news", path: "/admin/news" }],
       [
         { label: "menu.calendar", path: "/admin/calendar" },
         { label: "menu.manage_championships", path: "/admin/championship" },

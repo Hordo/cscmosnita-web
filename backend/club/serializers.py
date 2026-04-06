@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle
 
 # Discipline Serializer
 class DisciplineSerializer(serializers.ModelSerializer):
@@ -203,6 +203,14 @@ class CalendarEventSerializer(serializers.ModelSerializer):
             queryset=Player.objects.all(), source="players", many=True, write_only=True, required=False
         )
         return fields
+
+
+# --- NewsArticle Serializer ---
+class NewsArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NewsArticle
+        fields = '__all__'
+        read_only_fields = ['published_at', 'updated_at', 'slug']
 
 
 class CalendarEventCreateSerializer(serializers.ModelSerializer):

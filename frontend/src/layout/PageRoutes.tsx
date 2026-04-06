@@ -24,6 +24,9 @@ import NotificationPreferencesPage from "../pages/NotificationPreferencesPage";
 import RouteError from "./RouteError";
 import TournamentAdminPage from "../admin/TournamentAdminPage";
 import SponsorAdminPage from "../admin/SponsorAdminPage";
+import NewsAdminPage from "../admin/NewsAdminPage";
+import NewsPage from "../pages/NewsPage";
+import NewsDetailPage from "../pages/NewsDetailPage";
 import { TeamTournamentsPage } from "../pages/TeamTournamentsPage";
 import { TournamentViewPage } from "../pages/TournamentViewPage";
 
@@ -41,6 +44,10 @@ const router = createBrowserRouter([
         path: "admin",
         element: <AdminOnlyRoute />,
         children: [
+          {
+            path: "news",
+            element: <NewsAdminPage />,
+          },
           {
             path: "create-team",
             element: <TeamAdminPage />,
@@ -83,6 +90,8 @@ const router = createBrowserRouter([
           },
         ],
       },
+      { path: "news", element: <NewsPage /> },
+      { path: "news/:slug", element: <NewsDetailPage /> },
       { path: "teams", element: <TeamViewerPage /> },
       { path: "teams/:teamId", element: <TeamViewerPage /> },
       { path: "teams/:teamId/matches", element: <TeamMatchesPage /> },

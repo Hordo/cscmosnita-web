@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Discipline, Match, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor
+from .models import Discipline, Match, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle
 
 @admin.register(Discipline)
 class DisciplineAdmin(admin.ModelAdmin):
@@ -45,3 +45,13 @@ class MatchAdmin(admin.ModelAdmin):
 	list_filter = ("team", "season")
 	search_fields = ("home_team_name", "away_team_name", "season")
 	fields = ("team", "season", "date", "home_team_name", "home_score", "away_score", "away_team_name", "youtube_link")
+
+
+# --- NewsArticle Admin ---
+@admin.register(NewsArticle)
+class NewsArticleAdmin(admin.ModelAdmin):
+    list_display = ("title", "is_published", "published_at")
+    list_filter = ("is_published",)
+    list_editable = ("is_published",)
+    search_fields = ("title", "body")
+    readonly_fields = ("published_at", "updated_at", "slug")
