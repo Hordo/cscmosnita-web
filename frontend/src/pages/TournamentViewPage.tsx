@@ -80,6 +80,7 @@ const MatchRow: React.FC<{ m: any; videoLabel: string }> = ({
       {m.home_score !== null && m.away_score !== null ? (
         <span className="badge bg-dark fs-6 px-3">
           {m.home_score} – {m.away_score}
+          {m.ended_after_penalties ? " (p)" : ""}
         </span>
       ) : (
         <span className="text-muted">vs</span>

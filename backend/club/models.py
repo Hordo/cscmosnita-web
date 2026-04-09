@@ -245,6 +245,7 @@ class TournamentMatch(models.Model):
     home_score = models.IntegerField(null=True, blank=True)
     away_score = models.IntegerField(null=True, blank=True)
     youtube_link = models.URLField(blank=True)
+    ended_after_penalties = models.BooleanField(default=False)
     match_order = models.IntegerField(default=0)
 
     class Meta:

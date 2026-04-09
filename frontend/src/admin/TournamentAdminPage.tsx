@@ -42,6 +42,7 @@ const TournamentAdminPage: React.FC = () => {
     home_score: "",
     away_score: "",
     youtube_link: "",
+    ended_after_penalties: false,
   });
   const [editMatchId, setEditMatchId] = useState<number | null>(null);
 
@@ -221,6 +222,8 @@ const TournamentAdminPage: React.FC = () => {
       payload.home_score = Number(knockoutForm.home_score);
     if (knockoutForm.away_score !== "")
       payload.away_score = Number(knockoutForm.away_score);
+    // include ended after penalties flag
+    payload.ended_after_penalties = !!knockoutForm.ended_after_penalties;
 
     if (editMatchId) {
       await api.patch(`${API_URLS.tournamentMatches}${editMatchId}/`, payload);
@@ -235,6 +238,7 @@ const TournamentAdminPage: React.FC = () => {
       home_score: "",
       away_score: "",
       youtube_link: "",
+      ended_after_penalties: false,
     });
     setEditMatchId(null);
     loadTournament(activeTournament.id);
@@ -254,6 +258,7 @@ const TournamentAdminPage: React.FC = () => {
       home_score: m.home_score ?? "",
       away_score: m.away_score ?? "",
       youtube_link: m.youtube_link || "",
+      ended_after_penalties: !!m.ended_after_penalties,
     });
     setEditMatchId(m.id);
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
@@ -864,6 +869,28 @@ const TournamentAdminPage: React.FC = () => {
                       }
                     />
                   </div>
+                  <div className="col-md-2 d-flex align-items-center">
+                    <div className="form-check">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="endedAfterPenalties"
+                        checked={knockoutForm.ended_after_penalties}
+                        onChange={(e) =>
+                          setKnockoutForm({
+                            ...knockoutForm,
+                            ended_after_penalties: e.target.checked,
+                          })
+                        }
+                      />
+                      <label
+                        className="form-check-label"
+                        htmlFor="endedAfterPenalties"
+                      >
+                        Ended after penalties
+                      </label>
+                    </div>
+                  </div>
                   <div className="col-auto d-flex gap-1">
                     <button className="btn btn-sm btn-primary" type="submit">
                       {editMatchId ? t("tour.btn_update") : t("tour.btn_add")}
@@ -881,6 +908,7 @@ const TournamentAdminPage: React.FC = () => {
                             home_score: "",
                             away_score: "",
                             youtube_link: "",
+                            ended_after_penalties: false,
                           });
                         }}
                       >

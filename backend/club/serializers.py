@@ -383,7 +383,7 @@ class TournamentMatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = TournamentMatch
         fields = ['id', 'tournament', 'group', 'stage', 'stage_display', 'home_team_name',
-                  'away_team_name', 'home_score', 'away_score', 'youtube_link', 'match_order']
+                  'away_team_name', 'home_score', 'away_score', 'youtube_link', 'ended_after_penalties', 'match_order']
 
 
 class TournamentGroupSerializer(serializers.ModelSerializer):
