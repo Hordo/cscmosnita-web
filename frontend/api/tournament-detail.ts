@@ -37,7 +37,7 @@ export default async function handler(req: any, res: any) {
     // All matches for this tournament
     const matches = await sql<any[]>`
       SELECT id, group_id, stage, home_team_name, away_team_name,
-             home_score, away_score, youtube_link, match_order
+             home_score, away_score, youtube_link, ended_after_penalties, match_order
       FROM   club_tournamentmatch
       WHERE  tournament_id = ${id}
       ORDER  BY match_order
