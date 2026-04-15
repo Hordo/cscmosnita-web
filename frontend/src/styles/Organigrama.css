@@ -25,8 +25,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 320px;
+  /* min-width: max-content prevents the centred flex from clipping its
+     own left overflow inside the scrollable wrapper */
+  min-width: max-content;
   padding: 0 1rem 2rem;
+  margin: 0 auto;
 }
 
 /* -------- Node box -------- */
@@ -263,11 +266,38 @@
   white-space: nowrap;
 }
 
-/* -------- Mobile: stack vertically -------- */
-@media (max-width: 768px) {
+/* -------- Mobile inline coaches (below each expanded head coach) -------- */
+.org-inline-coaches {
+  margin-top: 8px;
+  padding-left: 16px;
+  border-left: 3px solid #198754;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: orgFadeIn 0.18s ease;
+  width: 100%;
+}
+
+.org-inline-coaches__empty {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin: 4px 0 0;
+}
+
+.org-inline-coaches__item {
+  /* wrapper */
+}
+
+/* -------- Mobile / landscape phones: stack vertically with horizontal card nodes -------- */
+@media (max-width: 900px) {
+  .orgchart-tree {
+    padding: 0 0.5rem 2rem;
+  }
+
   .org-tier {
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
+    width: 100%;
   }
 
   .org-tier--has-parent > .org-col::before,
@@ -276,18 +306,83 @@
   }
 
   .org-tier--has-parent > .org-col {
-    padding-top: 0;
-    margin-top: 12px;
-    border-left: 2px solid #dee2e6;
-    padding-left: 16px;
-    align-items: flex-start;
+    padding-top: 8px;
+    padding-left: 0;
+    margin-top: 8px;
+    border-left: none;
+    align-items: stretch;
   }
 
   .org-tier--has-parent > .org-col:first-child {
     margin-top: 8px;
   }
 
+  .org-col {
+    padding: 0;
+  }
+
+  /* Horizontal card layout for nodes on mobile */
+  .org-node {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    grid-template-rows: auto auto auto;
+    column-gap: 12px;
+    row-gap: 0;
+    align-items: start;
+    min-width: unset;
+    max-width: unset;
+    width: 100%;
+    padding: 10px 14px;
+    text-align: left;
+    box-sizing: border-box;
+  }
+
+  .org-node__avatar,
+  .org-node__avatar-placeholder {
+    grid-column: 1;
+    grid-row: 1 / 5;
+    align-self: center;
+    margin-bottom: 0;
+    width: 44px;
+    height: 44px;
+  }
+
+  .org-node__name {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: left;
+    margin-bottom: 3px;
+  }
+
+  .org-node__role {
+    grid-column: 2;
+    grid-row: 2;
+    text-align: left;
+    align-self: start;
+  }
+
+  .org-node__phone {
+    grid-column: 2;
+    grid-row: 3;
+    margin-top: 4px;
+    text-align: left;
+  }
+
+  .org-node__toggle {
+    grid-column: 3;
+    grid-row: 1 / 5;
+    align-self: center;
+    margin-top: 0;
+    font-size: 0.8rem;
+    opacity: 0.8;
+  }
+
+  .org-discipline-label {
+    white-space: normal;
+    text-align: left;
+  }
+
   .org-stem {
-    height: 12px;
+    height: 8px;
   }
 }

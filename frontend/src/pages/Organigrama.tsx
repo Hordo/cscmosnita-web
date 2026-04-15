@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "../styles/Organigrama.css";
 
@@ -92,9 +92,41 @@ export default function Organigrama() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [stemOffset, setStemOffset] = useState(0);
+  const [treeWidth, setTreeWidth] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const colRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const treeRef = useRef<HTMLDivElement | null>(null);
 
   const toggleDiscipline = (id: number) =>
     setExpandedId((prev) => (prev === id ? null : id));
+
+  // Track mobile breakpoint
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 900px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  // Recalculate stem offset and tree width whenever expandedId changes
+  useLayoutEffect(() => {
+    if (expandedId === null) {
+      setStemOffset(0);
+      setTreeWidth(0);
+      return;
+    }
+    const col = colRefs.current[expandedId];
+    const tree = treeRef.current;
+    if (!col || !tree) return;
+    const colRect = col.getBoundingClientRect();
+    const treeRect = tree.getBoundingClientRect();
+    const colCenter = colRect.left + colRect.width / 2;
+    const treeCenter = treeRect.left + treeRect.width / 2;
+    setStemOffset(colCenter - treeCenter);
+    setTreeWidth(treeRect.width);
+  }, [expandedId]);
 
   useEffect(() => {
     setLoading(true);
@@ -103,32 +135,40 @@ export default function Organigrama() {
       fetch("/api/coaces").then((r) => r.json()),
     ])
       .then(([disciplines, coaches]: [any[], any[]]) => {
-        // Collect all head-coach ids
-        const headCoachIds = new Set(
+        // Normalise all ids to numbers so string/number mismatches don't break comparisons
+        const headCoachIds = new Set<number>(
           disciplines
-            .map((d: any) => d.head_coach?.id)
-            .filter((id: any) => id != null),
+            .map((d: any) =>
+              d.head_coach?.id != null ? Number(d.head_coach.id) : null,
+            )
+            .filter((id): id is number => id != null),
         );
 
         // Director: coach with no teams AND not a head coach of any discipline
         const director =
           coaches.find(
-            (c: any) => c.teams.length === 0 && !headCoachIds.has(c.id),
+            (c: any) => c.teams.length === 0 && !headCoachIds.has(Number(c.id)),
           ) ?? null;
 
         // Build discipline tree
         const disciplineList: DisciplineWithCoaches[] = disciplines.map(
-          (d: any) => ({
-            id: d.id,
-            name: d.name,
-            name_en: d.name_en,
-            head_coach: d.head_coach ?? null,
-            // coaches assigned to this discipline, excluding the head coach
-            coaches: coaches.filter(
-              (c: any) =>
-                c.discipline_ids.includes(d.id) && c.id !== d.head_coach?.id,
-            ),
-          }),
+          (d: any) => {
+            const disciplineId = Number(d.id);
+            const headCoachId =
+              d.head_coach?.id != null ? Number(d.head_coach.id) : null;
+            return {
+              id: disciplineId,
+              name: d.name,
+              name_en: d.name_en,
+              head_coach: d.head_coach ?? null,
+              // coaches linked to this discipline via teams, excluding the head coach
+              coaches: coaches.filter(
+                (c: any) =>
+                  (c.discipline_ids as number[]).includes(disciplineId) &&
+                  Number(c.id) !== headCoachId,
+              ),
+            };
+          },
         );
 
         setData({ director, disciplines: disciplineList });
@@ -154,7 +194,7 @@ export default function Organigrama() {
         </div>
       ) : (
         <div className="orgchart-scroll">
-          <div className="orgchart-tree">
+          <div className="orgchart-tree" ref={treeRef}>
             {/* ── Level 1: Director ── */}
             {data?.director && (
               <>
@@ -174,59 +214,123 @@ export default function Organigrama() {
               }`}
             >
               {(data?.disciplines ?? []).map((d) => (
-                <div className="org-col" key={d.id}>
+                <div
+                  className="org-col"
+                  key={d.id}
+                  ref={(el) => {
+                    colRefs.current[d.id] = el;
+                  }}
+                >
                   {/* Discipline label */}
                   <div className="org-discipline-label">
                     {isRO ? d.name : d.name_en || d.name}
                   </div>
 
-                  {/* Head coach node — always clickable when it has coaches */}
+                  {/* Head coach node — always clickable to reveal/hide coaches */}
                   {d.head_coach ? (
                     <OrgNode
                       person={d.head_coach}
                       role={isRO ? "Șef secție" : "Head coach"}
                       variant="head"
-                      hasChildren={d.coaches.length > 0}
+                      hasChildren
                       expanded={expandedId === d.id}
-                      onClick={
-                        d.coaches.length > 0
-                          ? () => toggleDiscipline(d.id)
-                          : undefined
-                      }
+                      onClick={() => toggleDiscipline(d.id)}
                     />
                   ) : (
                     <div className="org-node org-node--empty">
                       {isRO ? "Fără șef secție" : "No head coach"}
                     </div>
                   )}
+
+                  {/* Mobile: inline coaches appear directly below the head coach */}
+                  {isMobile && expandedId === d.id && (
+                    <div className="org-inline-coaches">
+                      {d.coaches.length === 0 ? (
+                        <p className="org-inline-coaches__empty">
+                          {isRO
+                            ? "Niciun antrenor înregistrat."
+                            : "No coaches registered."}
+                        </p>
+                      ) : (
+                        d.coaches.map((c) => (
+                          <div key={c.id} className="org-inline-coaches__item">
+                            <OrgNode
+                              person={c}
+                              role={isRO ? "Antrenor" : "Coach"}
+                              variant="coach"
+                            />
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
-            {/* ── Level 3: Coaches panel — renders below the entire heads row ── */}
-            {(data?.disciplines ?? []).map((d) =>
-              expandedId === d.id && d.coaches.length > 0 ? (
-                <div key={`coaches-${d.id}`} className="org-coaches-panel">
-                  <div className="org-stem" />
-                  <div className="org-coaches-panel__label">
-                    {isRO ? d.name : d.name_en || d.name}
-                    {" — "}
-                    {isRO ? "Antrenori" : "Coaches"}
-                  </div>
-                  <div className="org-tier org-tier--has-parent">
-                    {d.coaches.map((c) => (
-                      <div className="org-col" key={c.id}>
-                        <OrgNode
-                          person={c}
-                          role={isRO ? "Antrenor" : "Coach"}
-                          variant="coach"
-                        />
+            {/* ── Level 3: Coaches panel — desktop only, renders below the entire heads row ── */}
+            {!isMobile &&
+              (data?.disciplines ?? []).map((d) =>
+                expandedId === d.id ? (
+                  <div key={`coaches-${d.id}`} className="org-coaches-panel">
+                    {/* SVG elbow: vertical from head coach → horizontal → vertical to coaches tier */}
+                    {treeWidth > 0 &&
+                      (() => {
+                        const svgH = 44;
+                        const cx = treeWidth / 2;
+                        const sx = cx + stemOffset; // x of selected head coach
+                        const ex = cx; // x of coaches tier centre
+                        const mid = svgH / 2;
+                        const pathD =
+                          Math.abs(stemOffset) < 1
+                            ? `M ${cx} 0 L ${cx} ${svgH}`
+                            : `M ${sx} 0 L ${sx} ${mid} L ${ex} ${mid} L ${ex} ${svgH}`;
+                        return (
+                          <svg
+                            width={treeWidth}
+                            height={svgH}
+                            style={{ flexShrink: 0, display: "block" }}
+                            aria-hidden="true"
+                          >
+                            <path
+                              d={pathD}
+                              stroke="#dee2e6"
+                              strokeWidth="2"
+                              fill="none"
+                            />
+                          </svg>
+                        );
+                      })()}
+                    <div className="org-coaches-panel__label">
+                      {isRO ? d.name : d.name_en || d.name}
+                      {" — "}
+                      {isRO ? "Antrenori" : "Coaches"}
+                    </div>
+                    {d.coaches.length === 0 ? (
+                      <p
+                        className="text-muted mt-2"
+                        style={{ fontSize: "0.85rem" }}
+                      >
+                        {isRO
+                          ? "Niciun antrenor înregistrat."
+                          : "No coaches registered."}
+                      </p>
+                    ) : (
+                      <div className="org-tier org-tier--has-parent">
+                        {d.coaches.map((c) => (
+                          <div className="org-col" key={c.id}>
+                            <OrgNode
+                              person={c}
+                              role={isRO ? "Antrenor" : "Coach"}
+                              variant="coach"
+                            />
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
-                </div>
-              ) : null,
-            )}
+                ) : null,
+              )}
           </div>
         </div>
       )}
