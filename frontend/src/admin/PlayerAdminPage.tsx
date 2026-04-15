@@ -95,11 +95,27 @@ export const PlayerAdminPage: React.FC = () => {
   const playerFields: AdminFormField[] = [
     ...basePlayerFields,
     {
+      name: "discipline_id",
+      label: "Discipline",
+      type: "select",
+      required: false,
+      options: disciplines.map((d: any) => ({ value: d.name, label: d.name })),
+    },
+    {
       name: "team_id",
       label: "Team",
       type: "select",
       required: true,
-      options: teams.map((t: any) => ({ value: String(t.id), label: t.name })),
+      // provide dynamic options depending on selected discipline in the form
+      options: (values: any) => {
+        const available = values.discipline_id
+          ? teams.filter((t: any) => t.discipline === values.discipline_id)
+          : teams;
+        return available.map((t: any) => ({
+          value: String(t.id),
+          label: t.name,
+        }));
+      },
     },
   ];
 
@@ -182,15 +198,15 @@ export const PlayerAdminPage: React.FC = () => {
                 onSubmit={editIndex === null ? handleCreate : handleUpdate}
                 initialValues={
                   editIndex !== null
-                    ? {
-                        ...players[editIndex],
-                        team_id: (() => {
-                          const t = teams.find(
-                            (team) => team.name === players[editIndex].team,
-                          );
-                          return t ? String(t.id) : "";
-                        })(),
-                      }
+                    ? (() => {
+                        const p = players[editIndex!];
+                        const t = teams.find((team) => team.name === p.team);
+                        return {
+                          ...p,
+                          discipline_id: t ? t.discipline : "",
+                          team_id: t ? String(t.id) : "",
+                        };
+                      })()
                     : {}
                 }
                 submitLabel={editIndex === null ? "Create" : "Update"}

@@ -18,6 +18,7 @@ import Terms from "../pages/Terms";
 import CookiesPolicy from "../pages/CookiesPolicy";
 import About from "../pages/About";
 import Contact from "../pages/Contact";
+import Organigrama from "../pages/Organigrama";
 import GDPR from "../pages/GDPR";
 import Calendar from "../admin/Calendar";
 import NotificationPreferencesPage from "../pages/NotificationPreferencesPage";
@@ -102,6 +103,8 @@ const router = createBrowserRouter([
       { path: "cookies-policy", element: <CookiesPolicy /> },
       { path: "about", element: <About /> },
       { path: "contact", element: <Contact /> },
+      { path: "organigrama", element: <Organigrama /> },
+      { path: "orgchart", element: <Organigrama /> },
       { path: "gdpr", element: <GDPR /> },
       { path: "notifications", element: <NotificationPreferencesPage /> },
       { path: "*", element: <NotFound /> },

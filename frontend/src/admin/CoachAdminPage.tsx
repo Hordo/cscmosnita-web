@@ -33,13 +33,16 @@ interface Coach {
 interface Team {
   id: number;
   name: string;
+  discipline?: string;
 }
 
 const CoachAdminPage: React.FC = () => {
   const { user } = useAuth();
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  // Removed disciplines state, not needed
+  const [disciplines, setDisciplines] = useState<any[]>([]);
+  const [filterDiscipline, setFilterDiscipline] = useState("");
+  const [filterTeam, setFilterTeam] = useState("");
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,12 +59,14 @@ const CoachAdminPage: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const [coachesRes, teamsRes] = await Promise.all([
+        const [coachesRes, teamsRes, disciplinesRes] = await Promise.all([
           api.get(API_URLS.coaches),
           api.get(API_URLS.teams),
+          api.get(API_URLS.disciplines),
         ]);
         setCoaches(coachesRes.data);
         setTeams(teamsRes.data);
+        setDisciplines(disciplinesRes.data);
       } catch (err) {
         const error = err as any;
         setError(
@@ -140,14 +145,49 @@ const CoachAdminPage: React.FC = () => {
   const coachFieldsWithTeams = [
     ...coachFields,
     {
+      name: "discipline_id",
+      label: "Discipline",
+      type: "select",
+      required: false,
+      options: disciplines.map((d: any) => ({ value: d.name, label: d.name })),
+    },
+    {
       name: "teams_id",
       label: "Teams",
       type: "select",
       required: false,
-      options: teams.map((t) => ({ value: t.id, label: t.name })),
+      // options can be a function: ReusableAdminForm will call it with current values
+      options: (values: any) => {
+        const available = values.discipline_id
+          ? teams.filter((t: any) => t.discipline === values.discipline_id)
+          : teams;
+        return available.map((t: any) => ({ value: t.id, label: t.name }));
+      },
       multiple: true,
     },
   ];
+
+  const filteredTeamsForFilter = filterDiscipline
+    ? teams.filter((t: any) => t.discipline === filterDiscipline)
+    : teams;
+
+  const filteredCoaches = coaches.filter((c: any) => {
+    if (filterTeam)
+      return (
+        Array.isArray(c.teams) &&
+        c.teams.some((t: any) => String(t.id) === filterTeam)
+      );
+    if (filterDiscipline) {
+      const disciplineTeamIds = teams
+        .filter((t: any) => t.discipline === filterDiscipline)
+        .map((t: any) => t.id);
+      return (
+        Array.isArray(c.teams) &&
+        c.teams.some((t: any) => disciplineTeamIds.includes(t.id))
+      );
+    }
+    return true;
+  });
 
   if (!user?.access) {
     return (
@@ -172,12 +212,20 @@ const CoachAdminPage: React.FC = () => {
                 onSubmit={editIndex === null ? handleCreate : handleUpdate}
                 initialValues={
                   editIndex !== null
-                    ? {
-                        ...coaches[editIndex],
-                        teams_id: Array.isArray(coaches[editIndex]?.teams)
-                          ? coaches[editIndex].teams.map((t: any) => t.id)
-                          : [],
-                      }
+                    ? (() => {
+                        const coach = coaches[editIndex!];
+                        const teamIds = Array.isArray(coach?.teams)
+                          ? coach!.teams.map((t: any) => t.id)
+                          : [];
+                        const firstTeam = teams.find(
+                          (t: any) => t.id === teamIds[0],
+                        );
+                        return {
+                          ...coach,
+                          discipline_id: firstTeam ? firstTeam.discipline : "",
+                          teams_id: teamIds,
+                        };
+                      })()
                     : {}
                 }
                 submitLabel={editIndex === null ? "Create" : "Update"}
@@ -193,9 +241,51 @@ const CoachAdminPage: React.FC = () => {
                 <div>Loading...</div>
               ) : (
                 <div className="admin-min-width">
+                  <div className="d-flex gap-2 mb-3 flex-wrap align-items-end">
+                    <h4 className="mb-0 me-auto">All Coaches</h4>
+                    <select
+                      className="form-select form-select-sm w-auto"
+                      value={filterDiscipline}
+                      onChange={(e) => {
+                        setFilterDiscipline(e.target.value);
+                        setFilterTeam("");
+                      }}
+                    >
+                      <option value="">All disciplines</option>
+                      {disciplines.map((d: any) => (
+                        <option key={d.id} value={d.name}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      className="form-select form-select-sm w-auto"
+                      value={filterTeam}
+                      onChange={(e) => setFilterTeam(e.target.value)}
+                      disabled={!filterDiscipline}
+                    >
+                      <option value="">All teams</option>
+                      {filteredTeamsForFilter.map((t: any) => (
+                        <option key={t.id} value={String(t.id)}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                    {(filterDiscipline || filterTeam) && (
+                      <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => {
+                          setFilterDiscipline("");
+                          setFilterTeam("");
+                        }}
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <ReusableAdminTable
                     columns={coachColumns}
-                    data={coaches}
+                    data={filteredCoaches}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     renderCell={(row, col) => {

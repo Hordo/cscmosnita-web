@@ -1,0 +1,293 @@
+/* ============================================================
+   ORG CHART TREE
+   Structure:
+     .orgchart-tree
+       OrgNode (director)
+       .org-stem
+       .org-tier.org-tier--has-parent   ← heads level
+         .org-col  (per discipline)
+           .org-discipline-label
+           OrgNode (head coach)
+           .org-stem
+           .org-tier.org-tier--has-parent   ← coaches level
+             .org-col
+               OrgNode (coach)
+   ============================================================ */
+
+/* Scrollable wrapper for small screens */
+.orgchart-scroll {
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+/* Root container */
+.orgchart-tree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 320px;
+  padding: 0 1rem 2rem;
+}
+
+/* -------- Node box -------- */
+.org-node {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fff;
+  border: 2px solid #dee2e6;
+  border-radius: 10px;
+  padding: 12px 14px 10px;
+  min-width: 130px;
+  max-width: 170px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+  transition: box-shadow 0.2s;
+  position: relative;
+  z-index: 1;
+}
+.org-node:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.13);
+}
+
+.org-node--clickable {
+  cursor: pointer;
+  user-select: none;
+}
+.org-node--clickable:hover {
+  border-color: #0d6efd;
+  box-shadow: 0 4px 16px rgba(13, 110, 253, 0.18);
+}
+.org-node--expanded {
+  border-color: #0d6efd;
+  background: #e8f0fe;
+}
+
+.org-node__toggle {
+  font-size: 0.6rem;
+  color: #6c757d;
+  margin-top: 6px;
+  opacity: 0.7;
+}
+
+/* -------- Coaches expansion panel (renders below the full heads row) -------- */
+.org-coaches-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  animation: orgFadeIn 0.18s ease;
+}
+
+@keyframes orgFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.org-coaches-panel__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #0a3622;
+  background: #d1e7dd;
+  border: 1px solid #a3cfbb;
+  border-radius: 4px;
+  padding: 3px 12px;
+  margin-bottom: 0;
+}
+
+.org-node--director {
+  border-color: #0d6efd;
+  background: #f0f4ff;
+}
+.org-node--head {
+  border-color: #198754;
+  background: #f0fff4;
+}
+.org-node--coach {
+  border-color: #adb5bd;
+  background: #fff;
+}
+.org-node--empty {
+  border-color: #dee2e6;
+  background: #f8f9fa;
+  color: #adb5bd;
+  font-size: 0.8rem;
+  padding: 14px;
+}
+
+.org-node__avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 8px;
+  border: 2px solid #dee2e6;
+}
+
+.org-node__avatar-placeholder {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.org-node__name {
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-align: center;
+  line-height: 1.25;
+  margin-bottom: 5px;
+}
+
+.org-node__role {
+  font-size: 0.68rem;
+  border-radius: 99px;
+  padding: 2px 8px;
+  text-align: center;
+  font-weight: 500;
+  background: #e9ecef;
+  color: #495057;
+}
+.org-node--director .org-node__role {
+  background: #cfe2ff;
+  color: #084298;
+}
+.org-node--head .org-node__role {
+  background: #d1e7dd;
+  color: #0a3622;
+}
+
+.org-node__phone {
+  font-size: 0.68rem;
+  color: #6c757d;
+  margin-top: 5px;
+  text-decoration: none;
+}
+.org-node__phone:hover {
+  color: #0d6efd;
+}
+
+/* -------- Vertical stem below a node -------- */
+.org-stem {
+  width: 2px;
+  height: 28px;
+  background: #dee2e6;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+/* -------- Tier (horizontal row of columns) -------- */
+.org-tier {
+  display: flex;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+/* -------- Each column inside a tier -------- */
+.org-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 0 12px;
+}
+
+/*
+  When a tier is connected to a parent node above it,
+  each column needs:
+    ::before  — the horizontal connecting bar at top
+    ::after   — the vertical stem from that bar down to the node
+*/
+.org-tier--has-parent > .org-col::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-top: 2px solid #dee2e6;
+}
+/* First child: bar starts at column center */
+.org-tier--has-parent > .org-col:first-child::before {
+  left: 50%;
+}
+/* Last child: bar ends at column center */
+.org-tier--has-parent > .org-col:last-child::before {
+  right: 50%;
+}
+/* Single child: no horizontal bar needed, just the stem */
+.org-tier--has-parent > .org-col:only-child::before {
+  display: none;
+}
+
+.org-tier--has-parent > .org-col::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 28px;
+  background: #dee2e6;
+}
+
+/* Each col needs top padding to make room for the connectors */
+.org-tier--has-parent > .org-col {
+  padding-top: 28px;
+}
+
+/* -------- Discipline label above head coach -------- */
+.org-discipline-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #495057;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+
+/* -------- Mobile: stack vertically -------- */
+@media (max-width: 768px) {
+  .org-tier {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .org-tier--has-parent > .org-col::before,
+  .org-tier--has-parent > .org-col::after {
+    display: none;
+  }
+
+  .org-tier--has-parent > .org-col {
+    padding-top: 0;
+    margin-top: 12px;
+    border-left: 2px solid #dee2e6;
+    padding-left: 16px;
+    align-items: flex-start;
+  }
+
+  .org-tier--has-parent > .org-col:first-child {
+    margin-top: 8px;
+  }
+
+  .org-stem {
+    height: 12px;
+  }
+}

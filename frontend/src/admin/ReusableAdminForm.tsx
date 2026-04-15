@@ -8,7 +8,12 @@ export type AdminFormField = {
   name: string;
   label: string;
   type: string;
-  options?: { value: string | number; label: string }[]; // for select fields
+  // options can be a static array or a function that receives current values and returns options
+  options?:
+    | { value: string | number; label: string }[]
+    | ((
+        values: Record<string, any>,
+      ) => { value: string | number; label: string }[]);
   required?: boolean;
   multiple?: boolean;
 };
@@ -133,28 +138,36 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
         {fields.map((field) => (
           <div className="mb-3" key={field.name}>
             <label className="form-label">{field.label}</label>
-            {field.type === "select" && field.options ? (
-              <select
-                className="form-select"
-                name={field.name}
-                value={
-                  field.multiple
-                    ? values[field.name] || []
-                    : typeof values[field.name] === "number"
-                      ? String(values[field.name])
-                      : values[field.name] || ""
-                }
-                onChange={handleChange}
-                required={field.required}
-                multiple={field.multiple}
-              >
-                {!field.multiple && <option value="">Select...</option>}
-                {field.options.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+            {field.type === "select" ? (
+              (() => {
+                const options =
+                  typeof field.options === "function"
+                    ? field.options(values)
+                    : field.options || [];
+                return (
+                  <select
+                    className="form-select"
+                    name={field.name}
+                    value={
+                      field.multiple
+                        ? values[field.name] || []
+                        : typeof values[field.name] === "number"
+                          ? String(values[field.name])
+                          : values[field.name] || ""
+                    }
+                    onChange={handleChange}
+                    required={field.required}
+                    multiple={field.multiple}
+                  >
+                    {!field.multiple && <option value="">Select...</option>}
+                    {options.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                );
+              })()
             ) : field.type === "checkbox" ? (
               <input
                 className="form-check-input"

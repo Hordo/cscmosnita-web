@@ -13,6 +13,7 @@ export const TeamAdminPage: React.FC = () => {
   const { user } = useAuth();
   const [teams, setTeams] = useState<any[]>([]);
   const [disciplines, setDisciplines] = useState<any[]>([]);
+  const [filterDiscipline, setFilterDiscipline] = useState("");
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,12 +139,27 @@ export const TeamAdminPage: React.FC = () => {
               <h4 className="mb-3">
                 {editIndex === null ? "Create Team" : "Edit Team"}
               </h4>
-              <ReusableAdminForm
-                fields={teamFields}
-                onSubmit={editIndex === null ? handleCreate : handleUpdate}
-                initialValues={editIndex !== null ? teams[editIndex] : {}}
-                submitLabel={editIndex === null ? "Create" : "Update"}
-              />
+              {(() => {
+                // Build initial values for the form and map discipline name -> discipline_id
+                const initialForForm =
+                  editIndex !== null && teams[editIndex]
+                    ? (() => {
+                        const t = teams[editIndex];
+                        const disc = disciplines.find(
+                          (d: any) => d.name === t.discipline,
+                        );
+                        return { ...t, discipline_id: disc ? disc.id : "" };
+                      })()
+                    : {};
+                return (
+                  <ReusableAdminForm
+                    fields={teamFields}
+                    onSubmit={editIndex === null ? handleCreate : handleUpdate}
+                    initialValues={initialForForm}
+                    submitLabel={editIndex === null ? "Create" : "Update"}
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -151,13 +167,41 @@ export const TeamAdminPage: React.FC = () => {
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <h4 className="mb-3">Teams</h4>
+              <div className="d-flex gap-2 mb-3 flex-wrap align-items-end">
+                <select
+                  className="form-select form-select-sm w-auto"
+                  value={filterDiscipline}
+                  onChange={(e) => setFilterDiscipline(e.target.value)}
+                >
+                  <option value="">All disciplines</option>
+                  {disciplines.map((d: any) => (
+                    <option key={d.id} value={d.name}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                {filterDiscipline && (
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => setFilterDiscipline("")}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
               {loading ? (
                 <div>Loading...</div>
               ) : (
                 <div className="admin-min-width">
                   <ReusableAdminTable
                     columns={teamColumns}
-                    data={teams}
+                    data={
+                      filterDiscipline
+                        ? teams.filter(
+                            (t: any) => t.discipline === filterDiscipline,
+                          )
+                        : teams
+                    }
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                   />

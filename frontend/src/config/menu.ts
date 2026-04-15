@@ -22,6 +22,10 @@ export const menuConfig: MenuItem[] = [
     path: "/contact",
   },
   {
+    label: "menu.orgchart",
+    path: "/organigrama",
+  },
+  {
     label: "menu.disciplines",
     mega: true,
     children: [
