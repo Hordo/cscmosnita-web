@@ -52,9 +52,9 @@ function computePlacement(row: any): { label: string; color: string } | null {
 async function getTournamentRows(teamId: string | undefined): Promise<any[]> {
   if (teamId) {
     const rows = await sql<any[]>`
-      SELECT t.id, t.name, t.season, t.has_group_stage, t.created_at, t.date,
-             tm.name AS team_name,
-             d.name  AS discipline_name
+            SELECT t.id, t.name, t.season, t.has_group_stage, t.calculate_place_from_groups, t.created_at, t.date,
+              tm.name AS team_name,
+              d.name  AS discipline_name
       FROM   club_tournament t
       LEFT JOIN club_team       tm ON tm.id = t.team_id
       LEFT JOIN club_discipline d  ON d.id  = t.discipline_id
@@ -64,9 +64,9 @@ async function getTournamentRows(teamId: string | undefined): Promise<any[]> {
     return Array.from(rows);
   }
   const rows = await sql<any[]>`
-    SELECT t.id, t.name, t.season, t.has_group_stage, t.created_at, t.date,
-           tm.name AS team_name,
-           d.name  AS discipline_name
+        SELECT t.id, t.name, t.season, t.has_group_stage, t.calculate_place_from_groups, t.created_at, t.date,
+          tm.name AS team_name,
+          d.name  AS discipline_name
     FROM   club_tournament t
     LEFT JOIN club_team       tm ON tm.id = t.team_id
     LEFT JOIN club_discipline d  ON d.id  = t.discipline_id
@@ -80,10 +80,10 @@ async function enrichWithPlacement(row: any): Promise<any> {
     const [finalRows, thirdRows, stageRows, groupRows] = await Promise.all([
       sql<any[]>`
         SELECT home_score, away_score FROM club_tournamentmatch
-        WHERE tournament_id = ${row.id} AND stage = 'final' LIMIT 1`,
+        WHERE tournament_id = ${row.id} AND stage = 'final' AND visible_on_tournament_page = 1 LIMIT 1`,
       sql<any[]>`
         SELECT home_score, away_score FROM club_tournamentmatch
-        WHERE tournament_id = ${row.id} AND stage = 'third' LIMIT 1`,
+        WHERE tournament_id = ${row.id} AND stage = 'third' AND visible_on_tournament_page = 1 LIMIT 1`,
       sql<any[]>`
         SELECT stage FROM club_tournamentmatch
         WHERE tournament_id = ${row.id}
@@ -91,16 +91,19 @@ async function enrichWithPlacement(row: any): Promise<any> {
           WHEN 'final' THEN 7 WHEN 'third' THEN 6 WHEN 'semi' THEN 5
           WHEN 'r8' THEN 4 WHEN 'r16' THEN 3 WHEN 'r32' THEN 2 ELSE 1
         END DESC LIMIT 1`,
-      sql<any[]>`
-        SELECT g.name AS group_name, gt.team_name,
-               ROW_NUMBER() OVER (
-                 PARTITION BY g.id
-                 ORDER BY gt.points DESC, (gt.goals_for - gt.goals_against) DESC
-               ) AS pos
-        FROM club_tournamentgroup g
-        JOIN club_groupteam gt ON gt.group_id = g.id
-        WHERE g.tournament_id = ${row.id} AND gt.team_name = ${row.team_name}
-        LIMIT 1`,
+      // Only calculate group-based position when tournament requests it
+      row.calculate_place_from_groups
+        ? sql<any[]>`
+            SELECT g.name AS group_name, gt.team_name,
+                   ROW_NUMBER() OVER (
+                     PARTITION BY g.id
+                     ORDER BY gt.points DESC, (gt.goals_for - gt.goals_against) DESC
+                   ) AS pos
+            FROM club_tournamentgroup g
+            JOIN club_groupteam gt ON gt.group_id = g.id
+            WHERE g.tournament_id = ${row.id} AND gt.team_name = ${row.team_name}
+            LIMIT 1`
+        : Promise.resolve([]),
     ]);
     const enriched = {
       ...row,

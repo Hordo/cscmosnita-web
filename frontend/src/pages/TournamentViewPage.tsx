@@ -133,6 +133,7 @@ export const TournamentViewPage: React.FC = () => {
   // Group knockout matches by stage
   const knockoutByStage: Record<string, any[]> = {};
   for (const m of tour.knockout_matches || []) {
+    if (m.visible_on_tournament_page === false) continue;
     if (!knockoutByStage[m.stage]) knockoutByStage[m.stage] = [];
     knockoutByStage[m.stage].push(m);
   }
@@ -205,6 +206,8 @@ export const TournamentViewPage: React.FC = () => {
                     <tbody>
                       {group.group_teams.map((gt: any) => {
                         const isMyTeam = gt.team_name === myTeam;
+                        const canShowDetails =
+                          isMyTeam || gt.show_group_details;
                         return (
                           <tr
                             key={gt.id}
@@ -217,44 +220,50 @@ export const TournamentViewPage: React.FC = () => {
                                 gt.team_name
                               )}
                             </td>
-                            <td>{gt.played}</td>
                             <td>
-                              {isMyTeam ? (
+                              {canShowDetails ? (
+                                gt.played
+                              ) : (
+                                <span className="text-muted">–</span>
+                              )}
+                            </td>
+                            <td>
+                              {canShowDetails ? (
                                 gt.won
                               ) : (
                                 <span className="text-muted">–</span>
                               )}
                             </td>
                             <td>
-                              {isMyTeam ? (
+                              {canShowDetails ? (
                                 gt.drawn
                               ) : (
                                 <span className="text-muted">–</span>
                               )}
                             </td>
                             <td>
-                              {isMyTeam ? (
+                              {canShowDetails ? (
                                 gt.lost
                               ) : (
                                 <span className="text-muted">–</span>
                               )}
                             </td>
                             <td>
-                              {isMyTeam ? (
+                              {canShowDetails ? (
                                 gt.goals_for
                               ) : (
                                 <span className="text-muted">–</span>
                               )}
                             </td>
                             <td>
-                              {isMyTeam ? (
+                              {canShowDetails ? (
                                 gt.goals_against
                               ) : (
                                 <span className="text-muted">–</span>
                               )}
                             </td>
                             <td>
-                              {isMyTeam ? (
+                              {canShowDetails ? (
                                 gt.goals_for - gt.goals_against
                               ) : (
                                 <span className="text-muted">–</span>
@@ -272,14 +281,16 @@ export const TournamentViewPage: React.FC = () => {
               {/* Group Matches — only my team's games */}
               {group.matches?.filter(
                 (m: any) =>
-                  m.home_team_name === myTeam || m.away_team_name === myTeam,
+                  m.visible_on_tournament_page !== false &&
+                  (m.home_team_name === myTeam || m.away_team_name === myTeam),
               ).length > 0 && (
                 <div className="card border-0 bg-light p-2">
                   {group.matches
                     .filter(
                       (m: any) =>
-                        m.home_team_name === myTeam ||
-                        m.away_team_name === myTeam,
+                        m.visible_on_tournament_page !== false &&
+                        (m.home_team_name === myTeam ||
+                          m.away_team_name === myTeam),
                     )
                     .map((m: any) => (
                       <MatchRow key={m.id} m={m} videoLabel={t("video")} />

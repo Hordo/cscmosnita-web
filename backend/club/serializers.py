@@ -374,7 +374,7 @@ class GroupTeamSerializer(serializers.ModelSerializer):
     class Meta:
         model = GroupTeam
         fields = ['id', 'team_name', 'played', 'won', 'drawn', 'lost',
-                  'goals_for', 'goals_against', 'points']
+                  'goals_for', 'goals_against', 'points', 'show_group_details']
 
 
 class TournamentMatchSerializer(serializers.ModelSerializer):
@@ -383,7 +383,7 @@ class TournamentMatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = TournamentMatch
         fields = ['id', 'tournament', 'group', 'stage', 'stage_display', 'home_team_name',
-                  'away_team_name', 'home_score', 'away_score', 'youtube_link', 'ended_after_penalties', 'match_order']
+                  'away_team_name', 'home_score', 'away_score', 'youtube_link', 'ended_after_penalties', 'match_order', 'visible_on_tournament_page']
 
 
 class TournamentGroupSerializer(serializers.ModelSerializer):
@@ -401,7 +401,7 @@ class TournamentListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tournament
-        fields = ['id', 'name', 'season', 'date', 'has_group_stage', 'team', 'team_name',
+        fields = ['id', 'name', 'season', 'date', 'has_group_stage', 'calculate_place_from_groups', 'team', 'team_name',
                   'discipline', 'discipline_name', 'created_at']
 
 
@@ -413,7 +413,7 @@ class TournamentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Tournament
-        fields = ['id', 'name', 'season', 'date', 'has_group_stage', 'team', 'team_name',
+        fields = ['id', 'name', 'season', 'date', 'has_group_stage', 'calculate_place_from_groups', 'team', 'team_name',
                   'discipline', 'discipline_name', 'groups', 'knockout_matches', 'created_at']
 
     def get_knockout_matches(self, obj):

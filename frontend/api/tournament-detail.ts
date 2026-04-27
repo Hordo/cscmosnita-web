@@ -7,7 +7,7 @@ export default async function handler(req: any, res: any) {
 
     // Tournament header
     const [tournament] = await sql<any[]>`
-      SELECT t.id, t.name, t.season, t.date, t.has_group_stage, t.created_at,
+      SELECT t.id, t.name, t.season, t.date, t.has_group_stage, t.calculate_place_from_groups, t.created_at,
              t.team_id,
              tm.name AS team_name,
              d.name  AS discipline_name
@@ -26,21 +26,21 @@ export default async function handler(req: any, res: any) {
     // Group teams (standings)
     const groupTeams = groups.length
       ? await sql<any[]>`
-          SELECT id, group_id, team_name, played, won, drawn, lost,
-                 goals_for, goals_against, points
-          FROM   club_groupteam
-          WHERE  group_id = ANY(${groups.map((g: any) => Number(g.id))})
-          ORDER  BY group_id, points DESC, goals_for DESC
+             SELECT id, group_id, team_name, played, won, drawn, lost,
+               goals_for, goals_against, points, show_group_details
+             FROM   club_groupteam
+             WHERE  group_id = ANY(${groups.map((g: any) => Number(g.id))})
+             ORDER  BY group_id, points DESC, goals_for DESC
         `
       : [];
 
     // All matches for this tournament
     const matches = await sql<any[]>`
-      SELECT id, group_id, stage, home_team_name, away_team_name,
-             home_score, away_score, youtube_link, ended_after_penalties, match_order
-      FROM   club_tournamentmatch
-      WHERE  tournament_id = ${id}
-      ORDER  BY match_order
+            SELECT id, group_id, stage, home_team_name, away_team_name,
+              home_score, away_score, youtube_link, ended_after_penalties, match_order, visible_on_tournament_page
+            FROM   club_tournamentmatch
+            WHERE  tournament_id = ${id}
+            ORDER  BY match_order
     `;
 
     // Assemble response

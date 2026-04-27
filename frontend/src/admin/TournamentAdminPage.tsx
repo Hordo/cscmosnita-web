@@ -14,6 +14,7 @@ const emptyTournament = {
   discipline_id: "",
   team_id: "",
   has_group_stage: true,
+  calculate_place_from_groups: false,
 };
 
 const TournamentAdminPage: React.FC = () => {
@@ -106,6 +107,7 @@ const TournamentAdminPage: React.FC = () => {
       name: form.name,
       season: form.season,
       has_group_stage: form.has_group_stage,
+      calculate_place_from_groups: !!form.calculate_place_from_groups,
       team: Number(form.team_id),
     };
     if (form.date) payload.date = form.date;
@@ -134,6 +136,7 @@ const TournamentAdminPage: React.FC = () => {
       discipline_id: disc ? String(disc.id) : "",
       team_id: String(t.team),
       has_group_stage: t.has_group_stage,
+      calculate_place_from_groups: !!t.calculate_place_from_groups,
     });
     setEditId(t.id);
     setActiveTournament(null);
@@ -204,6 +207,20 @@ const TournamentAdminPage: React.FC = () => {
   const deleteGroup = async (groupId: number) => {
     if (!confirm(t("tour.confirm_delete_group"))) return;
     await api.delete(`${API_URLS.tournamentGroups}${groupId}/`);
+    loadTournament(activeTournament.id);
+  };
+
+  const toggleShowDetails = async (groupTeamId: number, value: boolean) => {
+    await api.patch(`${API_URLS.groupTeams}${groupTeamId}/`, {
+      show_group_details: value,
+    });
+    loadTournament(activeTournament.id);
+  };
+
+  const toggleMatchVisibility = async (matchId: number, value: boolean) => {
+    await api.patch(`${API_URLS.tournamentMatches}${matchId}/`, {
+      visible_on_tournament_page: value,
+    });
     loadTournament(activeTournament.id);
   };
 
@@ -353,6 +370,25 @@ const TournamentAdminPage: React.FC = () => {
               />
               <label className="form-check-label" htmlFor="hasGroup">
                 {t("tour.label_groups")}
+              </label>
+            </div>
+          </div>
+          <div className="col-md-2 d-flex align-items-end">
+            <div className="form-check mt-2">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="calcFromGroups"
+                checked={!!form.calculate_place_from_groups}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    calculate_place_from_groups: e.target.checked,
+                  })
+                }
+              />
+              <label className="form-check-label" htmlFor="calcFromGroups">
+                {t("tour.label_calc_from_groups")}
               </label>
             </div>
           </div>
@@ -532,6 +568,7 @@ const TournamentAdminPage: React.FC = () => {
                                 <th>{t("tour.col_gf")}</th>
                                 <th>{t("tour.col_ga")}</th>
                                 <th>{t("tour.col_pts")}</th>
+                                <th>{t("tour.col_show_details")}</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -567,6 +604,22 @@ const TournamentAdminPage: React.FC = () => {
                                         {gt[field]}
                                       </td>
                                     ))}
+                                    <td className="text-center">
+                                      <div className="form-check form-switch">
+                                        <input
+                                          className="form-check-input"
+                                          type="checkbox"
+                                          role="switch"
+                                          checked={!!gt.show_group_details}
+                                          onChange={(e) =>
+                                            toggleShowDetails(
+                                              gt.id,
+                                              e.target.checked,
+                                            )
+                                          }
+                                        />
+                                      </div>
+                                    </td>
                                   </tr>
                                 ))}
                             </tbody>
@@ -592,6 +645,7 @@ const TournamentAdminPage: React.FC = () => {
                                 <th>{t("tour.col_score")}</th>
                                 <th>{t("tour.col_away")}</th>
                                 <th>{t("tour.col_video")}</th>
+                                <th>{t("tour.col_visible")}</th>
                                 <th></th>
                               </tr>
                             </thead>
@@ -684,6 +738,24 @@ const TournamentAdminPage: React.FC = () => {
                                       }
                                     />
                                   </td>
+                                  <td className="text-center">
+                                    <div className="form-check form-switch">
+                                      <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        role="switch"
+                                        checked={
+                                          m.visible_on_tournament_page !== false
+                                        }
+                                        onChange={(e) =>
+                                          toggleMatchVisibility(
+                                            m.id,
+                                            e.target.checked,
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                  </td>
                                   <td>
                                     <button
                                       className="btn btn-sm btn-outline-danger"
@@ -732,6 +804,7 @@ const TournamentAdminPage: React.FC = () => {
                             <th>{t("tour.col_score")}</th>
                             <th>{t("tour.col_away")}</th>
                             <th>{t("tour.col_video")}</th>
+                            <th>{t("tour.col_visible")}</th>
                             <th></th>
                           </tr>
                         </thead>
@@ -755,6 +828,24 @@ const TournamentAdminPage: React.FC = () => {
                                 ) : (
                                   "–"
                                 )}
+                              </td>
+                              <td className="text-center">
+                                <div className="form-check form-switch">
+                                  <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    role="switch"
+                                    checked={
+                                      m.visible_on_tournament_page !== false
+                                    }
+                                    onChange={(e) =>
+                                      toggleMatchVisibility(
+                                        m.id,
+                                        e.target.checked,
+                                      )
+                                    }
+                                  />
+                                </div>
                               </td>
                               <td className="d-flex gap-1">
                                 <button

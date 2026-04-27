@@ -204,6 +204,8 @@ class Tournament(models.Model):
     discipline = models.ForeignKey(Discipline, on_delete=models.SET_NULL, null=True, blank=True)
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name='tournaments')
     has_group_stage = models.BooleanField(default=True)
+    # When true, compute the tournament placement for our team using group rankings
+    calculate_place_from_groups = models.BooleanField(default=False, help_text='If true and tournament has only group stage, compute placement from group ranking')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -228,6 +230,8 @@ class GroupTeam(models.Model):
     goals_for = models.IntegerField(default=0)
     goals_against = models.IntegerField(default=0)
     points = models.IntegerField(default=0)
+    # Whether to show detailed group stats for this team on the public tournament view
+    show_group_details = models.BooleanField(default=True, help_text='Show full group details (played/w/d/l/goals) for this team')
 
     class Meta:
         ordering = ['-points', '-goals_for']
@@ -246,6 +250,8 @@ class TournamentMatch(models.Model):
     away_score = models.IntegerField(null=True, blank=True)
     youtube_link = models.URLField(blank=True)
     ended_after_penalties = models.BooleanField(default=False)
+    # Whether this match should be shown on the public tournament view page
+    visible_on_tournament_page = models.BooleanField(default=True, help_text='Hide this match from the public tournament page when false')
     match_order = models.IntegerField(default=0)
 
     class Meta:

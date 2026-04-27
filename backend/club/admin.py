@@ -11,7 +11,7 @@ class DisciplineAdmin(admin.ModelAdmin):
 
 @admin.register(Tournament)
 class TournamentAdmin(admin.ModelAdmin):
-    list_display = ("name", "season", "team", "discipline", "has_group_stage")
+    list_display = ("name", "season", "team", "discipline", "has_group_stage", "calculate_place_from_groups")
     list_filter = ("discipline", "team")
     search_fields = ("name", "season")
 
@@ -23,12 +23,12 @@ class TournamentGroupAdmin(admin.ModelAdmin):
 
 @admin.register(GroupTeam)
 class GroupTeamAdmin(admin.ModelAdmin):
-    list_display = ("team_name", "group", "points", "played", "won", "drawn", "lost")
+    list_display = ("team_name", "group", "points", "played", "won", "drawn", "lost", "show_group_details")
 
 
 @admin.register(TournamentMatch)
 class TournamentMatchAdmin(admin.ModelAdmin):
-    list_display = ("__str__", "tournament", "stage")
+    list_display = ("__str__", "tournament", "stage", "visible_on_tournament_page")
 
 
 @admin.register(Sponsor)
