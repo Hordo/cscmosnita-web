@@ -11,7 +11,9 @@ function computePlacement(
   t: TFunc,
 ): { label: string; color: string } | null {
   const teamName: string = tour.team_name;
-  const knockouts: any[] = tour.knockout_matches || [];
+  const knockouts: any[] = (tour.knockout_matches || []).filter(
+    (m: any) => m.visible_on_tournament_page !== false,
+  );
 
   if (knockouts.length > 0) {
     const finalMatch = knockouts.find((m) => m.stage === "final");
@@ -55,15 +57,18 @@ function computePlacement(
     }
   }
 
-  for (const group of tour.groups || []) {
-    const idx = (group.group_teams || []).findIndex(
-      (gt: any) => gt.team_name === teamName,
-    );
-    if (idx >= 0)
-      return {
-        label: t("placement.group", { name: group.name, pos: idx + 1 }),
-        color: idx === 0 ? "success" : "secondary",
-      };
+  // Only use group-based placement when admin requested it
+  if (tour.calculate_place_from_groups) {
+    for (const group of tour.groups || []) {
+      const idx = (group.group_teams || []).findIndex(
+        (gt: any) => gt.team_name === teamName,
+      );
+      if (idx >= 0)
+        return {
+          label: t("placement.group", { name: group.name, pos: idx + 1 }),
+          color: idx === 0 ? "success" : "secondary",
+        };
+    }
   }
   return null;
 }
@@ -281,16 +286,17 @@ export const TournamentViewPage: React.FC = () => {
               {/* Group Matches — only my team's games */}
               {group.matches?.filter(
                 (m: any) =>
-                  m.visible_on_tournament_page !== false &&
-                  (m.home_team_name === myTeam || m.away_team_name === myTeam),
+                  m.visible_on_tournament_page !== false ||
+                  m.home_team_name === myTeam ||
+                  m.away_team_name === myTeam,
               ).length > 0 && (
                 <div className="card border-0 bg-light p-2">
                   {group.matches
                     .filter(
                       (m: any) =>
-                        m.visible_on_tournament_page !== false &&
-                        (m.home_team_name === myTeam ||
-                          m.away_team_name === myTeam),
+                        m.visible_on_tournament_page !== false ||
+                        m.home_team_name === myTeam ||
+                        m.away_team_name === myTeam,
                     )
                     .map((m: any) => (
                       <MatchRow key={m.id} m={m} videoLabel={t("video")} />
