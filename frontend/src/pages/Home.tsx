@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import "../styles/HomePage.css";
 import logo from "../assets/CSCMosnita.png";
 const FOUNDED_YEAR = 2019;
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 const DISCIPLINE_ICONS: Record<string, string> = {
   // Football / Soccer
@@ -156,35 +157,41 @@ export default function Home() {
   const [playersCount, setPlayersCount] = useState<number>(0);
 
   useEffect(() => {
-    fetch("/api/disciplines")
+    fetch(`${API_BASE}/api/disciplines/`)
       .then((r) => r.json())
       .then((d) => Array.isArray(d) && setDisciplines(d))
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    fetch("/api/calendar-events")
+    fetch(`${API_BASE}/api/calendar/events/?upcoming=1`)
       .then((r) => r.json())
       .then((d) => {
-        Array.isArray(d) && setEvents(d);
+        Array.isArray(d) &&
+          setEvents(
+            d.map((e: any) => ({
+              ...e,
+              event_type: e.event_type_name ?? e.event_type,
+            })),
+          );
         setEventsLoading(false);
       })
       .catch(() => setEventsLoading(false));
   }, []);
 
   useEffect(() => {
-    fetch("/api/sponsors")
+    fetch(`${API_BASE}/api/sponsors/`)
       .then((r) => r.json())
       .then((d) => Array.isArray(d) && setSponsors(d))
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    fetch("/api/teams")
+    fetch(`${API_BASE}/api/teams/`)
       .then((r) => r.json())
       .then((d) => Array.isArray(d) && setTeamsCount(d.length))
       .catch(() => {});
-    fetch("/api/players")
+    fetch(`${API_BASE}/api/players/`)
       .then((r) => r.json())
       .then((d) => Array.isArray(d) && setPlayersCount(d.length))
       .catch(() => {});

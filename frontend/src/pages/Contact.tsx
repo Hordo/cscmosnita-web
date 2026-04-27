@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { Card } from "../components/Card";
 import "../styles/Contact.css";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 interface DisciplineWithHeadCoach {
   id: number;
@@ -27,7 +28,7 @@ export default function Contact() {
 
   useEffect(() => {
     setLoading(true);
-    fetch("/api/disciplines")
+    fetch(`${API_BASE}/api/disciplines/`)
       .then((res) => res.json())
       .then((data) => {
         setDisciplines(Array.isArray(data) ? data : []);

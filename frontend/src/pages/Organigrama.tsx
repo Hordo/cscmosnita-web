@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import "../styles/Organigrama.css";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 type Person = {
   id: number;
@@ -131,8 +132,8 @@ export default function Organigrama() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch("/api/disciplines").then((r) => r.json()),
-      fetch("/api/coaces").then((r) => r.json()),
+      fetch(`${API_BASE}/api/disciplines/`).then((r) => r.json()),
+      fetch(`${API_BASE}/api/coaches/`).then((r) => r.json()),
     ])
       .then(([disciplines, coaches]: [any[], any[]]) => {
         // Normalise all ids to numbers so string/number mismatches don't break comparisons
@@ -145,6 +146,7 @@ export default function Organigrama() {
         );
 
         // Director: coach with no teams AND not a head coach of any discipline
+        // Django returns teams as [{id, name}] objects
         const director =
           coaches.find(
             (c: any) => c.teams.length === 0 && !headCoachIds.has(Number(c.id)),
@@ -161,7 +163,7 @@ export default function Organigrama() {
               name: d.name,
               name_en: d.name_en,
               head_coach: d.head_coach ?? null,
-              // coaches linked to this discipline via teams, excluding the head coach
+              // coaches linked to this discipline via discipline_ids, excluding the head coach
               coaches: coaches.filter(
                 (c: any) =>
                   (c.discipline_ids as number[]).includes(disciplineId) &&

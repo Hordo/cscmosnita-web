@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as
   | string
@@ -75,7 +76,7 @@ export function usePushNotifications() {
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
       const prefs = loadStoredPrefs();
-      await fetch("/api/push?action=subscribe", {
+      await fetch(`${API_BASE}/api/push/?action=subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...sub.toJSON(), ...prefs }),
@@ -95,7 +96,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (!sub) return null;
-      const res = await fetch("/api/push?action=get-prefs", {
+      const res = await fetch(`${API_BASE}/api/push/?action=get-prefs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endpoint: sub.endpoint }),
@@ -112,7 +113,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (!sub) return;
-      await fetch("/api/push?action=update-prefs", {
+      await fetch(`${API_BASE}/api/push/?action=update-prefs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -132,7 +133,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await fetch("/api/push", {
+        await fetch(`${API_BASE}/api/push/`, {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: sub.endpoint }),

@@ -333,5 +333,8 @@
   "news.translate_btn": "🌐 Traducere RO → EN",
   "news.translating": "Se traduce...",
   "news.translate_hint": "Traducere automată din română",
-  "news.translate_error": "Traducerea a eșuat. Încearcă din nou."
+  "news.translate_error": "Traducerea a eșuat. Încearcă din nou.",
+  "server.waking_title": "Serverul pornește…",
+  "server.waking_sub": "Serverul se trezește din repaus — poate dura până la 45 de secunde. Pagina se va încărca automat.",
+  "server.awake": "Serverul este gata! Se încarcă conținutul…"
 }

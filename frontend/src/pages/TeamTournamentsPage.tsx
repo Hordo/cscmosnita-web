@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 export const TeamTournamentsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -14,8 +15,10 @@ export const TeamTournamentsPage: React.FC = () => {
     if (!teamId) return;
     setLoading(true);
     Promise.all([
-      fetch(`/api/tournaments?team_id=${teamId}`).then((r) => r.json()),
-      fetch("/api/teams").then((r) => r.json()),
+      fetch(`${API_BASE}/api/tournaments/?team_id=${teamId}`).then((r) =>
+        r.json(),
+      ),
+      fetch(`${API_BASE}/api/teams/`).then((r) => r.json()),
     ])
       .then(([tours, teams]) => {
         if (!Array.isArray(tours))

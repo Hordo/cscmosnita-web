@@ -4,7 +4,7 @@ from .views import (
     TeamViewSet, CoachViewSet, PlayerViewSet,
     ChampionshipViewSet, MatchViewSet, DisciplineViewSet,
     EventTypeViewSet, CalendarEventViewSet, TrainingSessionViewSet, EventAttendanceViewSet,
-    PushSendNotificationsView,
+    PushSendNotificationsView, PushSubscriptionView,
     TournamentViewSet, TournamentGroupViewSet, GroupTeamViewSet, TournamentMatchViewSet,
     SponsorViewSet, NewsArticleViewSet,
 )
@@ -46,6 +46,7 @@ urlpatterns = [
     path('upload/general-photo/', GenerateGeneralPhotoUploadURL.as_view(), name='upload_general_photo'),
     path('upload/sponsor-logo/', GenerateSponsorLogoUploadURL.as_view(), name='upload_sponsor_logo'),
     path('upload/news-cover/', GenerateNewsArticleCoverUploadURL.as_view(), name='upload_news_cover'),
-    # Push notification endpoints (subscribe/unsubscribe handled by Vercel serverless)
+    # Push notification endpoints
+    path('push/', PushSubscriptionView.as_view(), name='push_subscription'),
     path('push/send-notifications/', PushSendNotificationsView.as_view(), name='push_send_notifications'),
 ]

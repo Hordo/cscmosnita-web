@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import axios from "axios";
+import api from "../config/axios";
 
 interface NewsArticle {
   id: number;
@@ -24,8 +24,8 @@ export default function NewsDetailPage() {
 
   useEffect(() => {
     if (!slug) return;
-    axios
-      .get(`/api/news?slug=${slug}`)
+    api
+      .get(`/api/news/?slug=${slug}`)
       .then((res) => {
         // serverless returns a single object when queried by slug
         const data = res.data;

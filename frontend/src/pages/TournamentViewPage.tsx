@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 const STAGE_ORDER = ["r32", "r16", "r8", "semi", "third", "final"];
 
@@ -119,7 +120,7 @@ export const TournamentViewPage: React.FC = () => {
 
   useEffect(() => {
     if (!tournamentId) return;
-    fetch(`/api/tournament-detail?id=${tournamentId}`)
+    fetch(`${API_BASE}/api/tournaments/${tournamentId}/`)
       .then((r) => r.json())
       .then((d) => {
         if (d.error) throw new Error(d.error);

@@ -3,7 +3,7 @@ from .models import Team, Coach, Player, Championship, Match, Discipline, EventT
 
 # Discipline Serializer
 class DisciplineSerializer(serializers.ModelSerializer):
-    head_coach = serializers.StringRelatedField(read_only=True)
+    head_coach = serializers.SerializerMethodField(read_only=True)
     head_coach_id = serializers.PrimaryKeyRelatedField(
         queryset=Coach.objects.all(), source="head_coach", write_only=True, required=False
     )
@@ -11,11 +11,18 @@ class DisciplineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Discipline
         fields = '__all__'
-        extra_fields = ['head_coach_id']
-        def get_fields(self):
-            fields = super().get_fields()
-            fields['head_coach_id'] = self.fields['head_coach_id']
-            return fields
+
+    def get_head_coach(self, obj):
+        if not obj.head_coach:
+            return None
+        c = obj.head_coach
+        return {
+            'id': c.id,
+            'first_name': c.first_name,
+            'last_name': c.last_name,
+            'phone': c.phone,
+            'photo_url': c.photo_url,
+        }
 
 
 
@@ -48,6 +55,7 @@ class TeamSerializer(serializers.ModelSerializer):
 
 class CoachSerializer(serializers.ModelSerializer):
     teams = serializers.SerializerMethodField(read_only=True)
+    discipline_ids = serializers.SerializerMethodField(read_only=True)
     teams_id = serializers.PrimaryKeyRelatedField(
         queryset=Team.objects.all(), source="teams", many=True, write_only=True, required=False
     )
@@ -58,17 +66,18 @@ class CoachSerializer(serializers.ModelSerializer):
     class Meta:
         model = Coach
         fields = '__all__'
-        extra_fields = ['teams_id']
-        def get_fields(self):
-            fields = super().get_fields()
-            fields['teams_id'] = self.fields['teams_id']
-            fields['is_head_of_discipline'] = self.fields['is_head_of_discipline']
-            return fields
 
     def get_teams(self, obj):
         return [
             {"id": team.id, "name": team.name} for team in obj.teams.all()
         ]
+
+    def get_discipline_ids(self, obj):
+        return list(
+            obj.teams.filter(discipline__isnull=False)
+            .values_list('discipline_id', flat=True)
+            .distinct()
+        )
 
     # No need for get_photo_url, direct field
 
@@ -77,7 +86,7 @@ class CoachSerializer(serializers.ModelSerializer):
 class PlayerSerializer(serializers.ModelSerializer):
     team = serializers.StringRelatedField(read_only=True)
     team_id = serializers.PrimaryKeyRelatedField(
-        queryset=Team.objects.all(), source="team", write_only=True
+        queryset=Team.objects.all(), source="team"
     )
     photo_url = serializers.CharField(allow_blank=True, allow_null=True, required=False)
 
@@ -85,12 +94,6 @@ class PlayerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Player
         fields = '__all__'
-        extra_fields = ['team_id']
-        # Add team_id to fields for input
-        def get_fields(self):
-            fields = super().get_fields()
-            fields['team_id'] = self.fields['team_id']
-            return fields
 
     # No need for get_photo_url, direct field
 
@@ -332,6 +335,7 @@ class EventAttendanceSerializer(serializers.ModelSerializer):
 class CalendarEventListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for calendar event lists"""
     event_type = EventTypeSerializer(read_only=True)
+    event_type_name = serializers.SerializerMethodField(read_only=True)
     discipline = DisciplineSerializer(read_only=True)
     team = TeamSerializer(read_only=True)
     player_count = serializers.SerializerMethodField()
@@ -340,9 +344,12 @@ class CalendarEventListSerializer(serializers.ModelSerializer):
         model = CalendarEvent
         fields = [
             'id', 'title', 'start_datetime', 'end_datetime', 'all_day',
-            'location', 'is_cancelled', 'event_type', 'discipline', 'team',
-            'player_count', 'is_recurring', 'recurrence_group_id',
+            'location', 'is_cancelled', 'event_type', 'event_type_name',
+            'discipline', 'team', 'player_count', 'is_recurring', 'recurrence_group_id',
         ]
+
+    def get_event_type_name(self, obj):
+        return obj.event_type.name.lower() if obj.event_type else None
 
     def __init__(self, *args, **kwargs):
         print("=== CalendarEventListSerializer.__init__() called ===")

@@ -332,5 +332,8 @@
   "news.translate_btn": "🌐 Translate RO → EN",
   "news.translating": "Translating...",
   "news.translate_hint": "Auto-translate from Romanian",
-  "news.translate_error": "Translation failed. Try again."
+  "news.translate_error": "Translation failed. Try again.",
+  "server.waking_title": "Server is starting up…",
+  "server.waking_sub": "The server is waking from sleep — this can take up to 45 seconds. The page will load automatically.",
+  "server.awake": "Server is ready! Loading your content…"
 }

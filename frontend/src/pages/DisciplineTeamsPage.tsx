@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Card } from "../components/Card";
 import { useParams, useNavigate } from "react-router-dom";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 export const DisciplineTeamsPage: React.FC = () => {
   const { discipline } = useParams<{ discipline: string }>();
@@ -12,7 +13,7 @@ export const DisciplineTeamsPage: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/teams?discipline=${discipline}`)
+    fetch(`${API_BASE}/api/teams/?discipline=${discipline}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(await res.text());
         return res.json();

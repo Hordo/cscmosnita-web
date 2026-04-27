@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 const disciplineDescriptions: Record<string, string> = {
   fotbal:
@@ -49,9 +50,9 @@ export const DisciplineDetailPage: React.FC = () => {
     setError(null);
     Promise.all([
       fetch(
-        `/api/teams?discipline=${encodeURIComponent(discipline || "")}`,
+        `${API_BASE}/api/teams/?discipline=${encodeURIComponent(discipline || "")}`,
       ).then((res) => res.json()),
-      fetch("/api/disciplines").then((res) => res.json()),
+      fetch(`${API_BASE}/api/disciplines/`).then((res) => res.json()),
     ])
       .then(([teamsData, discData]) => {
         setTeams(Array.isArray(teamsData) ? teamsData : []);

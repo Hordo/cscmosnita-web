@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Card } from "../components/Card";
 import userPlaceholder from "../assets/user-placeholder.svg";
 import { useTranslation } from "react-i18next";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 export const TeamViewerPage: React.FC = () => {
   const { t } = useTranslation();
@@ -18,26 +19,32 @@ export const TeamViewerPage: React.FC = () => {
     setLoading(true);
     setError(null);
     const eventsUrl = teamId
-      ? `/api/calendar-events?team_id=${teamId}`
-      : "/api/calendar-events";
+      ? `${API_BASE}/api/calendar/events/?team=${teamId}&upcoming=1`
+      : `${API_BASE}/api/calendar/events/?upcoming=1`;
 
     Promise.all([
-      fetch("/api/teams").then(async (res) => {
+      fetch(`${API_BASE}/api/teams/`).then(async (res) => {
         if (!res.ok) throw new Error(await res.text());
         return res.json();
       }),
-      fetch("/api/players").then(async (res) => {
+      fetch(`${API_BASE}/api/players/`).then(async (res) => {
         if (!res.ok) throw new Error(await res.text());
         return res.json();
       }),
-      fetch("/api/coaces").then(async (res) => {
+      fetch(`${API_BASE}/api/coaches/`).then(async (res) => {
         if (!res.ok) throw new Error(await res.text());
         return res.json();
       }),
       fetch(eventsUrl).then(async (res) => {
         if (!res.ok) return [];
         const data = await res.json();
-        return Array.isArray(data) ? data : [];
+        // Normalise event_type to string (Django returns it as an object)
+        return Array.isArray(data)
+          ? data.map((e: any) => ({
+              ...e,
+              event_type: e.event_type_name ?? e.event_type,
+            }))
+          : [];
       }),
     ])
       .then(([teamsData, playersData, coachesData, eventsData]) => {
@@ -69,9 +76,10 @@ export const TeamViewerPage: React.FC = () => {
   const teamPlayers = players.filter(
     (p) => String(p.team_id) === String(team.id),
   );
-  // Find coaches for this team (if Coach.teams is available as array of team ids)
+  // Find coaches for this team — Django returns teams as [{id, name}] objects
   const teamCoaches = coaches.filter(
-    (c) => c.teams && c.teams.includes(team.id),
+    (c) =>
+      c.teams && c.teams.some((t: any) => Number(t.id) === Number(team.id)),
   );
   const disciplineName = team.discipline || "";
 

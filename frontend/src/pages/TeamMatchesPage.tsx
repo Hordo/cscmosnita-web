@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 interface Match {
   id: number;
@@ -27,7 +28,7 @@ export const TeamMatchesPage: React.FC = () => {
   // Fetch team name once
   useEffect(() => {
     if (!teamId) return;
-    fetch("/api/teams")
+    fetch(`${API_BASE}/api/teams/`)
       .then((r) => r.json())
       .then((teams: any[]) => {
         const team = teams.find((t: any) => String(t.id) === String(teamId));
@@ -42,8 +43,8 @@ export const TeamMatchesPage: React.FC = () => {
     setLoading(true);
     setError(null);
     const url = activeSeason
-      ? `/api/matches?team_id=${teamId}&season=${encodeURIComponent(activeSeason)}`
-      : `/api/matches?team_id=${teamId}`;
+      ? `${API_BASE}/api/matches/?team_id=${teamId}&season=${encodeURIComponent(activeSeason)}`
+      : `${API_BASE}/api/matches/?team_id=${teamId}`;
     fetch(url)
       .then(async (res) => {
         if (!res.ok) throw new Error(await res.text());

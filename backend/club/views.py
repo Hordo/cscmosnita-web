@@ -58,11 +58,32 @@ class MatchViewSet(viewsets.ModelViewSet):
     serializer_class = MatchSerializer
 
     def get_queryset(self):
-        queryset = Match.objects.select_related('team').order_by('-date')
-        team_id = self.request.query_params.get('team')
-        if team_id:
-            queryset = queryset.filter(team_id=team_id)
+        queryset = Match.objects.select_related('team').order_by('-date', '-id')
+        team_param = self.request.query_params.get('team_id') or self.request.query_params.get('team')
+        if team_param:
+            queryset = queryset.filter(team_id=team_param)
         return queryset
+
+    def list(self, request, *args, **kwargs):
+        team_param = request.query_params.get('team_id') or request.query_params.get('team')
+        if not team_param:
+            return super().list(request, *args, **kwargs)
+
+        # Return structured response with seasons for team-specific queries
+        requested_season = request.query_params.get('season')
+        seasons = list(
+            Match.objects.filter(team_id=team_param)
+            .exclude(season='').exclude(season__isnull=True)
+            .values_list('season', flat=True)
+            .distinct()
+            .order_by('-season')
+        )
+        active_season = requested_season if requested_season in seasons else (seasons[0] if seasons else None)
+        qs = Match.objects.select_related('team').filter(team_id=team_param).order_by('-date', '-id')
+        if active_season:
+            qs = qs.filter(season=active_season)
+        serializer = self.get_serializer(qs, many=True)
+        return Response({'matches': serializer.data, 'seasons': seasons, 'activeSeason': active_season})
 
 
 # --- User Registration API View ---
@@ -157,7 +178,29 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
             if is_cancelled is not None:
                 queryset = queryset.filter(is_cancelled=is_cancelled.lower() == 'true')
                 print(f"Filtered by is_cancelled: {is_cancelled}, count: {queryset.count()}")
-                
+
+            # Upcoming filter: next N days (default 7), exclude training when no team
+            upcoming = self.request.query_params.get('upcoming')
+            if upcoming:
+                from django.utils import timezone
+                import datetime
+                now = timezone.now()
+                days = 7
+                try:
+                    days = int(upcoming) if int(upcoming) > 1 else 7
+                except (ValueError, TypeError):
+                    days = 7
+                end = now + datetime.timedelta(days=days)
+                queryset = queryset.filter(
+                    is_cancelled=False,
+                    start_datetime__gte=now,
+                    start_datetime__lte=end,
+                )
+                # Exclude training events when viewing the global feed (no team filter)
+                if not team:
+                    queryset = queryset.exclude(event_type__name__iexact='training')
+                print(f"After upcoming filter ({days}d): {queryset.count()}")
+
             print(f"Final queryset count: {queryset.count()}")
             return queryset
         except Exception as e:
@@ -310,6 +353,9 @@ class NewsArticleViewSet(viewsets.ModelViewSet):
         # Public endpoint: non-admin users only see published articles
         if not (self.request.user and self.request.user.is_staff):
             queryset = queryset.filter(is_published=True)
+        slug = self.request.query_params.get('slug')
+        if slug:
+            queryset = queryset.filter(slug=slug)
         return queryset
 
 
@@ -435,9 +481,9 @@ class TournamentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Tournament.objects.select_related('team', 'discipline')
-        team_id = self.request.query_params.get('team')
-        if team_id:
-            qs = qs.filter(team_id=team_id)
+        team_param = self.request.query_params.get('team_id') or self.request.query_params.get('team')
+        if team_param:
+            qs = qs.filter(team_id=team_param)
         return qs.order_by('-created_at')
 
 
@@ -581,8 +627,90 @@ class SponsorViewSet(viewsets.ModelViewSet):
     serializer_class = SponsorSerializer
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        active_only = self.request.query_params.get('active')
-        if active_only == '1':
+        qs = Sponsor.objects.all()
+        # Unauthenticated users only see active sponsors
+        if not (self.request.user and self.request.user.is_authenticated):
+            qs = qs.filter(is_active=True)
+        elif self.request.query_params.get('active') == '1':
             qs = qs.filter(is_active=True)
         return qs.order_by('order', 'name')
+
+
+# ── Push Subscription View ────────────────────────────────────────────────────
+
+import json as _json
+
+class PushSubscriptionView(APIView):
+    """Manage browser Web Push subscriptions.
+
+    POST ?action=subscribe      — upsert subscription + prefs
+    POST ?action=get-prefs      — fetch stored prefs for an endpoint
+    POST ?action=update-prefs   — update prefs for an existing subscription
+    DELETE (no action)          — remove subscription
+    """
+    permission_classes = []  # Open to anonymous users (subscribers don't need accounts)
+
+    def post(self, request):
+        action = request.query_params.get('action')
+
+        if action == 'subscribe':
+            endpoint = request.data.get('endpoint')
+            keys = request.data.get('keys') or {}
+            p256dh = keys.get('p256dh')
+            auth_key = keys.get('auth')
+            if not endpoint or not p256dh or not auth_key:
+                return Response(
+                    {'error': 'endpoint, keys.p256dh and keys.auth are required'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            discipline_ids = request.data.get('discipline_ids', [])
+            team_ids = request.data.get('team_ids', [])
+            PushSubscription.objects.update_or_create(
+                endpoint=endpoint,
+                defaults={
+                    'p256dh': p256dh,
+                    'auth': auth_key,
+                    'user': request.user if request.user.is_authenticated else None,
+                    'discipline_ids': _json.dumps(discipline_ids if isinstance(discipline_ids, list) else []),
+                    'team_ids': _json.dumps(team_ids if isinstance(team_ids, list) else []),
+                },
+            )
+            return Response({'ok': True}, status=status.HTTP_201_CREATED)
+
+        elif action == 'get-prefs':
+            endpoint = request.data.get('endpoint')
+            if not endpoint:
+                return Response({'error': 'endpoint is required'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                sub = PushSubscription.objects.get(endpoint=endpoint)
+                return Response({
+                    'discipline_ids': _json.loads(sub.discipline_ids or '[]'),
+                    'team_ids': _json.loads(sub.team_ids or '[]'),
+                })
+            except PushSubscription.DoesNotExist:
+                return Response({'error': 'subscription not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        elif action == 'update-prefs':
+            endpoint = request.data.get('endpoint')
+            if not endpoint:
+                return Response({'error': 'endpoint is required'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                sub = PushSubscription.objects.get(endpoint=endpoint)
+                discipline_ids = request.data.get('discipline_ids', [])
+                team_ids = request.data.get('team_ids', [])
+                sub.discipline_ids = _json.dumps(discipline_ids if isinstance(discipline_ids, list) else [])
+                sub.team_ids = _json.dumps(team_ids if isinstance(team_ids, list) else [])
+                sub.save()
+                return Response({'ok': True})
+            except PushSubscription.DoesNotExist:
+                return Response({'error': 'subscription not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({'error': 'unknown action'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        # DRF parses JSON body for DELETE when Content-Type is application/json
+        endpoint = request.data.get('endpoint')
+        if not endpoint:
+            return Response({'error': 'endpoint is required'}, status=status.HTTP_400_BAD_REQUEST)
+        PushSubscription.objects.filter(endpoint=endpoint).delete()
+        return Response({'ok': True})

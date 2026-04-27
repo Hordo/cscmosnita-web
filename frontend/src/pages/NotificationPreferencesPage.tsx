@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { usePushNotifications } from "../hooks/usePushNotifications";
+const API_BASE = import.meta.env.VITE_API_URL as string;
 
 const PREFS_KEY = "push_preferences";
 
@@ -58,7 +59,10 @@ const NotificationPreferencesPage: React.FC = () => {
   useEffect(() => {
     setPrefs(loadPrefs());
 
-    Promise.all([fetch("/api/disciplines"), fetch("/api/teams")])
+    Promise.all([
+      fetch(`${API_BASE}/api/disciplines/`),
+      fetch(`${API_BASE}/api/teams/`),
+    ])
       .then(([dr, tr]) => Promise.all([dr.json(), tr.json()]))
       .then(([dData, tData]) => {
         setDisciplines(dData);
