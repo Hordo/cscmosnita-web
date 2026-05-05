@@ -3,6 +3,7 @@ import React from "react";
 export type AdminTableColumn = {
   key: string;
   label: string;
+  render?: (row: Record<string, any>) => React.ReactNode;
 };
 
 export type ReusableAdminTableProps = {
@@ -38,7 +39,11 @@ export const ReusableAdminTable: React.FC<ReusableAdminTableProps> = ({
           <tr key={idx}>
             {columns.map((col) => (
               <td key={col.key}>
-                {renderCell ? renderCell(row, col) : row[col.key]}
+                {col.render
+                  ? col.render(row)
+                  : renderCell
+                    ? renderCell(row, col)
+                    : row[col.key]}
               </td>
             ))}
             {(onEdit || onDelete) && (

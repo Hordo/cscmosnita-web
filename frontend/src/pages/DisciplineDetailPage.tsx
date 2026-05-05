@@ -1,49 +1,31 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card } from "../components/Card";
+import { useTranslation } from "react-i18next";
 const API_BASE = import.meta.env.VITE_API_URL as string;
-
-const disciplineDescriptions: Record<string, string> = {
-  fotbal:
-    "Fotbalul este un sport de echipă popular, jucat între două echipe a câte 11 jucători.",
-  baschet:
-    "Baschetul este un sport de echipă jucat între două echipe a câte cinci jucători.",
-  handbal:
-    "Handbalul este un sport de echipă rapid, jucat între două echipe a câte șapte jucători.",
-};
 
 export const DisciplineDetailPage: React.FC = () => {
   const { discipline } = useParams<{ discipline: string }>();
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dbDisciplines, setDbDisciplines] = useState<any[]>([]);
 
-  // Helper: similarity (very basic, for Romanian diacritics and case-insensitive)
-  function similarity(a: string, b: string) {
-    a = a
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "");
-    b = b
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{Diacritic}/gu, "");
-    let matches = 0;
-    for (let i = 0; i < Math.min(a.length, b.length); i++) {
-      if (a[i] === b[i]) matches++;
-    }
-    return matches / Math.max(a.length, b.length);
-  }
-
-  // Find best matching discipline from DB
-  const matchedDiscipline = dbDisciplines.reduce((best, d) => {
-    if (!discipline) return best;
-    const sim = similarity(discipline, d.name);
-    if (!best || sim > best.sim) return { ...d, sim };
-    return best;
-  }, null);
+  // Find best matching discipline from DB — exact match only
+  const matchedDiscipline =
+    dbDisciplines.find(
+      (d: any) =>
+        d.name
+          ?.toLowerCase()
+          .normalize("NFD")
+          .replace(/\p{Diacritic}/gu, "") ===
+        (discipline || "")
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/\p{Diacritic}/gu, ""),
+    ) ?? null;
 
   useEffect(() => {
     setLoading(true);
@@ -63,20 +45,28 @@ export const DisciplineDetailPage: React.FC = () => {
     // eslint-disable-next-line
   }, [discipline]);
 
-  const disciplineName =
-    matchedDiscipline?.name ||
-    (discipline
+  const isRo = i18n.language === "ro";
+  const disciplineName = matchedDiscipline
+    ? isRo
+      ? matchedDiscipline.name
+      : matchedDiscipline.name_en || matchedDiscipline.name
+    : discipline
       ? discipline.charAt(0).toUpperCase() + discipline.slice(1)
-      : "");
-  const description =
-    (matchedDiscipline &&
-      disciplineDescriptions[matchedDiscipline.name.toLowerCase()]) ||
-    "";
+      : "";
+  const description = matchedDiscipline
+    ? isRo
+      ? matchedDiscipline.description
+      : matchedDiscipline.description_en || matchedDiscipline.description
+    : "";
 
   return (
     <div className="container py-4">
       <h2 className="mb-3 text-center">{disciplineName}</h2>
-      {description && <p className="lead text-center mb-4">{description}</p>}
+      {description && (
+        <p className="lead text-center mb-4" style={{ whiteSpace: "pre-line" }}>
+          {description}
+        </p>
+      )}
       {loading ? (
         <div className="text-center">Loading teams...</div>
       ) : error ? (

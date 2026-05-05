@@ -5,12 +5,30 @@ import { ReusableAdminTable } from "./ReusableAdminTable";
 import api from "../config/axios";
 import { API_URLS } from "../config/api";
 
+const truncate = (text: string | null | undefined, max = 60) =>
+  text && text.length > max ? text.slice(0, max) + "…" : text || "—";
+
 const disciplineColumns = [
   { key: "name", label: "Name (RO)" },
   { key: "name_en", label: "Name (EN)" },
-  { key: "description", label: "Description (RO)" },
-  { key: "description_en", label: "Description (EN)" },
-  { key: "head_coach", label: "Head Coach" },
+  {
+    key: "description",
+    label: "Description (RO)",
+    render: (row: any) => truncate(row.description),
+  },
+  {
+    key: "description_en",
+    label: "Description (EN)",
+    render: (row: any) => truncate(row.description_en),
+  },
+  {
+    key: "head_coach",
+    label: "Head Coach",
+    render: (row: any) =>
+      row.head_coach
+        ? `${row.head_coach.first_name} ${row.head_coach.last_name}`
+        : "—",
+  },
 ];
 
 const DisciplineAdminPage: React.FC = () => {
@@ -91,14 +109,15 @@ const DisciplineAdminPage: React.FC = () => {
     {
       name: "description",
       label: "Description (RO)",
-      type: "text",
+      type: "textarea",
       required: false,
     },
     {
       name: "description_en",
       label: "Description (EN)",
-      type: "text",
+      type: "textarea",
       required: false,
+      translateFrom: "description",
     },
     {
       name: "head_coach_id",
@@ -126,7 +145,15 @@ const DisciplineAdminPage: React.FC = () => {
               <ReusableAdminForm
                 fields={disciplineFieldsWithHeadCoach}
                 onSubmit={editIndex === null ? handleCreate : handleUpdate}
-                initialValues={editIndex !== null ? disciplines[editIndex] : {}}
+                initialValues={
+                  editIndex !== null
+                    ? {
+                        ...disciplines[editIndex],
+                        head_coach_id:
+                          disciplines[editIndex].head_coach?.id ?? "",
+                      }
+                    : {}
+                }
                 submitLabel={editIndex === null ? "Create" : "Update"}
               />
             </div>

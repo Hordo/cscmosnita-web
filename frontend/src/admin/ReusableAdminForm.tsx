@@ -16,6 +16,8 @@ export type AdminFormField = {
       ) => { value: string | number; label: string }[]);
   required?: boolean;
   multiple?: boolean;
+  /** Name of another field to auto-translate FROM (ro → en via MyMemory API) */
+  translateFrom?: string;
 };
 
 export type ReusableAdminFormProps = {
@@ -32,6 +34,7 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
   submitLabel = "Create",
 }) => {
   const [values, setValues] = useState<Record<string, any>>(initialValues);
+  const [translating, setTranslating] = useState<Record<string, boolean>>({});
 
   // Reset form values when initialValues changes (e.g., when editing a different row)
   React.useEffect(() => {
@@ -42,8 +45,31 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
   const [cropImage, setCropImage] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
 
+  const handleAutoTranslate = async (field: AdminFormField) => {
+    if (!field.translateFrom) return;
+    const sourceText = values[field.translateFrom] || "";
+    if (!sourceText.trim()) return;
+    setTranslating((prev) => ({ ...prev, [field.name]: true }));
+    try {
+      const res = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(sourceText)}&langpair=ro|en`,
+      );
+      const data = await res.json();
+      const translated = data?.responseData?.translatedText || "";
+      if (translated) {
+        setValues((prev) => ({ ...prev, [field.name]: translated }));
+      }
+    } catch {
+      // silently ignore translation errors
+    } finally {
+      setTranslating((prev) => ({ ...prev, [field.name]: false }));
+    }
+  };
+
   const handleChange = async (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => {
     if (e.target.type === "file") {
       const file =
@@ -81,7 +107,10 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
           alert("Image upload failed. Please try again.");
         }
       }
-    } else if (e.target.multiple) {
+    } else if (
+      "multiple" in e.target &&
+      (e.target as HTMLSelectElement).multiple
+    ) {
       const selected = Array.from(
         (e.target as HTMLSelectElement).selectedOptions,
       ).map((opt) => opt.value);
@@ -178,6 +207,31 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
                   setValues({ ...values, [field.name]: e.target.checked })
                 }
               />
+            ) : field.type === "textarea" ? (
+              <>
+                <textarea
+                  className="form-control"
+                  name={field.name}
+                  value={values[field.name] || ""}
+                  onChange={handleChange}
+                  required={field.required}
+                  rows={4}
+                />
+                {field.translateFrom && (
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary mt-1"
+                    onClick={() => handleAutoTranslate(field)}
+                    disabled={
+                      translating[field.name] || !values[field.translateFrom]
+                    }
+                  >
+                    {translating[field.name]
+                      ? "Translating…"
+                      : "Auto Translate (RO → EN)"}
+                  </button>
+                )}
+              </>
             ) : (
               <input
                 className="form-control"
