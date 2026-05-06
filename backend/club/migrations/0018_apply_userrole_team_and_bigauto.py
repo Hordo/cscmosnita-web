@@ -9,6 +9,8 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
 
+    atomic = False  # Prevent one long transaction; avoids SSL drop on Koyeb during BigAutoField PK change
+
     dependencies = [
         ('club', '0017_alter_userrole_id'),
     ]
