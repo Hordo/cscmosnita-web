@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../config/axios";
 import { API_URLS } from "../config/api";
 import type { Discipline, Team } from "../../types/db";
 import "../styles/Calendar.css";
+import { useAuth } from "../context/AuthContext";
 
 interface TeamWithDiscipline extends Team {
   coaches: string[];
@@ -77,6 +78,7 @@ const EventCreator: React.FC<EventCreatorProps> = ({
 }) => {
   const { t } = useTranslation();
   const isTitleAuto = useRef(true);
+  const { user, getCoachTeamIds, getAdminDisciplines } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -179,16 +181,76 @@ const EventCreator: React.FC<EventCreatorProps> = ({
     fetchData();
   }, [isOpen]);
 
+  // Compute visible disciplines and teams based on coach access
+  // Memoized to prevent new array references on every render, which would
+  // cause useEffects that depend on these to fire infinitely.
+  const coachTeamIds = useMemo(
+    () => (user?.is_superuser ? null : getCoachTeamIds()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user],
+  );
+  // A team-constrained coach has specific team IDs assigned (coachTeamIds is a non-null array)
+  const isTeamConstrainedCoach = coachTeamIds !== null;
+  const allowedDisciplines = useMemo(
+    () => getAdminDisciplines(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user],
+  );
+
+  const visibleDisciplines = useMemo(
+    () =>
+      user?.is_superuser
+        ? disciplines
+        : disciplines.filter((d) =>
+            allowedDisciplines.some((r) => r.discipline_id === d.id),
+          ),
+    [user, disciplines, allowedDisciplines],
+  );
+
+  const visibleTeams: TeamWithDiscipline[] = useMemo(
+    () =>
+      user?.is_superuser
+        ? teams
+        : coachTeamIds === null
+          ? teams.filter((t) =>
+              allowedDisciplines.some((r) => {
+                const disc = disciplines.find(
+                  (d) => d.name === (t as any).discipline,
+                );
+                return disc && r.discipline_id === disc.id;
+              }),
+            )
+          : teams.filter((t) => coachTeamIds.includes(t.id)),
+    [user, teams, coachTeamIds, allowedDisciplines, disciplines],
+  );
+
+  // Auto-select discipline when only one is available, or always for team-constrained coaches
+  useEffect(() => {
+    if (!isOpen) return;
+    if (
+      (visibleDisciplines.length === 1 || isTeamConstrainedCoach) &&
+      !formData.discipline &&
+      visibleDisciplines.length > 0
+    ) {
+      setFormData((prev) => ({
+        ...prev,
+        discipline: visibleDisciplines[0].name,
+      }));
+    }
+  }, [isOpen, visibleDisciplines, isTeamConstrainedCoach]);
+
   useEffect(() => {
     if (formData.discipline) {
       const disc = disciplines.find((d) => d.name === formData.discipline);
       setFilteredTeams(
-        disc ? teams.filter((t) => t.discipline === disc.name) : teams,
+        disc
+          ? visibleTeams.filter((t) => t.discipline === disc.name)
+          : visibleTeams,
       );
     } else {
-      setFilteredTeams(teams);
+      setFilteredTeams(visibleTeams);
     }
-  }, [formData.discipline, teams, disciplines]);
+  }, [formData.discipline, visibleTeams, disciplines]);
 
   useEffect(() => {
     const colors: Record<string, string> = {
@@ -412,21 +474,37 @@ const EventCreator: React.FC<EventCreatorProps> = ({
                   <label htmlFor="discipline">
                     {t("ec.label_discipline")} *
                   </label>
-                  <select
-                    id="discipline"
-                    name="discipline"
-                    value={formData.discipline}
-                    onChange={handleChange}
-                    required
-                    className="form-select"
-                  >
-                    <option value="">{t("ec.select_discipline")}</option>
-                    {disciplines.map((d) => (
-                      <option key={d.id} value={d.name}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
+                  {isTeamConstrainedCoach ? (
+                    <select
+                      id="discipline"
+                      name="discipline"
+                      value={formData.discipline}
+                      disabled
+                      className="form-select"
+                    >
+                      {visibleDisciplines.map((d) => (
+                        <option key={d.id} value={d.name}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <select
+                      id="discipline"
+                      name="discipline"
+                      value={formData.discipline}
+                      onChange={handleChange}
+                      required
+                      className="form-select"
+                    >
+                      <option value="">{t("ec.select_discipline")}</option>
+                      {visibleDisciplines.map((d) => (
+                        <option key={d.id} value={d.name}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="form-group">

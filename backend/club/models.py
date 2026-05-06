@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Discipline(models.Model):
@@ -365,3 +366,25 @@ class NewsArticle(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class UserRole(models.Model):
+    ROLE_CHOICES = [
+        ('head_admin', 'Head Admin'),
+        ('coach_admin', 'Coach Admin'),
+    ]
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='club_roles')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE, related_name='user_roles')
+    team = models.ForeignKey(
+        'Team', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='user_roles',
+        help_text='Optional: restrict coach_admin to a specific team. If blank, access covers all teams in the discipline.'
+    )
+
+    class Meta:
+        unique_together = ('user', 'discipline', 'team')
+
+    def __str__(self):
+        team_str = f" ({self.team.name})" if self.team else ""
+        return f"{self.user.username} - {self.role} - {self.discipline.name}{team_str}"

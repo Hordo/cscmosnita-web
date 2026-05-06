@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ReusableAdminForm } from "./ReusableAdminForm";
 import { ReusableAdminTable } from "./ReusableAdminTable";
 
+import { useAuth } from "../context/AuthContext";
 import api from "../config/axios";
 import { API_URLS } from "../config/api";
 
@@ -36,6 +37,8 @@ const DisciplineAdminPage: React.FC = () => {
   const [coaches, setCoaches] = useState<any[]>([]);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { isSuperAdmin } = useAuth();
+  const canModify = isSuperAdmin();
 
   const fetchDisciplines = async () => {
     setError(null);
@@ -136,35 +139,37 @@ const DisciplineAdminPage: React.FC = () => {
       <h2 className="mb-4">Manage Disciplines</h2>
       {error && <div className="alert alert-danger mb-3">{error}</div>}
       <div className="row justify-content-center">
-        <div className="col-md-4 mb-3">
-          <div className="card shadow-sm h-100">
-            <div className="card-body admin-max-height">
-              <h4 className="mb-3">
-                {editIndex === null ? "Create Discipline" : "Edit Discipline"}
-              </h4>
-              <ReusableAdminForm
-                fields={disciplineFieldsWithHeadCoach}
-                onSubmit={editIndex === null ? handleCreate : handleUpdate}
-                initialValues={
-                  editIndex !== null
-                    ? {
-                        ...disciplines[editIndex],
-                        head_coach_id:
-                          disciplines[editIndex].head_coach?.id ?? "",
-                      }
-                    : {}
-                }
-                submitLabel={editIndex === null ? "Create" : "Update"}
-              />
+        {canModify ? (
+          <div className="col-md-4 mb-3">
+            <div className="card shadow-sm h-100">
+              <div className="card-body admin-max-height">
+                <h4 className="mb-3">
+                  {editIndex === null ? "Create Discipline" : "Edit Discipline"}
+                </h4>
+                <ReusableAdminForm
+                  fields={disciplineFieldsWithHeadCoach}
+                  onSubmit={editIndex === null ? handleCreate : handleUpdate}
+                  initialValues={
+                    editIndex !== null
+                      ? {
+                          ...disciplines[editIndex],
+                          head_coach_id:
+                            disciplines[editIndex].head_coach?.id ?? "",
+                        }
+                      : {}
+                  }
+                  submitLabel={editIndex === null ? "Create" : "Update"}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
         <div className="col-md-8">
           <ReusableAdminTable
             columns={disciplineColumns}
             data={disciplines}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            onEdit={canModify ? handleEdit : undefined}
+            onDelete={canModify ? handleDelete : undefined}
           />
         </div>
       </div>

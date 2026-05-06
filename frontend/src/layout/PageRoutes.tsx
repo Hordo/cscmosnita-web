@@ -9,6 +9,7 @@ import TeamAdminPage from "../admin/TeamAdminPage";
 import AdminOnlyRoute from "../admin/AdminOnlyRoute";
 import CoachAdminPage from "../admin/CoachAdminPage";
 import ChampionshipAdminPage from "../admin/ChampionshipAdminPage";
+import UserRoleAdminPage from "../admin/UserRoleAdminPage";
 import NotFound from "../pages/NotFound";
 import { TeamViewerPage } from "../pages/TeamViewerPage";
 import { TeamMatchesPage } from "../pages/TeamMatchesPage";
@@ -30,6 +31,7 @@ import NewsPage from "../pages/NewsPage";
 import NewsDetailPage from "../pages/NewsDetailPage";
 import { TeamTournamentsPage } from "../pages/TeamTournamentsPage";
 import { TournamentViewPage } from "../pages/TournamentViewPage";
+import VerifyEmail from "../pages/VerifyEmail";
 
 const router = createBrowserRouter([
   {
@@ -40,6 +42,7 @@ const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
+      { path: "verify-email", element: <VerifyEmail /> },
       { path: "logout", element: <Logout /> },
       {
         path: "admin",
@@ -88,6 +91,10 @@ const router = createBrowserRouter([
           {
             path: "sponsors",
             element: <SponsorAdminPage />,
+          },
+          {
+            path: "users",
+            element: <UserRoleAdminPage />,
           },
         ],
       },

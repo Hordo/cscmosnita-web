@@ -19,7 +19,8 @@ const emptyTournament = {
 
 const TournamentAdminPage: React.FC = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, isSuperAdmin, getAdminDisciplines, getCoachTeamIds } =
+    useAuth();
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [disciplines, setDisciplines] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -87,18 +88,57 @@ const TournamentAdminPage: React.FC = () => {
         setTournaments(t.data);
         setDisciplines(d.data);
         setTeams(tm.data);
+        // Auto-select discipline when the coach has access to exactly one
+        if (!editId && !user?.is_superuser) {
+          const roles = user?.admin_roles ?? [];
+          const uniqueDiscIds = [
+            ...new Set(roles.map((r: any) => r.discipline_id)),
+          ] as number[];
+          if (uniqueDiscIds.length === 1) {
+            setForm((prev) => ({
+              ...prev,
+              discipline_id: String(uniqueDiscIds[0]),
+            }));
+          }
+        }
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [user]);
 
-  const filteredTeams = form.discipline_id
-    ? teams.filter(
-        (t) =>
-          t.discipline ===
-          disciplines.find((d) => String(d.id) === form.discipline_id)?.name,
-      )
-    : teams;
+  // Disciplines visible in the dropdown (all for superuser/head_admin, own only for coach)
+  const adminRoles = getAdminDisciplines();
+  const allowedDisciplineIds: number[] | null = isSuperAdmin()
+    ? null
+    : [...new Set(adminRoles.map((r) => r.discipline_id))];
+  const visibleDisciplines =
+    allowedDisciplineIds === null
+      ? disciplines
+      : disciplines.filter((d) => allowedDisciplineIds.includes(d.id));
+
+  const headAdminRoles = isSuperAdmin()
+    ? []
+    : getAdminDisciplines("head_admin");
+  const headAdminSingleDiscipline =
+    headAdminRoles.length === 1 ? headAdminRoles[0] : null;
+
+  // Teams for the "Our team" dropdown: filter by discipline then by coach's allowed teams
+  const filteredTeams = (() => {
+    let result = form.discipline_id
+      ? teams.filter(
+          (t) =>
+            t.discipline ===
+            disciplines.find((d) => String(d.id) === form.discipline_id)?.name,
+        )
+      : teams;
+    if (form.discipline_id) {
+      const allowedTeamIds = getCoachTeamIds(Number(form.discipline_id));
+      if (allowedTeamIds !== null) {
+        result = result.filter((t) => allowedTeamIds.includes(t.id));
+      }
+    }
+    return result;
+  })();
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -330,9 +370,10 @@ const TournamentAdminPage: React.FC = () => {
               onChange={(e) =>
                 setForm({ ...form, discipline_id: e.target.value, team_id: "" })
               }
+              disabled={!isSuperAdmin() && !!headAdminSingleDiscipline}
             >
               <option value="">{t("tour.label_all_disciplines")}</option>
-              {disciplines.map((d) => (
+              {visibleDisciplines.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
                 </option>

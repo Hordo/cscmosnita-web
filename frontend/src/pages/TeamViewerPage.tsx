@@ -214,7 +214,6 @@ export const TeamViewerPage: React.FC = () => {
             <div className="col-12 col-md-6 col-lg-4" key={player.id}>
               <Card
                 title={`${player.first_name} ${player.last_name}`}
-                role={player.position || undefined}
                 number={player.number || undefined}
                 imageUrl={player.photo_url || undefined}
                 className="player-card"

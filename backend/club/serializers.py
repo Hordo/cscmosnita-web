@@ -93,7 +93,7 @@ class PlayerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Player
-        fields = '__all__'
+        exclude = ['position', 'position_en']
 
     # No need for get_photo_url, direct field
 
@@ -127,15 +127,47 @@ from django.contrib.auth.models import User
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=True)
+    password_confirm = serializers.CharField(write_only=True, required=True)
+    email = serializers.EmailField(required=True)
 
     class Meta:
         model = User
-        fields = ("username", "password")
+        fields = ("email", "password", "password_confirm")
+
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_password(self, value):
+        import re
+        errors = []
+        if len(value) < 8:
+            errors.append("at least 8 characters")
+        if not re.search(r'[A-Z]', value):
+            errors.append("at least one uppercase letter")
+        if not re.search(r'[a-z]', value):
+            errors.append("at least one lowercase letter")
+        if not re.search(r'[^A-Za-z0-9]', value):
+            errors.append("at least one special character")
+        if errors:
+            raise serializers.ValidationError(
+                "Password must contain: " + ", ".join(errors) + "."
+            )
+        return value
+
+    def validate(self, data):
+        if data.get("password") != data.get("password_confirm"):
+            raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
+        return data
 
     def create(self, validated_data):
+        validated_data.pop("password_confirm")
+        email = validated_data["email"]
         user = User.objects.create_user(
-            username=validated_data["username"],
-            password=validated_data["password"]
+            username=email,
+            email=email,
+            password=validated_data["password"],
         )
         return user
 
@@ -434,3 +466,39 @@ class SponsorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sponsor
         fields = ['id', 'name', 'logo_url', 'website_url', 'order', 'is_active']
+
+
+# ── User & Role Management Serializers ───────────────────────────────────────
+
+from django.contrib.auth.models import User
+
+class UserRoleSerializer(serializers.ModelSerializer):
+    discipline_name = serializers.CharField(source='discipline.name', read_only=True)
+    username = serializers.CharField(source='user.username', read_only=True)
+    team_name = serializers.SerializerMethodField()
+
+    class Meta:
+        from .models import UserRole
+        model = UserRole
+        fields = ['id', 'user', 'username', 'role', 'discipline', 'discipline_name', 'team', 'team_name']
+        extra_kwargs = {'user': {'required': True}}
+
+    def get_team_name(self, obj):
+        return obj.team.name if obj.team else None
+
+    def validate(self, attrs):
+        team = attrs.get('team')
+        discipline = attrs.get('discipline')
+        if team and discipline and team.discipline_id != discipline.id:
+            raise serializers.ValidationError(
+                {'team': 'The selected team does not belong to the selected discipline.'}
+            )
+        return attrs
+
+
+class UserWithRolesSerializer(serializers.ModelSerializer):
+    admin_roles = UserRoleSerializer(source='club_roles', many=True, read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'is_superuser', 'is_staff', 'date_joined', 'admin_roles']

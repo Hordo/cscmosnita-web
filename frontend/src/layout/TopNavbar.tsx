@@ -9,7 +9,7 @@ import "../styles/topnavbar.css";
 import "../styles/cscmosnita-colors.css";
 
 export default function TopNavbar() {
-  const { user, logout } = useAuth();
+  const { user, logout, isSuperAdmin, isHeadAdmin } = useAuth();
   const { i18n, t } = useTranslation();
   const { state: pushState } = usePushNotifications();
   const navigate = useNavigate();
@@ -64,7 +64,13 @@ export default function TopNavbar() {
     i18n.changeLanguage(i18n.language === "ro" ? "en" : "ro");
 
   const filteredMenu = menuConfig.filter((item: any) => {
-    if (item.adminOnly) return user && user.is_staff;
+    if (item.adminOnly)
+      return (
+        user &&
+        (user.is_staff ||
+          user.is_superuser ||
+          (user.admin_roles?.length ?? 0) > 0)
+      );
     if (item.label === "login") return !user;
     if (item.label === "logout") return !!user;
     return true;
@@ -72,26 +78,26 @@ export default function TopNavbar() {
 
   const getVisibleChildren = (item: any) => {
     if (!item.children) return undefined;
+
+    const filterChild = (child: any) => {
+      if (child.auth !== undefined) {
+        if (child.auth && !user) return false;
+        if (!child.auth && user) return false;
+      }
+      if ((child as any).superAdminOnly && !isSuperAdmin()) return false;
+      if ((child as any).headAdminOnly && !isHeadAdmin() && !isSuperAdmin())
+        return false;
+      return true;
+    };
+
     if (
       item.mega &&
       Array.isArray(item.children) &&
       Array.isArray(item.children[0])
     ) {
-      return (item.children as Column[]).map((col) =>
-        col.filter(
-          (child) =>
-            child.auth === undefined ||
-            (child.auth && user) ||
-            (!child.auth && !user),
-        ),
-      );
+      return (item.children as Column[]).map((col) => col.filter(filterChild));
     }
-    return (item.children as MenuItem[]).filter(
-      (child) =>
-        child.auth === undefined ||
-        (child.auth && user) ||
-        (!child.auth && !user),
-    );
+    return (item.children as MenuItem[]).filter(filterChild);
   };
 
   const BellButton = ({ onClick }: { onClick: () => void }) =>

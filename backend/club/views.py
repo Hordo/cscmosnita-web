@@ -9,17 +9,25 @@ from .serializers import (
     GroupTeamSerializer, TournamentMatchSerializer, SponsorSerializer,
     NewsArticleSerializer
 )
+from .permissions import (
+    IsSuperAdminOrReadOnly, IsSuperAdmin, IsAnyAdminOrReadOnly,
+    assert_discipline_write_access, assert_super_admin, get_user_admin_discipline_ids, is_any_admin,
+    assert_team_write_access, get_user_admin_team_ids
+)
+from rest_framework.exceptions import PermissionDenied
 
 # Discipline ViewSet
 class DisciplineViewSet(viewsets.ModelViewSet):
     queryset = Discipline.objects.all()
     serializer_class = DisciplineSerializer
+    permission_classes = [IsSuperAdminOrReadOnly]
 
 
 class TeamViewSet(viewsets.ModelViewSet):
 
     queryset = Team.objects.all()
     serializer_class = TeamSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -28,14 +36,46 @@ class TeamViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(discipline__name__iexact=discipline_slug)
         return queryset
 
-    # No file upload handling needed; serializers accept photo_url as string
+    def perform_create(self, serializer):
+        discipline_id = self.request.data.get('discipline_id') or self.request.data.get('discipline')
+        assert_discipline_write_access(self.request.user, discipline_id, min_role='head_admin')
+        serializer.save()
+
+    def perform_update(self, serializer):
+        assert_discipline_write_access(self.request.user, serializer.instance.discipline_id, min_role='head_admin')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        assert_discipline_write_access(self.request.user, instance.discipline_id, min_role='head_admin')
+        instance.delete()
 
 
 class CoachViewSet(viewsets.ModelViewSet):
     queryset = Coach.objects.all()
     serializer_class = CoachSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
 
-    # No file upload handling needed; serializers accept photo_url as string
+    def _check_head_admin(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            raise PermissionDenied("Authentication required.")
+        if user.is_superuser:
+            return
+        from .models import UserRole
+        if not UserRole.objects.filter(user=user, role='head_admin').exists():
+            raise PermissionDenied("Head admin access required to manage coaches.")
+
+    def perform_create(self, serializer):
+        self._check_head_admin()
+        serializer.save()
+
+    def perform_update(self, serializer):
+        self._check_head_admin()
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._check_head_admin()
+        instance.delete()
 
 
 from rest_framework.response import Response
@@ -45,17 +85,68 @@ import logging
 class PlayerViewSet(viewsets.ModelViewSet):
     queryset = Player.objects.all()
     serializer_class = PlayerSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
 
-    # No file upload handling needed; serializers accept photo_url as string
+    def _get_discipline_id_from_team(self, team_id):
+        if not team_id:
+            return None
+        try:
+            return Team.objects.get(pk=team_id).discipline_id
+        except Team.DoesNotExist:
+            return None
+
+    def perform_create(self, serializer):
+        team_id = self.request.data.get('team_id') or self.request.data.get('team')
+        discipline_id = self._get_discipline_id_from_team(team_id)
+        assert_discipline_write_access(self.request.user, discipline_id)
+        assert_team_write_access(self.request.user, team_id)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        # Check access for current team
+        current_team_id = serializer.instance.team_id if serializer.instance.team else None
+        discipline_id = serializer.instance.team.discipline_id if serializer.instance.team else None
+        assert_discipline_write_access(self.request.user, discipline_id)
+        assert_team_write_access(self.request.user, current_team_id)
+        # Also check access if team is being changed
+        new_team = serializer.validated_data.get('team')
+        if new_team and new_team.id != current_team_id:
+            assert_team_write_access(self.request.user, new_team.id)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        discipline_id = instance.team.discipline_id if instance.team else None
+        assert_discipline_write_access(self.request.user, discipline_id)
+        assert_team_write_access(self.request.user, instance.team_id)
+        instance.delete()
 
 
 class ChampionshipViewSet(viewsets.ModelViewSet):
     queryset = Championship.objects.all()
     serializer_class = ChampionshipSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
+
+    def perform_create(self, serializer):
+        team = serializer.validated_data.get('team')
+        assert_team_write_access(self.request.user, team.id if team else None)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        new_team = serializer.validated_data.get('team', serializer.instance.team)
+        old_team = serializer.instance.team
+        # Check access for both old and new team
+        assert_team_write_access(self.request.user, old_team.id if old_team else None)
+        assert_team_write_access(self.request.user, new_team.id if new_team else None)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        assert_team_write_access(self.request.user, instance.team_id)
+        instance.delete()
 
 
 class MatchViewSet(viewsets.ModelViewSet):
     serializer_class = MatchSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = Match.objects.select_related('team').order_by('-date', '-id')
@@ -63,6 +154,23 @@ class MatchViewSet(viewsets.ModelViewSet):
         if team_param:
             queryset = queryset.filter(team_id=team_param)
         return queryset
+
+    def perform_create(self, serializer):
+        team = serializer.validated_data.get('team')
+        assert_team_write_access(self.request.user, team.id if team else None)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        new_team = serializer.validated_data.get('team', serializer.instance.team)
+        old_team = serializer.instance.team
+        # Check access for both old and new team (team can be None)
+        assert_team_write_access(self.request.user, old_team.id if old_team else None)
+        assert_team_write_access(self.request.user, new_team.id if new_team else None)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        assert_team_write_access(self.request.user, instance.team_id)
+        instance.delete()
 
     def list(self, request, *args, **kwargs):
         team_param = request.query_params.get('team_id') or request.query_params.get('team')
@@ -91,17 +199,30 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
 from .serializers import RegisterSerializer
 
 class RegisterView(APIView):
-    permission_classes = []  # Allow any user (including unauthenticated) to access this view
+    permission_classes = []
 
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
+            return Response(
+                {"message": "Account created successfully. You can now log in."},
+                status=status.HTTP_201_CREATED,
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VerifyEmailView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        return Response({"detail": "Email verification is not enabled."}, status=status.HTTP_404_NOT_FOUND)
 
 
 # --- Calendar ViewSets ---
@@ -126,6 +247,7 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
     ).prefetch_related('players')
     
     filter_backends = [SearchFilter, OrderingFilter]
+    permission_classes = [IsAnyAdminOrReadOnly]
     search_fields = ['title', 'description', 'location']
     ordering_fields = ['start_datetime', 'created_at', 'title']
     ordering = ['-start_datetime']
@@ -234,12 +356,20 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
             raise
 
     def perform_create(self, serializer):
-        """Set created_by to current user when creating events"""
+        """Set created_by to current user when creating events and enforce team-level permissions."""
         print("=== perform_create() called ===")
         print(f"Serializer data: {serializer.validated_data}")
         print(f"Current user: {self.request.user}")
         print(f"Is authenticated: {self.request.user.is_authenticated}")
-        
+
+        team = serializer.validated_data.get('team')
+        if team:
+            assert_team_write_access(self.request.user, team.id)
+        else:
+            # No team: require at least any admin role
+            if not is_any_admin(self.request.user):
+                raise PermissionDenied("Admin access required.")
+
         try:
             # Only set created_by if user is authenticated
             if self.request.user.is_authenticated:
@@ -326,6 +456,11 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
         for item in request.data:
             serializer = CalendarEventCreateSerializer(data=item)
             serializer.is_valid(raise_exception=True)
+            team = serializer.validated_data.get('team')
+            if team:
+                assert_team_write_access(request.user, team.id)
+            elif not is_any_admin(request.user):
+                raise PermissionDenied("Admin access required.")
             players_data = serializer.validated_data.pop('players', [])
             event = CalendarEvent.objects.create(created_by=created_user, **serializer.validated_data)
             if players_data:
@@ -333,6 +468,25 @@ class CalendarEventViewSet(viewsets.ModelViewSet):
             created_ids.append(event.id)
 
         return Response({'created': len(created_ids), 'ids': created_ids}, status=status.HTTP_201_CREATED)
+    def perform_update(self, serializer):
+        """Enforce team-level permissions on update."""
+        instance = serializer.instance
+        if instance.team_id:
+            assert_team_write_access(self.request.user, instance.team_id)
+        elif not is_any_admin(self.request.user):
+            raise PermissionDenied("Admin access required.")
+        new_team = serializer.validated_data.get('team')
+        if new_team and new_team.id != instance.team_id:
+            assert_team_write_access(self.request.user, new_team.id)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        """Enforce team-level permissions on delete."""
+        if instance.team_id:
+            assert_team_write_access(self.request.user, instance.team_id)
+        elif not is_any_admin(self.request.user):
+            raise PermissionDenied("Admin access required.")
+        instance.delete()
 
 
 class TrainingSessionViewSet(viewsets.ModelViewSet):
@@ -347,11 +501,12 @@ class TrainingSessionViewSet(viewsets.ModelViewSet):
 # --- NewsArticle ViewSet ---
 class NewsArticleViewSet(viewsets.ModelViewSet):
     serializer_class = NewsArticleSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = NewsArticle.objects.all()
-        # Public endpoint: non-admin users only see published articles
-        if not (self.request.user and self.request.user.is_staff):
+        # Non-admins only see published articles
+        if not is_any_admin(self.request.user):
             queryset = queryset.filter(is_published=True)
         slug = self.request.query_params.get('slug')
         if slug:
@@ -474,6 +629,8 @@ class PushSendNotificationsView(APIView):
 from rest_framework.decorators import action
 
 class TournamentViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAnyAdminOrReadOnly]
+
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return TournamentSerializer
@@ -486,10 +643,34 @@ class TournamentViewSet(viewsets.ModelViewSet):
             qs = qs.filter(team_id=team_param)
         return qs.order_by('-created_at')
 
+    def perform_create(self, serializer):
+        discipline_id = self.request.data.get('discipline') or self.request.data.get('discipline_id')
+        assert_discipline_write_access(self.request.user, discipline_id)
+        team = serializer.validated_data.get('team')
+        if team:
+            assert_team_write_access(self.request.user, team.id)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        assert_discipline_write_access(self.request.user, serializer.instance.discipline_id)
+        # Check team access for the current team (or the new team if being changed)
+        new_team = serializer.validated_data.get('team', serializer.instance.team)
+        team_id = new_team.id if new_team else serializer.instance.team_id
+        if team_id:
+            assert_team_write_access(self.request.user, team_id)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        assert_discipline_write_access(self.request.user, instance.discipline_id)
+        if instance.team_id:
+            assert_team_write_access(self.request.user, instance.team_id)
+        instance.delete()
+
 
 class TournamentGroupViewSet(viewsets.ModelViewSet):
     queryset = TournamentGroup.objects.prefetch_related('group_teams', 'matches')
     serializer_class = TournamentGroupSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
 
     @action(detail=True, methods=['post'])
     def add_teams(self, request, pk=None):
@@ -570,6 +751,7 @@ class TournamentGroupViewSet(viewsets.ModelViewSet):
 class GroupTeamViewSet(viewsets.ModelViewSet):
     queryset = GroupTeam.objects.all()
     serializer_class = GroupTeamSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -582,6 +764,7 @@ class GroupTeamViewSet(viewsets.ModelViewSet):
 class TournamentMatchViewSet(viewsets.ModelViewSet):
     queryset = TournamentMatch.objects.all()
     serializer_class = TournamentMatchSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -625,15 +808,51 @@ class TournamentMatchViewSet(viewsets.ModelViewSet):
 class SponsorViewSet(viewsets.ModelViewSet):
     queryset = Sponsor.objects.all()
     serializer_class = SponsorSerializer
+    permission_classes = [IsSuperAdminOrReadOnly]
 
     def get_queryset(self):
         qs = Sponsor.objects.all()
+        # Show all sponsors to super admins
+        if self.request.user and self.request.user.is_superuser:
+            return qs.order_by('order', 'name')
         # Unauthenticated users only see active sponsors
         if not (self.request.user and self.request.user.is_authenticated):
             qs = qs.filter(is_active=True)
         elif self.request.query_params.get('active') == '1':
             qs = qs.filter(is_active=True)
         return qs.order_by('order', 'name')
+
+# ── User & Role Management ────────────────────────────────────────────────────
+
+from .models import UserRole
+from .serializers import UserRoleSerializer, UserWithRolesSerializer
+from .permissions import IsSuperAdmin
+from django.contrib.auth.models import User as DjangoUser
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+class UserListView(APIView):
+    """Superuser-only: list all registered users with their roles."""
+    permission_classes = [IsSuperAdmin]
+
+    def get(self, request):
+        users = DjangoUser.objects.prefetch_related('club_roles__discipline').order_by('username')
+        serializer = UserWithRolesSerializer(users, many=True)
+        return Response(serializer.data)
+
+
+class UserRoleViewSet(viewsets.ModelViewSet):
+    """Superuser-only: manage role assignments."""
+    queryset = UserRole.objects.select_related('user', 'discipline', 'team').all()
+    serializer_class = UserRoleSerializer
+    permission_classes = [IsSuperAdmin]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            qs = qs.filter(user_id=user_id)
+        return qs
 
 
 # ── Push Subscription View ────────────────────────────────────────────────────

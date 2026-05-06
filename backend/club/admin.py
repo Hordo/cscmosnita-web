@@ -55,3 +55,13 @@ class NewsArticleAdmin(admin.ModelAdmin):
     list_editable = ("is_published",)
     search_fields = ("title", "body")
     readonly_fields = ("published_at", "updated_at", "slug")
+
+
+# --- UserRole Admin ---
+from .models import UserRole
+
+@admin.register(UserRole)
+class UserRoleAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'discipline')
+    list_filter = ('role', 'discipline')
+    search_fields = ('user__username', 'discipline__name')

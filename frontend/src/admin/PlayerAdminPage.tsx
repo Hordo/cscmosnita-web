@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/adminStyles.css";
 import { ReusableAdminForm } from "./ReusableAdminForm";
 import type { AdminFormField } from "./ReusableAdminForm";
@@ -8,37 +9,10 @@ import { API_URLS } from "../config/api";
 import api, { setAuthToken } from "../config/axios";
 import { useAuth } from "../context/AuthContext";
 
-const basePlayerFields: AdminFormField[] = [
-  { name: "first_name", label: "First Name", type: "text", required: true },
-  { name: "last_name", label: "Last Name", type: "text", required: true },
-  { name: "number", label: "Number", type: "number", required: false },
-  {
-    name: "position",
-    label: "Position",
-    type: "select",
-    required: false,
-    options: [
-      { value: "", label: "Select..." },
-      { value: "GK", label: "Goalkeeper" },
-      { value: "DF", label: "Defender" },
-      { value: "MF", label: "Midfielder" },
-      { value: "FW", label: "Forward" },
-    ],
-  },
-  { name: "photo", label: "Photo", type: "file", required: false },
-];
-
-const playerColumns: AdminTableColumn[] = [
-  { key: "first_name", label: "First Name" },
-  { key: "last_name", label: "Last Name" },
-  { key: "number", label: "Number" },
-  { key: "position", label: "Position" },
-  { key: "photo_url", label: "Photo" },
-  { key: "team", label: "Team" },
-];
-
 export const PlayerAdminPage: React.FC = () => {
-  const { user } = useAuth();
+  const { t } = useTranslation();
+  const { user, getCoachTeamIds, getAdminDisciplines, isSuperAdmin } =
+    useAuth();
   const [players, setPlayers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [disciplines, setDisciplines] = useState<any[]>([]);
@@ -79,11 +53,80 @@ export const PlayerAdminPage: React.FC = () => {
     fetchAll();
   }, [user]);
 
+  const headAdminRoles = isSuperAdmin?.()
+    ? []
+    : getAdminDisciplines
+      ? getAdminDisciplines("head_admin")
+      : [];
+  const headAdminSingleDiscipline =
+    headAdminRoles.length === 1 ? headAdminRoles[0] : null;
+
+  // Auto-apply list filters for restricted coaches once teams load
+  useEffect(() => {
+    if (!isCoachRestricted || teams.length === 0) return;
+    if (!filterDiscipline && coachSingleDiscipline)
+      setFilterDiscipline(coachSingleDiscipline);
+    if (!filterTeam && coachSingleTeam) {
+      const team = teams.find((t: any) => String(t.id) === coachSingleTeam);
+      if (team) setFilterTeam(team.name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams]);
+
+  // Auto-apply filter for head admin once disciplines load
+  useEffect(() => {
+    if (headAdminSingleDiscipline && !filterDiscipline) {
+      setFilterDiscipline(headAdminSingleDiscipline.discipline_name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disciplines]);
+
+  const accessibleTeamIds = getCoachTeamIds ? getCoachTeamIds() : null;
+
+  let accessibleDisciplines = disciplines;
+  if (!isSuperAdmin?.()) {
+    const adminRoles = getAdminDisciplines
+      ? getAdminDisciplines("coach_admin")
+      : [];
+    const allowedDisciplineIds = adminRoles.map((r: any) => r.discipline_id);
+    accessibleDisciplines = disciplines.filter((d: any) =>
+      allowedDisciplineIds.includes(d.id),
+    );
+  }
+
+  const isCoachRestricted =
+    accessibleTeamIds !== null && accessibleTeamIds.length > 0;
+  const coachAccessibleTeams = isCoachRestricted
+    ? teams.filter((t: any) => accessibleTeamIds!.includes(t.id))
+    : [];
+  const coachSingleDiscipline =
+    isCoachRestricted &&
+    coachAccessibleTeams.length > 0 &&
+    coachAccessibleTeams.every(
+      (t: any) => t.discipline === coachAccessibleTeams[0].discipline,
+    )
+      ? (coachAccessibleTeams[0].discipline as string)
+      : "";
+  const coachSingleTeam =
+    isCoachRestricted && coachAccessibleTeams.length === 1
+      ? String(coachAccessibleTeams[0].id)
+      : "";
+
   const disciplineTeams = filterDiscipline
-    ? teams.filter((t: any) => t.discipline === filterDiscipline)
-    : teams;
+    ? teams
+        .filter((t: any) => t.discipline === filterDiscipline)
+        .filter((t: any) =>
+          accessibleTeamIds === null ? true : accessibleTeamIds.includes(t.id),
+        )
+    : teams.filter((t: any) =>
+        accessibleTeamIds === null ? true : accessibleTeamIds.includes(t.id),
+      );
 
   const filteredPlayers = players.filter((p: any) => {
+    if (accessibleTeamIds !== null) {
+      const team = teams.find((t: any) => t.name === p.team);
+      if (!team || !accessibleTeamIds.includes(team.id)) return false;
+    }
     if (filterDiscipline) {
       const team = teams.find((t: any) => t.name === p.team);
       if (!team || team.discipline !== filterDiscipline) return false;
@@ -92,30 +135,72 @@ export const PlayerAdminPage: React.FC = () => {
     return true;
   });
 
+  const basePlayerFields: AdminFormField[] = [
+    {
+      name: "first_name",
+      label: t("pl.first_name"),
+      type: "text",
+      required: true,
+    },
+    {
+      name: "last_name",
+      label: t("pl.last_name"),
+      type: "text",
+      required: true,
+    },
+    { name: "number", label: t("pl.number"), type: "number", required: false },
+    { name: "photo", label: t("pl.photo"), type: "file", required: false },
+  ];
+
+  const playerColumns: AdminTableColumn[] = [
+    { key: "first_name", label: t("pl.first_name") },
+    { key: "last_name", label: t("pl.last_name") },
+    { key: "number", label: t("pl.number") },
+    { key: "photo_url", label: t("pl.photo") },
+    { key: "team", label: t("pl.team") },
+  ];
+
   const playerFields: AdminFormField[] = [
     ...basePlayerFields,
     {
       name: "discipline_id",
-      label: "Discipline",
+      label: t("pl.discipline"),
       type: "select",
       required: false,
-      options: disciplines.map((d: any) => ({ value: d.name, label: d.name })),
+      options: accessibleDisciplines.map((d: any) => ({
+        value: d.name,
+        label: d.name,
+      })),
+      disabled:
+        (isCoachRestricted && !!coachSingleDiscipline) ||
+        !!headAdminSingleDiscipline,
     },
     {
       name: "team_id",
-      label: "Team",
+      label: t("pl.team"),
       type: "select",
       required: true,
       // provide dynamic options depending on selected discipline in the form
       options: (values: any) => {
         const available = values.discipline_id
-          ? teams.filter((t: any) => t.discipline === values.discipline_id)
-          : teams;
+          ? teams
+              .filter((t: any) => t.discipline === values.discipline_id)
+              .filter((t: any) =>
+                accessibleTeamIds === null
+                  ? true
+                  : accessibleTeamIds.includes(t.id),
+              )
+          : teams.filter((t: any) =>
+              accessibleTeamIds === null
+                ? true
+                : accessibleTeamIds.includes(t.id),
+            );
         return available.map((t: any) => ({
           value: String(t.id),
           label: t.name,
         }));
       },
+      disabled: isCoachRestricted && !!coachSingleTeam,
     },
   ];
 
@@ -125,7 +210,6 @@ export const PlayerAdminPage: React.FC = () => {
       first_name: values.first_name,
       last_name: values.last_name,
       number: values.number,
-      position: values.position,
       team_id: values.team_id,
     };
     if (values.photo_url) payload.photo_url = values.photo_url;
@@ -160,7 +244,6 @@ export const PlayerAdminPage: React.FC = () => {
       first_name: values.first_name,
       last_name: values.last_name,
       number: values.number,
-      position: values.position,
       team_id: values.team_id,
     };
     if (values.photo_url) payload.photo_url = values.photo_url;
@@ -176,11 +259,7 @@ export const PlayerAdminPage: React.FC = () => {
   };
 
   if (!user?.access) {
-    return (
-      <div className="alert alert-warning mt-4">
-        You must be logged in as an admin to manage players.
-      </div>
-    );
+    return <div className="alert alert-warning mt-4">{t("pl.no_auth")}</div>;
   }
 
   return (
@@ -191,7 +270,7 @@ export const PlayerAdminPage: React.FC = () => {
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <h4 className="mb-3">
-                {editIndex === null ? "Create Player" : "Edit Player"}
+                {editIndex === null ? t("pl.create_title") : t("pl.edit_title")}
               </h4>
               <ReusableAdminForm
                 fields={playerFields}
@@ -207,9 +286,21 @@ export const PlayerAdminPage: React.FC = () => {
                           team_id: t ? String(t.id) : "",
                         };
                       })()
-                    : {}
+                    : isCoachRestricted
+                      ? {
+                          discipline_id: coachSingleDiscipline,
+                          team_id: coachSingleTeam,
+                        }
+                      : headAdminSingleDiscipline
+                        ? {
+                            discipline_id:
+                              headAdminSingleDiscipline.discipline_name,
+                          }
+                        : {}
                 }
-                submitLabel={editIndex === null ? "Create" : "Update"}
+                submitLabel={
+                  editIndex === null ? t("pl.btn_create") : t("pl.btn_update")
+                }
               />
             </div>
           </div>
@@ -218,7 +309,7 @@ export const PlayerAdminPage: React.FC = () => {
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
-                <h4 className="mb-0 me-auto">Players</h4>
+                <h4 className="mb-0 me-auto">{t("pl.page_title")}</h4>
                 <select
                   className="form-select form-select-sm"
                   style={{ width: "auto" }}
@@ -228,8 +319,8 @@ export const PlayerAdminPage: React.FC = () => {
                     setFilterTeam("");
                   }}
                 >
-                  <option value="">All disciplines</option>
-                  {disciplines.map((d: any) => (
+                  <option value="">{t("pl.all_disciplines")}</option>
+                  {accessibleDisciplines.map((d: any) => (
                     <option key={d.id} value={d.name}>
                       {d.name}
                     </option>
@@ -242,7 +333,7 @@ export const PlayerAdminPage: React.FC = () => {
                   onChange={(e) => setFilterTeam(e.target.value)}
                   disabled={!filterDiscipline}
                 >
-                  <option value="">All teams</option>
+                  <option value="">{t("pl.all_teams")}</option>
                   {disciplineTeams.map((t: any) => (
                     <option key={t.id} value={t.name}>
                       {t.name}
@@ -257,12 +348,12 @@ export const PlayerAdminPage: React.FC = () => {
                       setFilterTeam("");
                     }}
                   >
-                    Clear
+                    {t("pl.clear")}
                   </button>
                 )}
               </div>
               {loading ? (
-                <div>Loading...</div>
+                <div>{t("loading")}</div>
               ) : (
                 <div className="admin-min-width">
                   <ReusableAdminTable
@@ -279,13 +370,17 @@ export const PlayerAdminPage: React.FC = () => {
                             className="admin-img-thumb"
                           />
                         ) : (
-                          <span className="admin-no-photo">No photo</span>
+                          <span className="admin-no-photo">
+                            {t("pl.no_photo")}
+                          </span>
                         );
                       }
                       if (col.key === "team") {
                         return (
                           row.team || (
-                            <span className="admin-no-teams">No team</span>
+                            <span className="admin-no-teams">
+                              {t("pl.no_team")}
+                            </span>
                           )
                         );
                       }

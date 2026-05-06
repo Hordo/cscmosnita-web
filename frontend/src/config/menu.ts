@@ -4,6 +4,8 @@ export type MenuItem = {
   mega?: boolean;
   auth?: boolean;
   adminOnly?: boolean;
+  superAdminOnly?: boolean; // NEW: only superusers see this
+  headAdminOnly?: boolean; // NEW: only head_admin or superuser see this
   // For normal dropdowns: children is MenuItem[]
   // For mega menus: children is Column[]
   children?: MenuItem[] | Column[];
@@ -50,18 +52,44 @@ export const menuConfig: MenuItem[] = [
     auth: true,
     adminOnly: true as any, // TypeScript workaround, will filter in navbar
     children: [
-      [{ label: "menu.manage_news", path: "/admin/news" }],
+      [
+        { label: "menu.manage_news", path: "/admin/news" },
+        {
+          label: "menu.manage_users",
+          path: "/admin/users",
+          superAdminOnly: true,
+        },
+      ],
       [
         { label: "menu.calendar", path: "/admin/calendar" },
-        { label: "menu.manage_championships", path: "/admin/championship" },
+        {
+          label: "menu.manage_championships",
+          path: "/admin/championship",
+        },
         { label: "menu.manage_tournaments", path: "/admin/tournaments" },
       ],
       [
-        { label: "menu.manage_teams", path: "/admin/create-team" },
-        { label: "menu.manage_coaches", path: "/admin/create-coach" },
+        {
+          label: "menu.manage_teams",
+          path: "/admin/create-team",
+          headAdminOnly: true,
+        },
+        {
+          label: "menu.manage_coaches",
+          path: "/admin/create-coach",
+          headAdminOnly: true,
+        },
         { label: "menu.manage_players", path: "/admin/player" },
-        { label: "menu.manage_disciplines", path: "/admin/disciplines" },
-        { label: "menu.manage_sponsors", path: "/admin/sponsors" },
+        {
+          label: "menu.manage_disciplines",
+          path: "/admin/disciplines",
+          superAdminOnly: true,
+        },
+        {
+          label: "menu.manage_sponsors",
+          path: "/admin/sponsors",
+          superAdminOnly: true,
+        },
       ],
     ],
   },

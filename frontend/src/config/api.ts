@@ -6,6 +6,7 @@ export const API_URLS = {
   token: `${API_BASE}/api/token/`,
   tokenRefresh: `${API_BASE}/api/token/refresh/`,
   register: `${API_BASE}/api/register/`,
+  verifyEmail: `${API_BASE}/api/verify-email/`,
   teams: `${API_BASE}/api/teams/`,
   coaches: `${API_BASE}/api/coaches/`,
   players: `${API_BASE}/api/players/`,
@@ -29,4 +30,7 @@ export const API_URLS = {
   sponsors: `${API_BASE}/api/sponsors/`,
   news: `${API_BASE}/api/news/`,
   uploadNewsCover: `${API_BASE}/api/upload/news-cover/`,
+  // Admin user management (super admin only)
+  adminUsers: `${API_BASE}/api/admin/users/`,
+  adminUserRoles: `${API_BASE}/api/admin/user-roles/`,
 };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/adminStyles.css";
 import { ReusableAdminTable } from "./ReusableAdminTable";
 import type { AdminTableColumn } from "./ReusableAdminTable";
@@ -37,7 +38,9 @@ const emptyForm = {
 };
 
 const MatchAdminPage: React.FC = () => {
-  const { user } = useAuth();
+  const { t } = useTranslation();
+  const { user, getCoachTeamIds, getAdminDisciplines, isSuperAdmin } =
+    useAuth();
   const [matches, setMatches] = useState<any[]>([]);
   const [disciplines, setDisciplines] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -81,19 +84,85 @@ const MatchAdminPage: React.FC = () => {
     fetchAll();
   }, [user]);
 
+  const headAdminRoles = isSuperAdmin?.()
+    ? []
+    : getAdminDisciplines
+      ? getAdminDisciplines("head_admin")
+      : [];
+  const headAdminSingleDiscipline =
+    headAdminRoles.length === 1 ? headAdminRoles[0] : null;
+
+  // Auto-populate form defaults for restricted coaches when teams load
+  useEffect(() => {
+    if (!isCoachRestricted || teams.length === 0) return;
+    setForm((prev) => ({
+      ...prev,
+      discipline_id: prev.discipline_id || coachSingleDiscipline,
+      team_id: prev.team_id || coachSingleTeam,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams]);
+
+  // Auto-populate form discipline for head admin
+  useEffect(() => {
+    if (!headAdminSingleDiscipline || disciplines.length === 0) return;
+    setForm((prev) => ({
+      ...prev,
+      discipline_id:
+        prev.discipline_id || headAdminSingleDiscipline.discipline_name,
+    }));
+    if (!filterDiscipline) {
+      setFilterDiscipline(headAdminSingleDiscipline.discipline_name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disciplines]);
+
+  const accessibleTeamIds = getCoachTeamIds ? getCoachTeamIds() : null;
+
+  let accessibleDisciplines = disciplines;
+  if (!isSuperAdmin?.()) {
+    const adminRoles = getAdminDisciplines
+      ? getAdminDisciplines("coach_admin")
+      : [];
+    const allowedDisciplineIds = adminRoles.map((r: any) => r.discipline_id);
+    accessibleDisciplines = disciplines.filter((d: any) =>
+      allowedDisciplineIds.includes(d.id),
+    );
+  }
+
   const filteredTeams = form.discipline_id
-    ? teams.filter((t: any) => t.discipline === form.discipline_id)
+    ? teams
+        .filter((t: any) => t.discipline === form.discipline_id)
+        .filter((t: any) =>
+          accessibleTeamIds === null ? true : accessibleTeamIds.includes(t.id),
+        )
     : [];
 
   const filterTeamOptions = filterDiscipline
-    ? teams.filter((t: any) => t.discipline === filterDiscipline)
-    : teams;
+    ? teams
+        .filter((t: any) => t.discipline === filterDiscipline)
+        .filter((t: any) =>
+          accessibleTeamIds === null ? true : accessibleTeamIds.includes(t.id),
+        )
+    : teams.filter((t: any) =>
+        accessibleTeamIds === null ? true : accessibleTeamIds.includes(t.id),
+      );
 
   const allSeasons = Array.from(
-    new Set(matches.map((m: any) => m.season).filter(Boolean)),
+    new Set(
+      matches
+        .filter(
+          (m: any) =>
+            accessibleTeamIds === null || accessibleTeamIds.includes(m.team),
+        )
+        .map((m: any) => m.season)
+        .filter(Boolean),
+    ),
   ).sort((a: any, b: any) => b.localeCompare(a)) as string[];
 
   const filteredMatches = matches.filter((m: any) => {
+    if (accessibleTeamIds !== null && !accessibleTeamIds.includes(m.team))
+      return false;
     if (filterSeason && m.season !== filterSeason) return false;
     if (filterTeam) return String(m.team) === filterTeam;
     if (filterDiscipline) {
@@ -106,6 +175,33 @@ const MatchAdminPage: React.FC = () => {
   });
 
   const selectedTeam = teams.find((t: any) => String(t.id) === form.team_id);
+
+  // Coach restriction: preselect & lock fields
+  const isCoachRestricted =
+    accessibleTeamIds !== null && accessibleTeamIds.length > 0;
+  const coachAccessibleTeams = isCoachRestricted
+    ? teams.filter((t: any) => accessibleTeamIds!.includes(t.id))
+    : [];
+  const coachSingleDiscipline =
+    isCoachRestricted &&
+    coachAccessibleTeams.length > 0 &&
+    coachAccessibleTeams.every(
+      (t: any) => t.discipline === coachAccessibleTeams[0].discipline,
+    )
+      ? (coachAccessibleTeams[0].discipline as string)
+      : "";
+  const coachSingleTeam =
+    isCoachRestricted && coachAccessibleTeams.length === 1
+      ? String(coachAccessibleTeams[0].id)
+      : "";
+
+  const coachResetForm = isCoachRestricted
+    ? {
+        ...emptyForm,
+        discipline_id: coachSingleDiscipline,
+        team_id: coachSingleTeam,
+      }
+    : emptyForm;
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -131,14 +227,13 @@ const MatchAdminPage: React.FC = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.team_id) return setError("Please select a team.");
-    if (!form.away_team_name.trim())
-      return setError("Away team name is required.");
+    if (!form.team_id) return setError(t("ch.err_select_team"));
+    if (!form.away_team_name.trim()) return setError(t("ch.err_away_required"));
     setError(null);
     try {
       const res = await api.post(API_URLS.matches, buildPayload());
       setMatches((prev) => [...prev, res.data]);
-      setForm(emptyForm);
+      setForm(coachResetForm);
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
@@ -168,9 +263,8 @@ const MatchAdminPage: React.FC = () => {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.team_id) return setError("Please select a team.");
-    if (!form.away_team_name.trim())
-      return setError("Away team name is required.");
+    if (!form.team_id) return setError(t("ch.err_select_team"));
+    if (!form.away_team_name.trim()) return setError(t("ch.err_away_required"));
     setError(null);
     try {
       const res = await api.put(
@@ -179,7 +273,7 @@ const MatchAdminPage: React.FC = () => {
       );
       setMatches((prev) => prev.map((m) => (m.id === editId ? res.data : m)));
       setEditId(null);
-      setForm(emptyForm);
+      setForm(coachResetForm);
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
@@ -197,7 +291,7 @@ const MatchAdminPage: React.FC = () => {
       setMatches(matches.filter((m) => m.id !== row.id));
       if (editId === row.id) {
         setEditId(null);
-        setForm(emptyForm);
+        setForm(coachResetForm);
       }
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || "Unknown error");
@@ -206,40 +300,40 @@ const MatchAdminPage: React.FC = () => {
 
   const handleCancelEdit = () => {
     setEditId(null);
-    setForm(emptyForm);
+    setForm(coachResetForm);
   };
 
   if (!user?.access) {
-    return (
-      <div className="alert alert-warning mt-4">
-        You must be logged in as an admin to manage matches.
-      </div>
-    );
+    return <div className="alert alert-warning mt-4">{t("ch.no_auth")}</div>;
   }
 
   return (
     <div className="container-fluid py-3 admin-min-height">
-      {loading && <div className="text-center mb-3">Loading...</div>}
+      {loading && <div className="text-center mb-3">{t("loading")}</div>}
       {error && <div className="alert alert-danger mb-3">{error}</div>}
       <div className="row justify-content-center">
         <div className="col-md-4 mb-3">
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <h4 className="mb-3">
-                {editId === null ? "Create Match" : "Edit Match"}
+                {editId === null ? t("ch.create_title") : t("ch.edit_title")}
               </h4>
               <form onSubmit={editId === null ? handleCreate : handleUpdate}>
                 {/* Step 1: Discipline */}
-                <FormGroup label="Discipline">
+                <FormGroup label={t("ch.label_discipline")}>
                   <select
                     className="form-select"
                     name="discipline_id"
                     value={form.discipline_id}
                     onChange={handleChange}
                     required
+                    disabled={
+                      (isCoachRestricted && !!coachSingleDiscipline) ||
+                      !!headAdminSingleDiscipline
+                    }
                   >
-                    <option value="">— Select discipline —</option>
-                    {disciplines.map((d: any) => (
+                    <option value="">{t("ch.select_discipline")}</option>
+                    {accessibleDisciplines.map((d: any) => (
                       <option key={d.id} value={d.name}>
                         {d.name}
                       </option>
@@ -248,19 +342,22 @@ const MatchAdminPage: React.FC = () => {
                 </FormGroup>
 
                 {/* Step 2: Our Team (home team) */}
-                <FormGroup label="Our Team (Home)">
+                <FormGroup label={t("ch.label_team")}>
                   <select
                     className="form-select"
                     name="team_id"
                     value={form.team_id}
                     onChange={handleChange}
                     required
-                    disabled={!form.discipline_id}
+                    disabled={
+                      !form.discipline_id ||
+                      (isCoachRestricted && !!coachSingleTeam)
+                    }
                   >
                     <option value="">
                       {form.discipline_id
-                        ? "— Select team —"
-                        : "— Select a discipline first —"}
+                        ? t("ch.select_team")
+                        : t("ch.select_discipline_first")}
                     </option>
                     {filteredTeams.map((t: any) => (
                       <option key={t.id} value={String(t.id)}>
@@ -271,7 +368,7 @@ const MatchAdminPage: React.FC = () => {
                 </FormGroup>
 
                 {/* Season */}
-                <FormGroup label="Season (e.g. 2025-2026)">
+                <FormGroup label={t("ch.label_season")}>
                   <input
                     type="text"
                     className="form-control"
@@ -287,8 +384,8 @@ const MatchAdminPage: React.FC = () => {
                   <div className="col">
                     <label className="form-label">
                       {selectedTeam
-                        ? `${selectedTeam.name} Score`
-                        : "Home Score"}
+                        ? `${selectedTeam.name}`
+                        : t("ch.label_home_score")}
                     </label>
                     <input
                       type="number"
@@ -300,7 +397,9 @@ const MatchAdminPage: React.FC = () => {
                     />
                   </div>
                   <div className="col">
-                    <label className="form-label">Away Score</label>
+                    <label className="form-label">
+                      {t("ch.label_away_score")}
+                    </label>
                     <input
                       type="number"
                       className="form-control"
@@ -313,7 +412,7 @@ const MatchAdminPage: React.FC = () => {
                 </div>
 
                 {/* Opponent */}
-                <FormGroup label="Away Team (Opponent)">
+                <FormGroup label={t("ch.label_away_team")}>
                   <input
                     type="text"
                     className="form-control"
@@ -321,12 +420,12 @@ const MatchAdminPage: React.FC = () => {
                     value={form.away_team_name}
                     onChange={handleChange}
                     required
-                    placeholder="Opponent team name"
+                    placeholder={t("ch.placeholder_away_team")}
                   />
                 </FormGroup>
 
                 {/* Date */}
-                <FormGroup label="Date (optional)">
+                <FormGroup label={t("ch.label_date")}>
                   <input
                     type="date"
                     className="form-control"
@@ -338,19 +437,19 @@ const MatchAdminPage: React.FC = () => {
 
                 {/* YouTube link */}
                 <div className="mb-3">
-                  <label className="form-label">YouTube Link (optional)</label>
+                  <label className="form-label">{t("ch.label_youtube")}</label>
                   <input
                     type="url"
                     className="form-control"
                     name="youtube_link"
                     value={form.youtube_link}
                     onChange={handleChange}
-                    placeholder="https://youtube.com/..."
+                    placeholder={t("ch.placeholder_youtube")}
                   />
                 </div>
 
                 <button type="submit" className="btn btn-primary w-100">
-                  {editId === null ? "Create" : "Update"}
+                  {editId === null ? t("ch.btn_create") : t("ch.btn_update")}
                 </button>
               </form>
               {editId !== null && (
@@ -358,7 +457,7 @@ const MatchAdminPage: React.FC = () => {
                   className="btn btn-secondary mt-2 w-100"
                   onClick={handleCancelEdit}
                 >
-                  Cancel Edit
+                  {t("ch.cancel_edit")}
                 </button>
               )}
             </div>
@@ -368,7 +467,7 @@ const MatchAdminPage: React.FC = () => {
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <div className="d-flex gap-2 mb-3 flex-wrap align-items-end">
-                <h4 className="mb-0 me-auto">All Matches</h4>
+                <h4 className="mb-0 me-auto">{t("ch.page_title")}</h4>
                 <select
                   className="form-select form-select-sm w-auto"
                   value={filterDiscipline}
@@ -377,8 +476,8 @@ const MatchAdminPage: React.FC = () => {
                     setFilterTeam("");
                   }}
                 >
-                  <option value="">All disciplines</option>
-                  {disciplines.map((d: any) => (
+                  <option value="">{t("ch.all_disciplines")}</option>
+                  {accessibleDisciplines.map((d: any) => (
                     <option key={d.id} value={d.name}>
                       {d.name}
                     </option>
@@ -390,7 +489,7 @@ const MatchAdminPage: React.FC = () => {
                   onChange={(e) => setFilterTeam(e.target.value)}
                   disabled={!filterDiscipline}
                 >
-                  <option value="">All teams</option>
+                  <option value="">{t("ch.all_teams")}</option>
                   {filterTeamOptions.map((t: any) => (
                     <option key={t.id} value={String(t.id)}>
                       {t.name}
@@ -402,7 +501,7 @@ const MatchAdminPage: React.FC = () => {
                   value={filterSeason}
                   onChange={(e) => setFilterSeason(e.target.value)}
                 >
-                  <option value="">All seasons</option>
+                  <option value="">{t("ch.all_seasons")}</option>
                   {allSeasons.map((s) => (
                     <option key={s} value={s}>
                       {s}
@@ -418,7 +517,7 @@ const MatchAdminPage: React.FC = () => {
                       setFilterSeason("");
                     }}
                   >
-                    Clear
+                    {t("ch.clear")}
                   </button>
                 )}
               </div>

@@ -10,7 +10,7 @@ import { fetchDisciplines } from "../utils/fetchDisciplines";
 import { useAuth } from "../context/AuthContext";
 
 export const TeamAdminPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, getAdminDisciplines, isSuperAdmin } = useAuth();
   const [teams, setTeams] = useState<any[]>([]);
   const [disciplines, setDisciplines] = useState<any[]>([]);
   const [filterDiscipline, setFilterDiscipline] = useState("");
@@ -21,6 +21,22 @@ export const TeamAdminPage: React.FC = () => {
   useEffect(() => {
     fetchDisciplines().then(setDisciplines);
   }, []);
+
+  const headAdminRoles = isSuperAdmin?.()
+    ? []
+    : getAdminDisciplines
+      ? getAdminDisciplines("head_admin")
+      : [];
+  const headAdminSingleDiscipline =
+    headAdminRoles.length === 1 ? headAdminRoles[0] : null;
+
+  // Auto-set table filter for head admin
+  useEffect(() => {
+    if (headAdminSingleDiscipline && !filterDiscipline) {
+      setFilterDiscipline(headAdminSingleDiscipline.discipline_name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disciplines]);
 
   const teamColumns: AdminTableColumn[] = [
     { key: "name", label: "Team Name" },
@@ -63,6 +79,7 @@ export const TeamAdminPage: React.FC = () => {
       type: "select",
       required: false,
       options: disciplines.map((d: any) => ({ value: d.id, label: d.name })),
+      disabled: !!headAdminSingleDiscipline,
     },
     { name: "photo", label: "Photo", type: "file", required: false },
   ];
@@ -150,7 +167,12 @@ export const TeamAdminPage: React.FC = () => {
                         );
                         return { ...t, discipline_id: disc ? disc.id : "" };
                       })()
-                    : {};
+                    : headAdminSingleDiscipline
+                      ? {
+                          discipline_id:
+                            headAdminSingleDiscipline.discipline_id,
+                        }
+                      : {};
                 return (
                   <ReusableAdminForm
                     fields={teamFields}

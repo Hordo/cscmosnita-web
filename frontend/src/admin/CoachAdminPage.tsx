@@ -37,7 +37,7 @@ interface Team {
 }
 
 const CoachAdminPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, getAdminDisciplines, isSuperAdmin } = useAuth();
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [disciplines, setDisciplines] = useState<any[]>([]);
@@ -142,6 +142,22 @@ const CoachAdminPage: React.FC = () => {
     }
   };
 
+  const headAdminRoles = isSuperAdmin?.()
+    ? []
+    : getAdminDisciplines
+      ? getAdminDisciplines("head_admin")
+      : [];
+  const headAdminSingleDiscipline =
+    headAdminRoles.length === 1 ? headAdminRoles[0] : null;
+
+  // Auto-set table filter for head admin
+  useEffect(() => {
+    if (headAdminSingleDiscipline && !filterDiscipline) {
+      setFilterDiscipline(headAdminSingleDiscipline.discipline_name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disciplines]);
+
   const coachFieldsWithTeams = [
     ...coachFields,
     {
@@ -150,6 +166,7 @@ const CoachAdminPage: React.FC = () => {
       type: "select",
       required: false,
       options: disciplines.map((d: any) => ({ value: d.name, label: d.name })),
+      disabled: !!headAdminSingleDiscipline,
     },
     {
       name: "teams_id",
@@ -226,7 +243,12 @@ const CoachAdminPage: React.FC = () => {
                           teams_id: teamIds,
                         };
                       })()
-                    : {}
+                    : headAdminSingleDiscipline
+                      ? {
+                          discipline_id:
+                            headAdminSingleDiscipline.discipline_name,
+                        }
+                      : {}
                 }
                 submitLabel={editIndex === null ? "Create" : "Update"}
               />

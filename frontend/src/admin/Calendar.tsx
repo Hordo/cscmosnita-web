@@ -31,7 +31,7 @@ interface CalendarEvent {
 }
 
 const Calendar: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [allEvents, setAllEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEventModal, setShowEventModal] = useState(false);
@@ -244,15 +244,13 @@ const Calendar: React.FC = () => {
     <div className="calendar-container">
       <div className="calendar-header">
         <div className="calendar-title-section">
-          <h1 className="calendar-title">CSC Mosnita Calendar</h1>
-          <p className="calendar-subtitle">
-            Manage your team's schedule and events
-          </p>
+          <h1 className="calendar-title">{t("cal.title")}</h1>
+          <p className="calendar-subtitle">{t("cal.subtitle")}</p>
         </div>
         <div className="calendar-actions">
           <button className="cal-btn cal-btn-primary" onClick={handleNewEvent}>
             <span className="cal-btn-icon">+</span>
-            New Event
+            {t("cal.new_event")}
           </button>
         </div>
       </div>
@@ -260,7 +258,7 @@ const Calendar: React.FC = () => {
       {/* Filters */}
       <div className="calendar-filters">
         <div className="filter-group">
-          <label>Discipline</label>
+          <label>{t("cal.filter_discipline")}</label>
           <select
             value={filterDiscipline}
             onChange={(e) => {
@@ -268,7 +266,7 @@ const Calendar: React.FC = () => {
               setFilterTeam("");
             }}
           >
-            <option value="">All disciplines</option>
+            <option value="">{t("cal.all_disciplines")}</option>
             {disciplines.map((d) => (
               <option key={d} value={d}>
                 {d}
@@ -277,29 +275,29 @@ const Calendar: React.FC = () => {
           </select>
         </div>
         <div className="filter-group">
-          <label>Team</label>
+          <label>{t("cal.filter_team")}</label>
           <select
             value={filterTeam}
             onChange={(e) => setFilterTeam(e.target.value)}
           >
-            <option value="">All teams</option>
-            {teams.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            <option value="">{t("cal.all_teams")}</option>
+            {teams.map((tm) => (
+              <option key={tm} value={tm}>
+                {tm}
               </option>
             ))}
           </select>
         </div>
         <div className="filter-group">
-          <label>Event type</label>
+          <label>{t("cal.filter_type")}</label>
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
           >
-            <option value="">All types</option>
-            {eventTypes.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            <option value="">{t("cal.all_types")}</option>
+            {eventTypes.map((et) => (
+              <option key={et} value={et}>
+                {et}
               </option>
             ))}
           </select>
@@ -313,7 +311,7 @@ const Calendar: React.FC = () => {
               setFilterType("");
             }}
           >
-            ✕ Clear filters
+            {t("cal.clear_filters")}
           </button>
         )}
       </div>
@@ -322,7 +320,7 @@ const Calendar: React.FC = () => {
         {loading ? (
           <div className="calendar-loading">
             <div className="spinner"></div>
-            <p>Loading calendar...</p>
+            <p>{t("cal.loading")}</p>
           </div>
         ) : (
           <FullCalendar
@@ -471,27 +469,27 @@ const Calendar: React.FC = () => {
             <div className="modal-body">
               <div className="event-details-grid">
                 <div className="detail-item">
-                  <label>Date & Time</label>
+                  <label>{t("cal.detail_datetime")}</label>
                   <p>{new Date(selectedEvent.start).toLocaleString()}</p>
                 </div>
 
                 {selectedEvent.extendedProps.location && (
                   <div className="detail-item">
-                    <label>Location</label>
+                    <label>{t("cal.detail_location")}</label>
                     <p>📍 {selectedEvent.extendedProps.location}</p>
                   </div>
                 )}
 
                 {selectedEvent.extendedProps.team && (
                   <div className="detail-item">
-                    <label>Team</label>
+                    <label>{t("cal.detail_team")}</label>
                     <p>👥 {selectedEvent.extendedProps.team}</p>
                   </div>
                 )}
 
                 {selectedEvent.extendedProps.discipline && (
                   <div className="detail-item">
-                    <label>Discipline</label>
+                    <label>{t("cal.detail_discipline")}</label>
                     <p>⚽ {selectedEvent.extendedProps.discipline}</p>
                   </div>
                 )}
@@ -500,7 +498,9 @@ const Calendar: React.FC = () => {
                   selectedEvent.extendedProps.players.length > 0 && (
                     <div className="detail-item full-width">
                       <label>
-                        Players ({selectedEvent.extendedProps.players.length})
+                        {t("cal.detail_players", {
+                          count: selectedEvent.extendedProps.players.length,
+                        })}
                       </label>
                       <div className="players-list">
                         {selectedEvent.extendedProps.players.map(
@@ -517,7 +517,7 @@ const Calendar: React.FC = () => {
 
                 {selectedEvent.extendedProps.description && (
                   <div className="detail-item full-width">
-                    <label>Description</label>
+                    <label>{t("cal.detail_description")}</label>
                     <p className="event-description">
                       {selectedEvent.extendedProps.description}
                     </p>
@@ -533,7 +533,7 @@ const Calendar: React.FC = () => {
                   onClick={() => handleDeleteEvent(true)}
                   disabled={deleting}
                 >
-                  {deleting ? "Deleting…" : "Delete all in series"}
+                  {deleting ? t("cal.deleting") : t("cal.btn_delete_series")}
                 </button>
               )}
               {selectedEvent.extendedProps.recurrence_group_id && (
@@ -541,24 +541,24 @@ const Calendar: React.FC = () => {
                   className="btn btn-outline-primary"
                   onClick={handleEditAllInSeries}
                 >
-                  Edit all in series
+                  {t("cal.btn_edit_series")}
                 </button>
               )}
               <button className="btn btn-primary" onClick={handleEditEvent}>
-                Edit this
+                {t("cal.btn_edit")}
               </button>
               <button
                 className="btn btn-danger"
                 onClick={() => handleDeleteEvent(false)}
                 disabled={deleting}
               >
-                {deleting ? "Deleting…" : "Delete this event"}
+                {deleting ? t("cal.deleting") : t("cal.btn_delete")}
               </button>
               <button
                 className="btn btn-secondary"
                 onClick={() => setShowDetailsModal(false)}
               >
-                Close
+                {t("cal.btn_close")}
               </button>
             </div>
           </div>

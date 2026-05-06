@@ -16,6 +16,7 @@ export type AdminFormField = {
       ) => { value: string | number; label: string }[]);
   required?: boolean;
   multiple?: boolean;
+  disabled?: boolean;
   /** Name of another field to auto-translate FROM (ro → en via MyMemory API) */
   translateFrom?: string;
 };
@@ -187,6 +188,7 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
                     onChange={handleChange}
                     required={field.required}
                     multiple={field.multiple}
+                    disabled={field.disabled}
                   >
                     {!field.multiple && <option value="">Select...</option>}
                     {options.map((opt) => (
@@ -242,6 +244,7 @@ export const ReusableAdminForm: React.FC<ReusableAdminFormProps> = ({
                 }
                 onChange={handleChange}
                 required={field.required}
+                disabled={field.disabled}
               />
             )}
             {/* Show preview if photo_url is set */}
