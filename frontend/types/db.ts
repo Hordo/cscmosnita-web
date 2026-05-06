@@ -58,3 +58,15 @@ export interface CoachTeam {
   coach_id: number;
   team_id: number;
 }
+
+export interface TeamPhoto {
+  id: number;
+  team_id: number;
+  photo_url: string;
+  caption: string | null;
+  caption_en: string | null;
+  uploaded_by: number | null;
+  uploaded_by_name: string | null;
+  uploaded_at: string;
+  order: number;
+}

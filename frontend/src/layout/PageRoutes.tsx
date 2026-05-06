@@ -33,6 +33,9 @@ import { TeamTournamentsPage } from "../pages/TeamTournamentsPage";
 import { TournamentViewPage } from "../pages/TournamentViewPage";
 import VerifyEmail from "../pages/VerifyEmail";
 
+import TeamGalleryAdminPage from "../admin/TeamGalleryAdminPage";
+import { TeamGalleryPage } from "../pages/TeamGalleryPage";
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -89,6 +92,10 @@ const router = createBrowserRouter([
             element: <TournamentAdminPage />,
           },
           {
+            path: "gallery",
+            element: <TeamGalleryAdminPage />,
+          },
+          {
             path: "sponsors",
             element: <SponsorAdminPage />,
           },
@@ -104,6 +111,7 @@ const router = createBrowserRouter([
       { path: "teams/:teamId", element: <TeamViewerPage /> },
       { path: "teams/:teamId/matches", element: <TeamMatchesPage /> },
       { path: "teams/:teamId/tournaments", element: <TeamTournamentsPage /> },
+      { path: "teams/:teamId/gallery", element: <TeamGalleryPage /> },
       { path: "tournaments/:tournamentId", element: <TournamentViewPage /> },
       { path: "disciplines/:discipline", element: <DisciplineDetailPage /> },
       { path: "terms", element: <Terms /> },

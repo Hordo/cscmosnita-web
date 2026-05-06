@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto
 from .serializers import (
     TeamSerializer, CoachSerializer, PlayerSerializer,
     ChampionshipSerializer, MatchSerializer, DisciplineSerializer,
@@ -7,7 +7,7 @@ from .serializers import (
     TrainingSessionSerializer, EventAttendanceSerializer, CalendarEventListSerializer,
     TournamentListSerializer, TournamentSerializer, TournamentGroupSerializer,
     GroupTeamSerializer, TournamentMatchSerializer, SponsorSerializer,
-    NewsArticleSerializer
+    NewsArticleSerializer, TeamPhotoSerializer
 )
 from .permissions import (
     IsSuperAdminOrReadOnly, IsSuperAdmin, IsAnyAdminOrReadOnly,
@@ -933,3 +933,29 @@ class PushSubscriptionView(APIView):
             return Response({'error': 'endpoint is required'}, status=status.HTTP_400_BAD_REQUEST)
         PushSubscription.objects.filter(endpoint=endpoint).delete()
         return Response({'ok': True})
+
+
+class TeamPhotoViewSet(viewsets.ModelViewSet):
+    queryset = TeamPhoto.objects.all()
+    serializer_class = TeamPhotoSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        team_id = self.request.query_params.get('team')
+        if team_id:
+            queryset = queryset.filter(team_id=team_id)
+        return queryset
+
+    def perform_create(self, serializer):
+        team_id = self.request.data.get('team_id') or self.request.data.get('team')
+        assert_team_write_access(self.request.user, team_id)
+        serializer.save(uploaded_by=self.request.user)
+
+    def perform_update(self, serializer):
+        assert_team_write_access(self.request.user, serializer.instance.team_id)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        assert_team_write_access(self.request.user, instance.team_id)
+        instance.delete()

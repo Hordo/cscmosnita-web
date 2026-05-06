@@ -17,8 +17,6 @@ class Discipline(models.Model):
     def __str__(self):
         return self.name
 
-from django.db import models
-
 
 
 
@@ -388,3 +386,19 @@ class UserRole(models.Model):
     def __str__(self):
         team_str = f" ({self.team.name})" if self.team else ""
         return f"{self.user.username} - {self.role} - {self.discipline.name}{team_str}"
+
+
+class TeamPhoto(models.Model):
+    team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='photos')
+    photo_url = models.CharField(max_length=500)
+    caption = models.TextField(blank=True, null=True)
+    caption_en = models.TextField(blank=True, null=True)
+    uploaded_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='team_photos_uploaded')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', '-uploaded_at']
+
+    def __str__(self):
+        return f"Photo for {self.team.name} (#{self.id})"

@@ -1,5 +1,19 @@
 from rest_framework import serializers
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto
+# --- Team Photo Gallery ---
+class TeamPhotoSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.SerializerMethodField(read_only=True)
+    team_id = serializers.PrimaryKeyRelatedField(queryset=Team.objects.all(), source='team', write_only=False)
+    
+    class Meta:
+        model = TeamPhoto
+        fields = ['id', 'team_id', 'photo_url', 'caption', 'caption_en', 'uploaded_by', 'uploaded_by_name', 'uploaded_at', 'order']
+        read_only_fields = ['uploaded_by', 'uploaded_at']
+    
+    def get_uploaded_by_name(self, obj):
+        if obj.uploaded_by:
+            return f"{obj.uploaded_by.first_name} {obj.uploaded_by.last_name}".strip() or obj.uploaded_by.username
+        return None
 
 # Discipline Serializer
 class DisciplineSerializer(serializers.ModelSerializer):

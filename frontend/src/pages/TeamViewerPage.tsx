@@ -114,6 +114,12 @@ export const TeamViewerPage: React.FC = () => {
         >
           🥇 {t("view_tournaments")}
         </Link>
+        <Link
+          to={`/teams/${team.id}/gallery`}
+          className="btn btn-outline-secondary"
+        >
+          📸 {t("gallery")}
+        </Link>
       </div>
 
       {/* This week's schedule */}

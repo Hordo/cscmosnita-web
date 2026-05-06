@@ -80,6 +80,7 @@ export const menuConfig: MenuItem[] = [
           headAdminOnly: true,
         },
         { label: "menu.manage_players", path: "/admin/player" },
+        { label: "menu.manage_gallery", path: "/admin/gallery" },
         {
           label: "menu.manage_disciplines",
           path: "/admin/disciplines",
