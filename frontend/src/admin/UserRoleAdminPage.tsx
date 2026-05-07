@@ -158,7 +158,11 @@ export default function UserRoleAdminPage() {
       setUsers((prev) =>
         prev.map((u) =>
           u.id === userId
-            ? { ...u, is_superuser: updated.data.is_superuser, is_staff: updated.data.is_staff }
+            ? {
+                ...u,
+                is_superuser: updated.data.is_superuser,
+                is_staff: updated.data.is_staff,
+              }
             : u,
         ),
       );

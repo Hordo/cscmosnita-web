@@ -119,8 +119,15 @@ function toLocalDateStr(d: Date): string {
 
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
+// 30-min time slot options: 00:00, 00:30, 01:00, …, 23:30
+const TIME_OPTIONS_30MIN: string[] = [];
+for (let h = 0; h < 24; h++) {
+  TIME_OPTIONS_30MIN.push(`${String(h).padStart(2, "0")}:00`);
+  TIME_OPTIONS_30MIN.push(`${String(h).padStart(2, "0")}:30`);
+}
+
 export default function ResourceBookingsAdminPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isAccountantAdmin, isSuperAdmin } = useAuth();
 
   const [locations, setLocations] = useState<Location[]>([]);
@@ -485,7 +492,7 @@ export default function ResourceBookingsAdminPage() {
               <option value="">{t("resbk.select_resource_ph")}</option>
               {locations.map((loc) => (
                 <option key={loc.id} value={loc.id}>
-                  {loc.name}
+                  {i18n.language === "ro" ? loc.name : loc.name_en || loc.name}
                 </option>
               ))}
             </select>
@@ -749,27 +756,86 @@ export default function ResourceBookingsAdminPage() {
             tabIndex={-1}
             style={{ zIndex: 1050 }}
           >
-            <div className="modal-dialog modal-lg">
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h5 className="modal-title">
-                    {bookEditId !== null
-                      ? t("resbk.modal_edit_title")
-                      : t("resbk.modal_create_title")}
-                  </h5>
+            <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+              <div
+                className="modal-content border-0 shadow-lg"
+                style={{ borderRadius: 12, overflow: "hidden" }}
+              >
+                {/* ── Header ── */}
+                <div
+                  className="modal-header border-0 text-white"
+                  style={{
+                    background:
+                      bookEditId !== null
+                        ? "linear-gradient(135deg, #2c3e50 0%, #3d5a80 100%)"
+                        : "linear-gradient(135deg, #1a6b3c 0%, #28a745 100%)",
+                    padding: "18px 24px",
+                  }}
+                >
+                  <div className="d-flex align-items-center gap-2">
+                    <span style={{ fontSize: "1.4rem" }}>
+                      {bookEditId !== null ? "✏️" : "📅"}
+                    </span>
+                    <div>
+                      <h5 className="modal-title mb-0 fw-bold">
+                        {bookEditId !== null
+                          ? t("resbk.modal_edit_title")
+                          : t("resbk.modal_create_title")}
+                      </h5>
+                      {bookForm.start_datetime && (
+                        <div
+                          style={{
+                            fontSize: "0.78rem",
+                            opacity: 0.85,
+                            marginTop: 2,
+                          }}
+                        >
+                          {new Date(bookForm.start_datetime).toLocaleDateString(
+                            [],
+                            {
+                              weekday: "long",
+                              day: "2-digit",
+                              month: "long",
+                              year: "numeric",
+                            },
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    className="btn-close"
+                    className="btn-close btn-close-white ms-auto"
                     onClick={closeModal}
                   />
                 </div>
 
                 <form onSubmit={handleBookSubmit}>
-                  <div className="modal-body">
-                    <div className="row g-3">
-                      {/* External toggle */}
-                      <div className="col-12">
-                        <div className="form-check form-switch">
+                  <div
+                    className="modal-body"
+                    style={{ padding: "24px", background: "#f8f9fa" }}
+                  >
+                    {/* ── Section: Booking type ── */}
+                    <div
+                      className="rounded-3 p-3 mb-3"
+                      style={{
+                        background: bookForm.is_external ? "#fff3cd" : "#fff",
+                        border: `1.5px solid ${bookForm.is_external ? "#ffc107" : "#dee2e6"}`,
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <span
+                          className="fw-semibold text-secondary"
+                          style={{
+                            fontSize: "0.8rem",
+                            letterSpacing: "0.05em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {t("res.book_external")}
+                        </span>
+                        <div className="form-check form-switch mb-0">
                           <input
                             className="form-check-input"
                             type="checkbox"
@@ -777,200 +843,364 @@ export default function ResourceBookingsAdminPage() {
                             name="is_external"
                             checked={bookForm.is_external}
                             onChange={handleBookChange}
+                            style={{
+                              width: "2.5em",
+                              height: "1.3em",
+                              cursor: "pointer",
+                            }}
                           />
                           <label
-                            className="form-check-label"
+                            className="form-check-label fw-semibold"
                             htmlFor="isExternalToggle"
                           >
-                            {t("res.book_external")}
+                            {bookForm.is_external ? (
+                              <span className="text-warning">
+                                ⚠ {t("res.book_external")}
+                              </span>
+                            ) : (
+                              <span className="text-muted">
+                                {t("res.book_internal") ??
+                                  t("res.book_discipline")}
+                              </span>
+                            )}
                           </label>
                         </div>
                       </div>
 
-                      {/* Discipline + Team OR External organizer */}
-                      {!bookForm.is_external ? (
-                        <>
-                          <div className="col-md-6">
-                            <label className="form-label">
-                              {t("res.book_discipline")}
+                      <div className="row g-3 mt-1">
+                        {!bookForm.is_external ? (
+                          <>
+                            <div className="col-md-6">
+                              <label className="form-label fw-semibold small mb-1">
+                                {t("res.book_discipline")}
+                              </label>
+                              <select
+                                className="form-select form-select-sm"
+                                name="discipline_id"
+                                value={bookForm.discipline_id}
+                                onChange={handleBookChange}
+                              >
+                                <option value="">
+                                  {t("res.book_select_discipline")}
+                                </option>
+                                {disciplines.map((d) => (
+                                  <option key={d.id} value={d.id}>
+                                    {d.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="col-md-6">
+                              <label className="form-label fw-semibold small mb-1">
+                                {t("res.book_team")}
+                              </label>
+                              <select
+                                className="form-select form-select-sm"
+                                name="team_id"
+                                value={bookForm.team_id}
+                                onChange={handleBookChange}
+                              >
+                                <option value="">
+                                  {t("res.book_select_team")}
+                                </option>
+                                {filteredTeams.map((team) => (
+                                  <option key={team.id} value={team.id}>
+                                    {team.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="col-12">
+                            <label className="form-label fw-semibold small mb-1">
+                              {t("res.book_external_organizer")}{" "}
+                              <span className="text-danger">*</span>
                             </label>
+                            <div className="input-group input-group-sm">
+                              <span className="input-group-text">🏢</span>
+                              <input
+                                className="form-control"
+                                name="external_organizer"
+                                value={bookForm.external_organizer}
+                                onChange={handleBookChange}
+                                placeholder={t(
+                                  "res.book_external_organizer_ph",
+                                )}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* ── Section: Schedule ── */}
+                    <div
+                      className="rounded-3 p-3 mb-3"
+                      style={{
+                        background: "#fff",
+                        border: "1.5px solid #dee2e6",
+                      }}
+                    >
+                      <div
+                        className="fw-semibold text-secondary mb-3"
+                        style={{
+                          fontSize: "0.8rem",
+                          letterSpacing: "0.05em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        🕐 {t("resbk.section_schedule") ?? "Schedule"}
+                      </div>
+                      <div className="row g-3">
+                        <div className="col-md-6">
+                          <label className="form-label fw-semibold small mb-1">
+                            {t("res.book_start")}{" "}
+                            <span className="text-danger">*</span>
+                          </label>
+                          <div className="input-group input-group-sm">
+                            <span className="input-group-text">📆</span>
+                            <input
+                              className="form-control"
+                              type="date"
+                              value={
+                                bookForm.start_datetime.split("T")[0] || ""
+                              }
+                              onChange={(e) =>
+                                setBookForm((prev) => ({
+                                  ...prev,
+                                  start_datetime: `${e.target.value}T${prev.start_datetime.split("T")[1] || "08:00"}`,
+                                }))
+                              }
+                              required
+                            />
                             <select
                               className="form-select"
-                              name="discipline_id"
-                              value={bookForm.discipline_id}
-                              onChange={handleBookChange}
+                              style={{ maxWidth: 100, borderLeft: "none" }}
+                              value={
+                                bookForm.start_datetime.split("T")[1] || ""
+                              }
+                              onChange={(e) =>
+                                setBookForm((prev) => ({
+                                  ...prev,
+                                  start_datetime: `${prev.start_datetime.split("T")[0] || ""}T${e.target.value}`,
+                                }))
+                              }
+                              required
                             >
-                              <option value="">
-                                {t("res.book_select_discipline")}
-                              </option>
-                              {disciplines.map((d) => (
-                                <option key={d.id} value={d.id}>
-                                  {d.name}
+                              <option value="">--:--</option>
+                              {TIME_OPTIONS_30MIN.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
                                 </option>
                               ))}
                             </select>
                           </div>
-                          <div className="col-md-6">
-                            <label className="form-label">
-                              {t("res.book_team")}
-                            </label>
+                        </div>
+
+                        <div className="col-md-6">
+                          <label className="form-label fw-semibold small mb-1">
+                            {t("res.book_end")}{" "}
+                            <span className="text-danger">*</span>
+                          </label>
+                          <div className="input-group input-group-sm">
+                            <span className="input-group-text">📆</span>
+                            <input
+                              className="form-control"
+                              type="date"
+                              value={bookForm.end_datetime.split("T")[0] || ""}
+                              onChange={(e) =>
+                                setBookForm((prev) => ({
+                                  ...prev,
+                                  end_datetime: `${e.target.value}T${prev.end_datetime.split("T")[1] || "08:30"}`,
+                                }))
+                              }
+                              required
+                            />
                             <select
                               className="form-select"
-                              name="team_id"
-                              value={bookForm.team_id}
-                              onChange={handleBookChange}
+                              style={{ maxWidth: 100, borderLeft: "none" }}
+                              value={bookForm.end_datetime.split("T")[1] || ""}
+                              onChange={(e) =>
+                                setBookForm((prev) => ({
+                                  ...prev,
+                                  end_datetime: `${prev.end_datetime.split("T")[0] || ""}T${e.target.value}`,
+                                }))
+                              }
+                              required
                             >
-                              <option value="">
-                                {t("res.book_select_team")}
-                              </option>
-                              {filteredTeams.map((team) => (
-                                <option key={team.id} value={team.id}>
-                                  {team.name}
+                              <option value="">--:--</option>
+                              {TIME_OPTIONS_30MIN.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
                                 </option>
                               ))}
                             </select>
                           </div>
-                        </>
-                      ) : (
-                        <div className="col-12">
-                          <label className="form-label">
-                            {t("res.book_external_organizer")} *
-                          </label>
-                          <input
-                            className="form-control"
-                            name="external_organizer"
-                            value={bookForm.external_organizer}
-                            onChange={handleBookChange}
-                            placeholder={t("res.book_external_organizer_ph")}
-                          />
                         </div>
-                      )}
-
-                      {/* Start / End datetime */}
-                      <div className="col-md-6">
-                        <label className="form-label">
-                          {t("res.book_start")} *
-                        </label>
-                        <input
-                          className="form-control"
-                          type="datetime-local"
-                          name="start_datetime"
-                          value={bookForm.start_datetime}
-                          onChange={handleBookChange}
-                          required
-                        />
                       </div>
-                      <div className="col-md-6">
-                        <label className="form-label">
-                          {t("res.book_end")} *
-                        </label>
-                        <input
-                          className="form-control"
-                          type="datetime-local"
-                          name="end_datetime"
-                          value={bookForm.end_datetime}
-                          onChange={handleBookChange}
-                          required
-                        />
-                      </div>
+                    </div>
 
-                      {/* Recurrence — create mode only */}
-                      {bookEditId === null && (
-                        <div className="col-md-6">
-                          <label className="form-label">
-                            {t("res.book_recurrence")}
-                          </label>
-                          <select
-                            className="form-select"
-                            name="recurrence_type"
-                            value={bookForm.recurrence_type}
-                            onChange={handleBookChange}
-                          >
-                            <option value="">{t("res.recurrence_none")}</option>
-                            <option value="daily">
-                              {t("res.recurrence_daily")}
-                            </option>
-                            <option value="weekdays">
-                              {t("res.recurrence_weekdays")}
-                            </option>
-                            <option value="weekly">
-                              {t("res.recurrence_weekly")}
-                            </option>
-                            <option value="biweekly">
-                              {t("res.recurrence_biweekly")}
-                            </option>
-                            <option value="monthly">
-                              {t("res.recurrence_monthly")}
-                            </option>
-                          </select>
+                    {/* ── Section: Recurrence ── */}
+                    {(bookEditId === null || bookForm.recurrence_type) && (
+                      <div
+                        className="rounded-3 p-3 mb-3"
+                        style={{
+                          background: "#fff",
+                          border: "1.5px solid #dee2e6",
+                        }}
+                      >
+                        <div
+                          className="fw-semibold text-secondary mb-3"
+                          style={{
+                            fontSize: "0.8rem",
+                            letterSpacing: "0.05em",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          🔁 {t("res.book_recurrence")}
                         </div>
-                      )}
-                      {bookEditId === null && bookForm.recurrence_type && (
-                        <div className="col-md-6">
-                          <label className="form-label">
-                            {t("res.book_recurrence_until")} *
-                          </label>
-                          <input
-                            className="form-control"
-                            type="date"
-                            name="recurrence_end_date"
-                            value={bookForm.recurrence_end_date}
-                            onChange={handleBookChange}
-                          />
+                        <div className="row g-3">
+                          {bookEditId === null && (
+                            <div
+                              className={
+                                bookForm.recurrence_type ? "col-md-6" : "col-12"
+                              }
+                            >
+                              <label className="form-label fw-semibold small mb-1">
+                                {t("res.book_recurrence")}
+                              </label>
+                              <select
+                                className="form-select form-select-sm"
+                                name="recurrence_type"
+                                value={bookForm.recurrence_type}
+                                onChange={handleBookChange}
+                              >
+                                <option value="">
+                                  {t("res.recurrence_none")}
+                                </option>
+                                <option value="daily">
+                                  {t("res.recurrence_daily")}
+                                </option>
+                                <option value="weekdays">
+                                  {t("res.recurrence_weekdays")}
+                                </option>
+                                <option value="weekly">
+                                  {t("res.recurrence_weekly")}
+                                </option>
+                                <option value="biweekly">
+                                  {t("res.recurrence_biweekly")}
+                                </option>
+                                <option value="monthly">
+                                  {t("res.recurrence_monthly")}
+                                </option>
+                              </select>
+                            </div>
+                          )}
+                          {bookEditId === null && bookForm.recurrence_type && (
+                            <div className="col-md-6">
+                              <label className="form-label fw-semibold small mb-1">
+                                {t("res.book_recurrence_until")}{" "}
+                                <span className="text-danger">*</span>
+                              </label>
+                              <input
+                                className="form-control form-control-sm"
+                                type="date"
+                                name="recurrence_end_date"
+                                value={bookForm.recurrence_end_date}
+                                onChange={handleBookChange}
+                              />
+                            </div>
+                          )}
+                          {bookEditId !== null && bookForm.recurrence_type && (
+                            <div className="col-12">
+                              <div className="alert alert-warning py-2 mb-0 small">
+                                ⚠ {t("res.recurrence_no_edit")}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {bookEditId !== null && bookForm.recurrence_type && (
-                        <div className="col-12">
-                          <div className="form-text text-muted">
-                            {t("res.recurrence_no_edit")}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Notes */}
-                      <div className="col-12">
-                        <label className="form-label">
-                          {t("res.book_notes")}
-                        </label>
-                        <textarea
-                          className="form-control"
-                          name="notes"
-                          value={bookForm.notes}
-                          onChange={handleBookChange}
-                          placeholder={t("res.book_notes_ph")}
-                          rows={2}
-                        />
                       </div>
+                    )}
+
+                    {/* ── Section: Notes ── */}
+                    <div
+                      className="rounded-3 p-3"
+                      style={{
+                        background: "#fff",
+                        border: "1.5px solid #dee2e6",
+                      }}
+                    >
+                      <div
+                        className="fw-semibold text-secondary mb-2"
+                        style={{
+                          fontSize: "0.8rem",
+                          letterSpacing: "0.05em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        📝 {t("res.book_notes")}
+                      </div>
+                      <textarea
+                        className="form-control form-control-sm"
+                        name="notes"
+                        value={bookForm.notes}
+                        onChange={handleBookChange}
+                        placeholder={t("res.book_notes_ph")}
+                        rows={2}
+                        style={{ resize: "vertical" }}
+                      />
                     </div>
                   </div>
 
-                  <div className="modal-footer">
+                  {/* ── Footer ── */}
+                  <div
+                    className="modal-footer border-0"
+                    style={{
+                      background: "#f8f9fa",
+                      padding: "16px 24px",
+                      gap: 8,
+                    }}
+                  >
                     {bookEditId !== null && (
                       <button
                         type="button"
-                        className="btn btn-danger me-auto"
+                        className="btn btn-outline-danger btn-sm me-auto d-flex align-items-center gap-1"
                         onClick={handleBookDelete}
                       >
-                        {t("res.btn_delete")}
+                        🗑 {t("res.btn_delete")}
                       </button>
                     )}
                     <button
                       type="button"
-                      className="btn btn-secondary"
+                      className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
                       onClick={closeModal}
                     >
-                      {t("res.btn_cancel")}
+                      ✕ {t("res.btn_cancel")}
                     </button>
                     <button
                       type="submit"
-                      className="btn btn-primary"
+                      className="btn btn-sm d-flex align-items-center gap-1 text-white fw-semibold"
                       disabled={bookLoading}
+                      style={{
+                        background:
+                          bookEditId !== null
+                            ? "linear-gradient(135deg, #2c3e50, #3d5a80)"
+                            : "linear-gradient(135deg, #1a6b3c, #28a745)",
+                        border: "none",
+                        minWidth: 100,
+                      }}
                     >
-                      {bookLoading
-                        ? t("res.saving")
-                        : bookEditId !== null
-                          ? t("resbk.btn_save")
-                          : t("resbk.btn_add")}
+                      {bookLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm" />{" "}
+                          {t("res.saving")}
+                        </>
+                      ) : bookEditId !== null ? (
+                        <>💾 {t("resbk.btn_save")}</>
+                      ) : (
+                        <>✔ {t("resbk.btn_add")}</>
+                      )}
                     </button>
                   </div>
                 </form>

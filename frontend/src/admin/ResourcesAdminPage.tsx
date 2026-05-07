@@ -44,10 +44,16 @@ export default function ResourcesAdminPage() {
   const { isAccountantAdmin, isSuperAdmin } = useAuth();
 
   const [locations, setLocations] = useState<Location[]>([]);
-  const [locForm, setLocForm] = useState<LocationForm>({ ...emptyLocationForm });
+  const [locForm, setLocForm] = useState<LocationForm>({
+    ...emptyLocationForm,
+  });
   const [locEditId, setLocEditId] = useState<number | null>(null);
   const [locLoading, setLocLoading] = useState(false);
-  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const [msg, setMsg] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const flash = (type: "success" | "error", text: string) => {
     setMsg({ type, text });
@@ -144,11 +150,38 @@ export default function ResourcesAdminPage() {
     setLocForm({ ...emptyLocationForm });
   };
 
+  const handleTranslateName = async () => {
+    if (!locForm.name.trim()) return;
+    setTranslating(true);
+    try {
+      const res = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(locForm.name.trim())}&langpair=ro|en`,
+      );
+      const data = await res.json();
+      const translated: string = data.responseData?.translatedText;
+      if (translated) {
+        setLocForm((prev) => ({
+          ...prev,
+          name_en: translated.replace(/&nbsp;/g, " "),
+        }));
+      } else {
+        flash("error", t("res.translate_error"));
+      }
+    } catch {
+      flash("error", t("res.translate_error"));
+    } finally {
+      setTranslating(false);
+    }
+  };
+
   return (
     <div className="container py-4">
       <div className="d-flex align-items-center justify-content-between mb-1 flex-wrap gap-2">
         <h2 className="mb-0">{t("res.page_title")}</h2>
-        <Link to="/admin/resource-bookings" className="btn btn-sm btn-outline-primary">
+        <Link
+          to="/admin/resource-bookings"
+          className="btn btn-sm btn-outline-primary"
+        >
           {t("res.go_to_bookings")} →
         </Link>
       </div>
@@ -159,7 +192,11 @@ export default function ResourcesAdminPage() {
           className={`alert alert-${msg.type === "success" ? "success" : "danger"} alert-dismissible`}
         >
           {msg.text}
-          <button type="button" className="btn-close" onClick={() => setMsg(null)} />
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setMsg(null)}
+          />
         </div>
       )}
 
@@ -167,7 +204,9 @@ export default function ResourcesAdminPage() {
       <div className="card mb-4">
         <div className="card-header">
           <strong>
-            {locEditId !== null ? t("res.loc_form_edit") : t("res.loc_form_add")}
+            {locEditId !== null
+              ? t("res.loc_form_edit")
+              : t("res.loc_form_add")}
           </strong>
         </div>
         <div className="card-body">
@@ -184,7 +223,20 @@ export default function ResourcesAdminPage() {
               />
             </div>
             <div className="col-md-4">
-              <label className="form-label">{t("res.loc_name_en")}</label>
+              <div className="d-flex align-items-center justify-content-between mb-1">
+                <label className="form-label mb-0">
+                  {t("res.loc_name_en")}
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={handleTranslateName}
+                  disabled={translating || !locForm.name.trim()}
+                  title={t("res.translate_hint")}
+                >
+                  {translating ? t("res.translating") : t("res.translate_btn")}
+                </button>
+              </div>
               <input
                 className="form-control"
                 name="name_en"
@@ -215,7 +267,11 @@ export default function ResourcesAdminPage() {
               />
             </div>
             <div className="col-12 d-flex gap-2">
-              <button type="submit" className="btn btn-primary" disabled={locLoading}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={locLoading}
+              >
                 {locLoading
                   ? t("res.saving")
                   : locEditId !== null
@@ -223,7 +279,11 @@ export default function ResourcesAdminPage() {
                     : t("res.loc_btn_add")}
               </button>
               {locEditId !== null && (
-                <button type="button" className="btn btn-secondary" onClick={cancelLocEdit}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={cancelLocEdit}
+                >
                   {t("res.btn_cancel")}
                 </button>
               )}
@@ -236,7 +296,9 @@ export default function ResourcesAdminPage() {
       {locations.length > 0 && (
         <div className="card mb-4">
           <div className="card-header">
-            <strong>{t("res.loc_list_title", { count: locations.length })}</strong>
+            <strong>
+              {t("res.loc_list_title", { count: locations.length })}
+            </strong>
           </div>
           <div className="card-body p-0">
             <table className="table table-sm table-hover mb-0">
@@ -256,14 +318,19 @@ export default function ResourcesAdminPage() {
                     <td>
                       <span
                         className="badge me-1"
-                        style={{ backgroundColor: locationColorMap.get(loc.id), color: "#fff" }}
+                        style={{
+                          backgroundColor: locationColorMap.get(loc.id),
+                          color: "#fff",
+                        }}
                       >
                         ■
                       </span>
                       {loc.name}
                     </td>
                     <td>{loc.name_en || "—"}</td>
-                    <td className="text-muted small">{loc.description || "—"}</td>
+                    <td className="text-muted small">
+                      {loc.description || "—"}
+                    </td>
                     <td>
                       <button
                         className="btn btn-sm btn-outline-primary me-1"
@@ -290,7 +357,10 @@ export default function ResourcesAdminPage() {
       {locations.length > 0 && (
         <div className="alert alert-light border d-flex align-items-center justify-content-between gap-3">
           <span>{t("res.bookings_prompt")}</span>
-          <Link to="/admin/resource-bookings" className="btn btn-primary btn-sm text-nowrap">
+          <Link
+            to="/admin/resource-bookings"
+            className="btn btn-primary btn-sm text-nowrap"
+          >
             {t("res.go_to_bookings")} →
           </Link>
         </div>

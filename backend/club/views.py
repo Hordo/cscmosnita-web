@@ -874,9 +874,8 @@ class SetSuperuserView(APIView):
 
         make_super = bool(request.data.get('is_superuser', False))
         target.is_superuser = make_super
-        # is_staff must be True for superusers; keep it if already True when demoting
-        if make_super:
-            target.is_staff = True
+        # is_staff must be True for superusers; clear it when demoting
+        target.is_staff = make_super
         target.save(update_fields=['is_superuser', 'is_staff'])
 
         serializer = UserWithRolesSerializer(target)

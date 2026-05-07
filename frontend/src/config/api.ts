@@ -33,7 +33,8 @@ export const API_URLS = {
   // Admin user management (super admin only)
   adminUsers: `${API_BASE}/api/admin/users/`,
   adminUserRoles: `${API_BASE}/api/admin/user-roles/`,
-  adminUserSetSuperuser: (userId: number) => `${API_BASE}/api/admin/users/${userId}/set-superuser/`,
+  adminUserSetSuperuser: (userId: number) =>
+    `${API_BASE}/api/admin/users/${userId}/set-superuser/`,
   teamPhotos: `${API_BASE}/api/team-photos/`,
   uploadTeamGalleryPhoto: `${API_BASE}/api/upload/team-gallery-photo/`,
   officialDocuments: `${API_BASE}/api/official-documents/`,

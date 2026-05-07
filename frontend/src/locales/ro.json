@@ -472,6 +472,10 @@
   "res.loc_name_ph": "ex. Baza Urseni",
   "res.loc_name_en": "Nume (EN)",
   "res.loc_name_en_ph": "Nume în engleză (opțional)",
+  "res.translate_btn": "🌐 Traducere RO → EN",
+  "res.translating": "Se traduce...",
+  "res.translate_hint": "Traducere automată din română",
+  "res.translate_error": "Traducerea a eșuat. Încearcă din nou.",
   "res.loc_order": "Ordine",
   "res.loc_description": "Descriere",
   "res.loc_description_ph": "Scurtă descriere a locației",
@@ -575,5 +579,7 @@
   "resbk.btn_save": "Salvează Modificările",
   "resbk.btn_add": "Adaugă Rezervare",
   "resbk.err_load_locations": "Eroare la încărcarea resurselor.",
-  "resbk.err_load_bookings": "Eroare la încărcarea rezervărilor."
+  "resbk.err_load_bookings": "Eroare la încărcarea rezervărilor.",
+  "resbk.section_schedule": "Program",
+  "res.book_internal": "Rezervare Internă"
 }

@@ -471,6 +471,10 @@
   "res.loc_name_ph": "e.g. Baza Urseni",
   "res.loc_name_en": "Name (EN)",
   "res.loc_name_en_ph": "English name (optional)",
+  "res.translate_btn": "🌐 Translate RO → EN",
+  "res.translating": "Translating...",
+  "res.translate_hint": "Auto-translate from Romanian",
+  "res.translate_error": "Translation failed. Try again.",
   "res.loc_order": "Order",
   "res.loc_description": "Description",
   "res.loc_description_ph": "Brief description of the location",
@@ -574,5 +578,7 @@
   "resbk.btn_save": "Save Changes",
   "resbk.btn_add": "Add Booking",
   "resbk.err_load_locations": "Failed to load resources.",
-  "resbk.err_load_bookings": "Failed to load bookings."
+  "resbk.err_load_bookings": "Failed to load bookings.",
+  "resbk.section_schedule": "Schedule",
+  "res.book_internal": "Internal Booking"
 }
