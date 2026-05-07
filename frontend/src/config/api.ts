@@ -35,4 +35,6 @@ export const API_URLS = {
   adminUserRoles: `${API_BASE}/api/admin/user-roles/`,
   teamPhotos: `${API_BASE}/api/team-photos/`,
   uploadTeamGalleryPhoto: `${API_BASE}/api/upload/team-gallery-photo/`,
+  officialDocuments: `${API_BASE}/api/official-documents/`,
+  uploadOfficialDocument: `${API_BASE}/api/upload/official-document/`,
 };

@@ -9,7 +9,8 @@ import "../styles/topnavbar.css";
 import "../styles/cscmosnita-colors.css";
 
 export default function TopNavbar() {
-  const { user, logout, isSuperAdmin, isHeadAdmin } = useAuth();
+  const { user, logout, isSuperAdmin, isHeadAdmin, isAccountantAdmin } =
+    useAuth();
   const { i18n, t } = useTranslation();
   const { state: pushState } = usePushNotifications();
   const navigate = useNavigate();
@@ -79,11 +80,16 @@ export default function TopNavbar() {
   const getVisibleChildren = (item: any) => {
     if (!item.children) return undefined;
 
+    // A "pure accountant" has the accountant role but no superuser or head_admin privileges
+    const isPureAccountant =
+      isAccountantAdmin() && !isSuperAdmin() && !isHeadAdmin();
+
     const filterChild = (child: any) => {
       if (child.auth !== undefined) {
         if (child.auth && !user) return false;
         if (!child.auth && user) return false;
       }
+      if (isPureAccountant && !child.accountantAccessible) return false;
       if ((child as any).superAdminOnly && !isSuperAdmin()) return false;
       if ((child as any).headAdminOnly && !isHeadAdmin() && !isSuperAdmin())
         return false;

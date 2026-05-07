@@ -542,3 +542,15 @@ class UserWithRolesSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'is_superuser', 'is_staff', 'date_joined', 'admin_roles']
+
+
+# ── Official Document serializer ──────────────────────────────────────────────
+
+class OfficialDocumentSerializer(serializers.ModelSerializer):
+    is_available = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        from .models import OfficialDocument
+        model = OfficialDocument
+        fields = ['id', 'name', 'year', 'document_type', 'file_url', 'order', 'is_available', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'is_available', 'created_at', 'updated_at']

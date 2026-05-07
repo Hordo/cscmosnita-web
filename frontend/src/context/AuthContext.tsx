@@ -40,12 +40,6 @@ type AuthContextType = {
    */
   getCoachTeamIds: (disciplineId?: number) => number[] | null;
 };
-const isAccountantAdmin = () => {
-  if (!user) return false;
-  if (user.is_superuser) return true;
-  return (user.admin_roles ?? []).some((r) => r.role === "accountant_admin");
-};
-
 const AuthContext = createContext<AuthContextType | null>(null);
 
 function decodeJWT(token: string) {
@@ -83,6 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isSuperAdmin = () => !!user?.is_superuser;
+
+  const isAccountantAdmin = () => {
+    if (!user) return false;
+    if (user.is_superuser) return true;
+    return (user.admin_roles ?? []).some((r) => r.role === "accountant_admin");
+  };
 
   const isAnyAdmin = () =>
     !!user &&

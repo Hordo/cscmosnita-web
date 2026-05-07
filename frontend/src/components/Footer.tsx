@@ -54,6 +54,9 @@ export default function Footer() {
                 <Link to="/about">{t("footer.about")}</Link>
               </li>
               <li>
+                <Link to="/transparenta">{t("menu.transparenta")}</Link>
+              </li>
+              <li>
                 <Link to="/notifications">{t("footer.notifications")}</Link>
               </li>
             </ul>

@@ -9,12 +9,13 @@ from .views import (
     SponsorViewSet, NewsArticleViewSet,
     RegisterView, VerifyEmailView,
     UserListView, UserRoleViewSet,
-    TeamPhotoViewSet
+    TeamPhotoViewSet,
+    OfficialDocumentViewSet
 )
 from .signed_upload import (
     GeneratePlayerPhotoUploadURL, GenerateTeamPhotoUploadURL, GenerateCoachPhotoUploadURL,
     GenerateGeneralPhotoUploadURL, GenerateSponsorLogoUploadURL, GenerateNewsArticleCoverUploadURL,
-    GenerateTeamGalleryPhotoUploadURL
+    GenerateTeamGalleryPhotoUploadURL, GenerateOfficialDocumentUploadURL
 )
 
 
@@ -42,6 +43,9 @@ router.register(r'calendar/attendance', EventAttendanceViewSet, basename='event-
 router.register(r'admin/user-roles', UserRoleViewSet, basename='user-roles')
 router.register(r'team-photos', TeamPhotoViewSet, basename='team-photos')
 
+# Official Documents endpoint
+router.register(r'official-documents', OfficialDocumentViewSet, basename='official-documents')
+
 urlpatterns = [
     path('', include(router.urls)),
     path('register/', RegisterView.as_view(), name='register'),
@@ -53,6 +57,7 @@ urlpatterns = [
     path('upload/sponsor-logo/', GenerateSponsorLogoUploadURL.as_view(), name='upload_sponsor_logo'),
     path('upload/news-cover/', GenerateNewsArticleCoverUploadURL.as_view(), name='upload_news_cover'),
     path('upload/team-gallery-photo/', GenerateTeamGalleryPhotoUploadURL.as_view(), name='upload_team_gallery_photo'),
+    path('upload/official-document/', GenerateOfficialDocumentUploadURL.as_view(), name='upload_official_document'),
     # Push notification endpoints
     path('push/', PushSubscriptionView.as_view(), name='push_subscription'),
     path('push/send-notifications/', PushSendNotificationsView.as_view(), name='push_send_notifications'),

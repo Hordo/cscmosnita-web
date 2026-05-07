@@ -119,13 +119,13 @@ def assert_super_admin(user):
 
 
 def is_any_admin(user):
-    """Returns True if user is superuser, is_staff, or has any UserRole."""
+    """Returns True if user is superuser, is_staff, or has any non-accountant UserRole."""
     from .models import UserRole
     if not user.is_authenticated:
         return False
     if user.is_superuser or user.is_staff:
         return True
-    return UserRole.objects.filter(user=user).exists()
+    return UserRole.objects.filter(user=user).exclude(role='accountant_admin').exists()
 
 
 class IsAnyAdminOrReadOnly(BasePermission):
@@ -148,3 +148,29 @@ class IsSuperAdmin(BasePermission):
     """Only superusers allowed for any method."""
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.is_superuser
+
+
+def is_accountant_admin(user):
+    """Returns True if user is superuser or has accountant_admin role."""
+    from .models import UserRole
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return UserRole.objects.filter(user=user, role='accountant_admin').exists()
+
+
+class IsAccountantAdminOrReadOnly(BasePermission):
+    """Allow safe methods for all; write only for accountant admins or superusers."""
+    def has_permission(self, request, view):
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return True
+        return is_accountant_admin(request.user)
+
+
+class IsAccountantOrAnyAdminOrReadOnly(BasePermission):
+    """Allow safe methods for all; write for accountant admins, regular admins, or superusers."""
+    def has_permission(self, request, view):
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return True
+        return is_any_admin(request.user) or is_accountant_admin(request.user)

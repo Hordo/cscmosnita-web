@@ -79,6 +79,35 @@ class Sponsor(models.Model):
         return self.name
 
 
+
+class OfficialDocument(models.Model):
+    DOCUMENT_TYPE_CHOICES = [
+        ('general', 'General'),
+        ('yearly', 'Yearly'),
+    ]
+
+    name = models.CharField(max_length=200)
+    year = models.IntegerField(null=True, blank=True, help_text="Year for yearly documents; null for general documents")
+    document_type = models.CharField(max_length=10, choices=DOCUMENT_TYPE_CHOICES, default='yearly')
+    file_url = models.CharField(max_length=500, blank=True, null=True, help_text="URL to the PDF document in R2/S3 storage")
+    order = models.PositiveIntegerField(default=0, help_text="Display order within the group (lower = first)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['document_type', 'year', 'order', 'name']
+        verbose_name = "Official Document"
+        verbose_name_plural = "Official Documents"
+
+    def __str__(self):
+        year_str = f" ({self.year})" if self.year else " (General)"
+        return f"{self.name}{year_str}"
+
+    @property
+    def is_available(self):
+        return bool(self.file_url)
+
+
 class Championship(models.Model):
     name = models.CharField(max_length=150)  # e.g. "Liga Juniori U10"
     season = models.CharField(max_length=20, blank=True)

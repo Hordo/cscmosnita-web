@@ -12,7 +12,7 @@ from .serializers import (
 from .permissions import (
     IsSuperAdminOrReadOnly, IsSuperAdmin, IsAnyAdminOrReadOnly,
     assert_discipline_write_access, assert_super_admin, get_user_admin_discipline_ids, is_any_admin,
-    assert_team_write_access, get_user_admin_team_ids
+    assert_team_write_access, get_user_admin_team_ids, IsAccountantOrAnyAdminOrReadOnly, is_accountant_admin
 )
 from rest_framework.exceptions import PermissionDenied
 
@@ -501,12 +501,12 @@ class TrainingSessionViewSet(viewsets.ModelViewSet):
 # --- NewsArticle ViewSet ---
 class NewsArticleViewSet(viewsets.ModelViewSet):
     serializer_class = NewsArticleSerializer
-    permission_classes = [IsAnyAdminOrReadOnly]
+    permission_classes = [IsAccountantOrAnyAdminOrReadOnly]
 
     def get_queryset(self):
         queryset = NewsArticle.objects.all()
         # Non-admins only see published articles
-        if not is_any_admin(self.request.user):
+        if not (is_any_admin(self.request.user) or is_accountant_admin(self.request.user)):
             queryset = queryset.filter(is_published=True)
         slug = self.request.query_params.get('slug')
         if slug:
@@ -959,3 +959,28 @@ class TeamPhotoViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         assert_team_write_access(self.request.user, instance.team_id)
         instance.delete()
+
+
+# ── Official Documents ────────────────────────────────────────────────────────
+
+from .models import OfficialDocument
+from .serializers import OfficialDocumentSerializer
+from .permissions import IsAccountantAdminOrReadOnly
+
+class OfficialDocumentViewSet(viewsets.ModelViewSet):
+    queryset = OfficialDocument.objects.all()
+    serializer_class = OfficialDocumentSerializer
+    permission_classes = [IsAccountantAdminOrReadOnly]
+
+    def get_queryset(self):
+        qs = OfficialDocument.objects.all()
+        doc_type = self.request.query_params.get('type')
+        year_param = self.request.query_params.get('year')
+        if doc_type:
+            qs = qs.filter(document_type=doc_type)
+        if year_param:
+            try:
+                qs = qs.filter(year=int(year_param))
+            except (ValueError, TypeError):
+                pass
+        return qs.order_by('document_type', 'year', 'order', 'name')

@@ -213,3 +213,38 @@ class GenerateTeamGalleryPhotoUploadURL(APIView):
             return Response({'uploadUrl': upload_url, 'finalUrl': final_url})
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class GenerateOfficialDocumentUploadURL(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from .permissions import is_accountant_admin
+        if not is_accountant_admin(request.user):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Accountant admin access required.")
+        ext = request.data.get('ext', 'pdf')
+        year = request.data.get('year', 'general')
+        key = f"official-documents/{year}/{uuid.uuid4()}.{ext}"
+        s3 = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            region_name=settings.AWS_S3_REGION_NAME,
+        )
+        try:
+            upload_url = s3.generate_presigned_url(
+                'put_object',
+                Params={
+                    'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                    'Key': key,
+                    'ContentType': request.data.get('contentType', 'application/pdf'),
+                },
+                ExpiresIn=600,
+                HttpMethod='PUT',
+            )
+            final_url = f"{settings.R2_PUBLIC_URL}/{key}"
+            return Response({'uploadUrl': upload_url, 'finalUrl': final_url})
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

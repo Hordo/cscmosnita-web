@@ -1,0 +1,65 @@
+/* ── Transparenta / Official Documents Page ─────────────────────────────── */
+
+.transparenta-section {
+  border-left: 3px solid var(--csc-primary, #1a6b2d);
+  padding-left: 1rem;
+}
+
+.transparenta-year-heading {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--csc-primary, #1a6b2d);
+  margin-bottom: 0.75rem;
+}
+
+.transparenta-doc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.4rem 1.5rem;
+}
+
+.transparenta-doc-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0;
+  font-size: 0.95rem;
+}
+
+.transparenta-doc-icon {
+  font-size: 0.9rem;
+  width: 1.1rem;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.transparenta-doc-available {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.transparenta-doc-available:hover .transparenta-doc-name {
+  text-decoration: underline;
+  color: var(--csc-primary, #1a6b2d);
+}
+
+.transparenta-doc-available .transparenta-doc-icon {
+  color: #198754;
+  font-weight: 700;
+}
+
+.transparenta-doc-unavailable {
+  color: #888;
+  cursor: default;
+}
+
+.transparenta-doc-unavailable .transparenta-doc-icon {
+  color: #ccc;
+}
+
+@media (max-width: 576px) {
+  .transparenta-doc-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

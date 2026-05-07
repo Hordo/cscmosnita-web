@@ -4,8 +4,9 @@ export type MenuItem = {
   mega?: boolean;
   auth?: boolean;
   adminOnly?: boolean;
-  superAdminOnly?: boolean; // NEW: only superusers see this
-  headAdminOnly?: boolean; // NEW: only head_admin or superuser see this
+  superAdminOnly?: boolean; // only superusers see this
+  headAdminOnly?: boolean; // only head_admin or superuser see this
+  accountantAccessible?: boolean; // visible to pure accountant admins (accountant-only, no other admin role)
   // For normal dropdowns: children is MenuItem[]
   // For mega menus: children is Column[]
   children?: MenuItem[] | Column[];
@@ -18,6 +19,10 @@ export const menuConfig: MenuItem[] = [
   {
     label: "menu.news",
     path: "/news",
+  },
+  {
+    label: "menu.transparenta",
+    path: "/transparenta",
   },
   {
     label: "menu.contact",
@@ -53,11 +58,20 @@ export const menuConfig: MenuItem[] = [
     adminOnly: true as any, // TypeScript workaround, will filter in navbar
     children: [
       [
-        { label: "menu.manage_news", path: "/admin/news" },
+        {
+          label: "menu.manage_news",
+          path: "/admin/news",
+          accountantAccessible: true,
+        },
         {
           label: "menu.manage_users",
           path: "/admin/users",
           superAdminOnly: true,
+        },
+        {
+          label: "menu.manage_official_docs",
+          path: "/admin/official-documents",
+          accountantAccessible: true,
         },
       ],
       [
