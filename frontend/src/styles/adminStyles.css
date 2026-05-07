@@ -10,11 +10,11 @@
 }
 
 .admin-min-width {
-  min-width: 300px;
+  overflow-x: auto;
 }
 
 .admin-form-min-width {
-  min-width: 250px;
+  min-width: 0;
 }
 
 .admin-img-thumb {

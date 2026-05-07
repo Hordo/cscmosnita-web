@@ -218,7 +218,7 @@ const CoachAdminPage: React.FC = () => {
     <div className="container-fluid py-3 admin-min-height">
       {error && <div className="alert alert-danger mb-3">{error}</div>}
       <div className="row justify-content-center">
-        <div className="col-md-4 mb-3">
+        <div className="col-lg-4 mb-3">
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <h4 className="mb-3">
@@ -255,18 +255,19 @@ const CoachAdminPage: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="col-md-8 mb-3">
+        <div className="col-lg-8 mb-3">
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <h4 className="mb-3">Coaches</h4>
               {loading ? (
                 <div>Loading...</div>
               ) : (
-                <div className="admin-min-width">
+                <div>
                   <div className="d-flex gap-2 mb-3 flex-wrap align-items-end">
                     <h4 className="mb-0 me-auto">All Coaches</h4>
                     <select
-                      className="form-select form-select-sm w-auto"
+                      className="form-select form-select-sm"
+                      style={{ minWidth: 130 }}
                       value={filterDiscipline}
                       onChange={(e) => {
                         setFilterDiscipline(e.target.value);
@@ -281,7 +282,8 @@ const CoachAdminPage: React.FC = () => {
                       ))}
                     </select>
                     <select
-                      className="form-select form-select-sm w-auto"
+                      className="form-select form-select-sm"
+                      style={{ minWidth: 130 }}
                       value={filterTeam}
                       onChange={(e) => setFilterTeam(e.target.value)}
                       disabled={!filterDiscipline}

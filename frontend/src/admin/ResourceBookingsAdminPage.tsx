@@ -151,6 +151,13 @@ export default function ResourceBookingsAdminPage() {
   const [bookEditId, setBookEditId] = useState<number | null>(null);
   const [bookLoading, setBookLoading] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [mobileDayIdx, setMobileDayIdx] = useState(() => {
+    const d = new Date();
+    const dow = d.getDay();
+    return dow === 0 ? 6 : dow - 1; // 0=Mon…6=Sun
+  });
+
   const [msg, setMsg] = useState<{
     type: "success" | "error";
     text: string;
@@ -173,6 +180,11 @@ export default function ResourceBookingsAdminPage() {
     }
     return days;
   }, [weekStart]);
+
+  // Mobile: only show selected day; desktop: show all 7 days
+  const displayDayIndices = isMobile
+    ? [mobileDayIdx]
+    : weekDays.map((_, i) => i);
 
   // ── Data loading ────────────────────────────────────────────────────────────
   const loadLocations = async () => {
@@ -221,6 +233,12 @@ export default function ResourceBookingsAdminPage() {
   useEffect(() => {
     loadBookings();
   }, [selectedLocationId, weekStart]);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   // ── Slot helpers ────────────────────────────────────────────────────────────
 
@@ -568,6 +586,48 @@ export default function ResourceBookingsAdminPage() {
         </div>
       )}
 
+      {/* Mobile day selector */}
+      {isMobile && selectedLocationId !== null && (
+        <div className="d-flex align-items-center gap-1 mb-2">
+          <button
+            className="btn btn-sm btn-outline-secondary flex-shrink-0"
+            onClick={() => setMobileDayIdx((i) => Math.max(0, i - 1))}
+            aria-label={t("resbk.prev_week")}
+          >
+            ‹
+          </button>
+          <div className="d-flex gap-1 flex-nowrap overflow-auto flex-grow-1">
+            {weekDays.map((day, idx) => (
+              <button
+                key={idx}
+                className={`btn btn-sm flex-shrink-0 ${
+                  mobileDayIdx === idx ? "btn-primary" : "btn-outline-secondary"
+                }`}
+                onClick={() => setMobileDayIdx(idx)}
+                style={{ minWidth: 52, lineHeight: 1.2, padding: "4px 6px" }}
+              >
+                <div style={{ fontSize: "0.7rem", fontWeight: 600 }}>
+                  {t(`res.day_${DAY_KEYS[idx]}`)}
+                </div>
+                <div style={{ fontSize: "0.62rem", opacity: 0.8 }}>
+                  {day.toLocaleDateString([], {
+                    day: "2-digit",
+                    month: "2-digit",
+                  })}
+                </div>
+              </button>
+            ))}
+          </div>
+          <button
+            className="btn btn-sm btn-outline-secondary flex-shrink-0"
+            onClick={() => setMobileDayIdx((i) => Math.min(6, i + 1))}
+            aria-label={t("resbk.next_week")}
+          >
+            ›
+          </button>
+        </div>
+      )}
+
       {/* Slot grid */}
       {selectedLocationId === null ? (
         <div className="alert alert-info">
@@ -588,7 +648,7 @@ export default function ResourceBookingsAdminPage() {
             style={{
               borderCollapse: "separate",
               borderSpacing: 0,
-              minWidth: 720,
+              minWidth: isMobile ? undefined : 720,
             }}
           >
             {/* Sticky header */}
@@ -612,38 +672,41 @@ export default function ResourceBookingsAdminPage() {
                 >
                   {t("resbk.time_col")}
                 </th>
-                {weekDays.map((day, idx) => (
-                  <th
-                    key={idx}
-                    className="text-center"
-                    style={{
-                      position: "sticky",
-                      top: 0,
-                      zIndex: 2,
-                      background: "#212529",
-                      color: "#fff",
-                      minWidth: 100,
-                      padding: "4px 6px",
-                      borderBottom: "2px solid #495057",
-                    }}
-                  >
-                    <div style={{ fontWeight: 600, fontSize: "0.8rem" }}>
-                      {t(`res.day_${DAY_KEYS[idx]}`)}
-                    </div>
-                    <div style={{ fontSize: "0.7rem", opacity: 0.75 }}>
-                      {day.toLocaleDateString([], {
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
-                    </div>
-                  </th>
-                ))}
+                {displayDayIndices.map((idx) => {
+                  const day = weekDays[idx];
+                  return (
+                    <th
+                      key={idx}
+                      className="text-center"
+                      style={{
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 2,
+                        background: "#212529",
+                        color: "#fff",
+                        minWidth: isMobile ? 140 : 100,
+                        padding: "4px 6px",
+                        borderBottom: "2px solid #495057",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, fontSize: "0.8rem" }}>
+                        {t(`res.day_${DAY_KEYS[idx]}`)}
+                      </div>
+                      <div style={{ fontSize: "0.7rem", opacity: 0.75 }}>
+                        {day.toLocaleDateString([], {
+                          day: "2-digit",
+                          month: "2-digit",
+                        })}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
 
             <tbody>
               {Array.from({ length: SLOT_COUNT }, (_, slotIdx) => (
-                <tr key={slotIdx} style={{ height: 34 }}>
+                <tr key={slotIdx} style={{ height: isMobile ? 44 : 34 }}>
                   {/* Sticky time label */}
                   <td
                     style={{
@@ -664,7 +727,8 @@ export default function ResourceBookingsAdminPage() {
                   </td>
 
                   {/* Day cells */}
-                  {weekDays.map((day, dayIdx) => {
+                  {displayDayIndices.map((dayIdx) => {
+                    const day = weekDays[dayIdx];
                     const bk = getBookingForSlot(dayIdx, slotIdx);
                     const isFirst = bk
                       ? isFirstDisplayedSlot(bk, day, slotIdx)
@@ -750,7 +814,7 @@ export default function ResourceBookingsAdminPage() {
             tabIndex={-1}
             style={{ zIndex: 1050 }}
           >
-            <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div className="modal-dialog modal-lg modal-fullscreen-sm-down modal-dialog-centered modal-dialog-scrollable">
               <div
                 className="modal-content border-0 shadow-lg"
                 style={{ borderRadius: 12, overflow: "hidden" }}
@@ -1149,7 +1213,7 @@ export default function ResourceBookingsAdminPage() {
 
                   {/* ── Footer ── */}
                   <div
-                    className="modal-footer border-0"
+                    className="modal-footer border-0 flex-wrap"
                     style={{
                       background: "#f8f9fa",
                       padding: "16px 24px",

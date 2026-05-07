@@ -140,7 +140,7 @@ const DisciplineAdminPage: React.FC = () => {
       {error && <div className="alert alert-danger mb-3">{error}</div>}
       <div className="row justify-content-center">
         {canModify ? (
-          <div className="col-md-4 mb-3">
+          <div className="col-lg-4 mb-3">
             <div className="card shadow-sm h-100">
               <div className="card-body admin-max-height">
                 <h4 className="mb-3">
@@ -164,7 +164,7 @@ const DisciplineAdminPage: React.FC = () => {
             </div>
           </div>
         ) : null}
-        <div className="col-md-8">
+        <div className="col-lg-8">
           <ReusableAdminTable
             columns={disciplineColumns}
             data={disciplines}

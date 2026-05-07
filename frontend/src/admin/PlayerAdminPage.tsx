@@ -266,7 +266,7 @@ export const PlayerAdminPage: React.FC = () => {
     <div className="container-fluid py-3 admin-min-height">
       {error && <div className="alert alert-danger mb-3">{error}</div>}
       <div className="row justify-content-center">
-        <div className="col-md-4 mb-3">
+        <div className="col-lg-4 mb-3">
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <h4 className="mb-3">
@@ -305,14 +305,14 @@ export const PlayerAdminPage: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="col-md-8 mb-3">
+        <div className="col-lg-8 mb-3">
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
                 <h4 className="mb-0 me-auto">{t("pl.page_title")}</h4>
                 <select
                   className="form-select form-select-sm"
-                  style={{ width: "auto" }}
+                  style={{ minWidth: 130 }}
                   value={filterDiscipline}
                   onChange={(e) => {
                     setFilterDiscipline(e.target.value);
@@ -328,7 +328,7 @@ export const PlayerAdminPage: React.FC = () => {
                 </select>
                 <select
                   className="form-select form-select-sm"
-                  style={{ width: "auto" }}
+                  style={{ minWidth: 130 }}
                   value={filterTeam}
                   onChange={(e) => setFilterTeam(e.target.value)}
                   disabled={!filterDiscipline}
@@ -355,39 +355,37 @@ export const PlayerAdminPage: React.FC = () => {
               {loading ? (
                 <div>{t("loading")}</div>
               ) : (
-                <div className="admin-min-width">
-                  <ReusableAdminTable
-                    columns={playerColumns}
-                    data={filteredPlayers}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    renderCell={(row, col) => {
-                      if (col.key === "photo_url") {
-                        return row.photo_url ? (
-                          <img
-                            src={row.photo_url}
-                            alt="Player"
-                            className="admin-img-thumb"
-                          />
-                        ) : (
-                          <span className="admin-no-photo">
-                            {t("pl.no_photo")}
+                <ReusableAdminTable
+                  columns={playerColumns}
+                  data={filteredPlayers}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  renderCell={(row, col) => {
+                    if (col.key === "photo_url") {
+                      return row.photo_url ? (
+                        <img
+                          src={row.photo_url}
+                          alt="Player"
+                          className="admin-img-thumb"
+                        />
+                      ) : (
+                        <span className="admin-no-photo">
+                          {t("pl.no_photo")}
+                        </span>
+                      );
+                    }
+                    if (col.key === "team") {
+                      return (
+                        row.team || (
+                          <span className="admin-no-teams">
+                            {t("pl.no_team")}
                           </span>
-                        );
-                      }
-                      if (col.key === "team") {
-                        return (
-                          row.team || (
-                            <span className="admin-no-teams">
-                              {t("pl.no_team")}
-                            </span>
-                          )
-                        );
-                      }
-                      return row[col.key];
-                    }}
-                  />
-                </div>
+                        )
+                      );
+                    }
+                    return row[col.key];
+                  }}
+                />
               )}
             </div>
           </div>

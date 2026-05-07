@@ -150,7 +150,7 @@ export const TeamAdminPage: React.FC = () => {
     <div className="container-fluid py-3 admin-min-height">
       {error && <div className="alert alert-danger mb-3">{error}</div>}
       <div className="row justify-content-center">
-        <div className="col-md-4 mb-3">
+        <div className="col-lg-4 mb-3">
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <h4 className="mb-3">
@@ -185,13 +185,14 @@ export const TeamAdminPage: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="col-md-8 mb-3">
+        <div className="col-lg-8 mb-3">
           <div className="card shadow-sm h-100">
             <div className="card-body admin-max-height">
               <h4 className="mb-3">Teams</h4>
               <div className="d-flex gap-2 mb-3 flex-wrap align-items-end">
                 <select
-                  className="form-select form-select-sm w-auto"
+                  className="form-select form-select-sm"
+                  style={{ minWidth: 130 }}
                   value={filterDiscipline}
                   onChange={(e) => setFilterDiscipline(e.target.value)}
                 >
@@ -214,20 +215,18 @@ export const TeamAdminPage: React.FC = () => {
               {loading ? (
                 <div>Loading...</div>
               ) : (
-                <div className="admin-min-width">
-                  <ReusableAdminTable
-                    columns={teamColumns}
-                    data={
-                      filterDiscipline
-                        ? teams.filter(
-                            (t: any) => t.discipline === filterDiscipline,
-                          )
-                        : teams
-                    }
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                </div>
+                <ReusableAdminTable
+                  columns={teamColumns}
+                  data={
+                    filterDiscipline
+                      ? teams.filter(
+                          (t: any) => t.discipline === filterDiscipline,
+                        )
+                      : teams
+                  }
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
               )}
             </div>
           </div>
