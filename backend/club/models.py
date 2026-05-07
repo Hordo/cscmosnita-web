@@ -433,3 +433,55 @@ class TeamPhoto(models.Model):
 
     def __str__(self):
         return f"Photo for {self.team.name} (#{self.id})"
+
+
+
+
+# ── Resource Locations & Bookings ─────────────────────────────────────────────
+
+class Location(models.Model):
+    name = models.CharField(max_length=200)
+    name_en = models.CharField(max_length=200, blank=True, null=True)
+    description = models.TextField(blank=True, null=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class ResourceBooking(models.Model):
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='bookings')
+    discipline = models.ForeignKey('Discipline', on_delete=models.SET_NULL, null=True, blank=True)
+    team = models.ForeignKey('Team', on_delete=models.SET_NULL, null=True, blank=True)
+    start_datetime = models.DateTimeField()
+    end_datetime = models.DateTimeField()
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    # New fields for recurrence and external bookings
+    is_external = models.BooleanField(default=False)
+    external_organizer = models.CharField(max_length=200, blank=True, null=True)
+    recurrence_type = models.CharField(
+        max_length=16,
+        choices=[
+            ('daily', 'Daily'),
+            ('weekly', 'Weekly'),
+            ('biweekly', 'Biweekly'),
+            ('monthly', 'Monthly'),
+        ],
+        blank=True,
+        null=True
+    )
+    recurrence_group = models.UUIDField(blank=True, null=True, db_index=True)
+
+    class Meta:
+        ordering = ['start_datetime']
+
+    def __str__(self):
+        if self.is_external:
+            label = self.external_organizer or 'External'
+        else:
+            label = self.team.name if self.team else (self.discipline.name if self.discipline else 'Unknown')
+        return f"{self.location.name} - {label}"

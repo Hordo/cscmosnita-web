@@ -984,3 +984,53 @@ class OfficialDocumentViewSet(viewsets.ModelViewSet):
             except (ValueError, TypeError):
                 pass
         return qs.order_by('document_type', 'year', 'order', 'name')
+
+
+# ── Resource Locations & Bookings ─────────────────────────────────────────────
+
+from .models import Location, ResourceBooking
+from .serializers import LocationSerializer, ResourceBookingSerializer
+
+
+class LocationViewSet(viewsets.ModelViewSet):
+    queryset = Location.objects.all()
+    serializer_class = LocationSerializer
+    permission_classes = [IsAccountantAdminOrReadOnly]
+
+
+class ResourceBookingViewSet(viewsets.ModelViewSet):
+    serializer_class = ResourceBookingSerializer
+    permission_classes = [IsAccountantAdminOrReadOnly]
+
+    def get_queryset(self):
+        qs = ResourceBooking.objects.select_related('location', 'discipline', 'team').all()
+        location_id = self.request.query_params.get('location')
+        date_from = self.request.query_params.get('from')
+        date_to = self.request.query_params.get('to')
+        if location_id:
+            qs = qs.filter(location_id=location_id)
+        if date_from:
+            try:
+                qs = qs.filter(end_datetime__gte=date_from)
+            except (ValueError, TypeError):
+                pass
+        if date_to:
+            try:
+                qs = qs.filter(start_datetime__lte=date_to)
+            except (ValueError, TypeError):
+                pass
+        return qs.order_by('start_datetime')
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        If ?scope=series and instance has recurrence_group, delete all in group.
+        Otherwise, delete single instance.
+        """
+        instance = self.get_object()
+        scope = request.query_params.get('scope')
+        if scope == 'series' and instance.recurrence_group:
+            group = instance.recurrence_group
+            count, _ = ResourceBooking.objects.filter(recurrence_group=group).delete()
+            from rest_framework.response import Response
+            return Response({'deleted': count}, status=200)
+        return super().destroy(request, *args, **kwargs)

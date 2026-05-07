@@ -10,7 +10,8 @@ from .views import (
     RegisterView, VerifyEmailView,
     UserListView, UserRoleViewSet,
     TeamPhotoViewSet,
-    OfficialDocumentViewSet
+    OfficialDocumentViewSet,
+    LocationViewSet, ResourceBookingViewSet
 )
 from .signed_upload import (
     GeneratePlayerPhotoUploadURL, GenerateTeamPhotoUploadURL, GenerateCoachPhotoUploadURL,
@@ -45,6 +46,8 @@ router.register(r'team-photos', TeamPhotoViewSet, basename='team-photos')
 
 # Official Documents endpoint
 router.register(r'official-documents', OfficialDocumentViewSet, basename='official-documents')
+router.register(r'resource-locations', LocationViewSet, basename='resource-locations')
+router.register(r'resource-bookings', ResourceBookingViewSet, basename='resource-bookings')
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -37,4 +37,6 @@ export const API_URLS = {
   uploadTeamGalleryPhoto: `${API_BASE}/api/upload/team-gallery-photo/`,
   officialDocuments: `${API_BASE}/api/official-documents/`,
   uploadOfficialDocument: `${API_BASE}/api/upload/official-document/`,
+  resourceLocations: `${API_BASE}/api/resource-locations/`,
+  resourceBookings: `${API_BASE}/api/resource-bookings/`,
 };

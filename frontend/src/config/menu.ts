@@ -73,6 +73,11 @@ export const menuConfig: MenuItem[] = [
           path: "/admin/official-documents",
           accountantAccessible: true,
         },
+        {
+          label: "menu.manage_resources",
+          path: "/admin/resources",
+          accountantAccessible: true,
+        },
       ],
       [
         { label: "menu.calendar", path: "/admin/calendar" },

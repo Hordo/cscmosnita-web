@@ -36,7 +36,9 @@ import VerifyEmail from "../pages/VerifyEmail";
 import TeamGalleryAdminPage from "../admin/TeamGalleryAdminPage";
 import { TeamGalleryPage } from "../pages/TeamGalleryPage";
 import TransparentaPage from "../pages/TransparentaPage";
+
 import OfficialDocumentsAdminPage from "../admin/OfficialDocumentsAdminPage";
+import ResourcesAdminPage from "../admin/ResourcesAdminPage";
 
 const router = createBrowserRouter([
   {
@@ -108,6 +110,10 @@ const router = createBrowserRouter([
           {
             path: "official-documents",
             element: <OfficialDocumentsAdminPage />,
+          },
+          {
+            path: "resources",
+            element: <ResourcesAdminPage />,
           },
         ],
       },

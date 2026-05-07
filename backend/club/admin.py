@@ -65,3 +65,19 @@ class UserRoleAdmin(admin.ModelAdmin):
     list_display = ('user', 'role', 'discipline')
     list_filter = ('role', 'discipline')
     search_fields = ('user__username', 'discipline__name')
+
+
+# --- Resource Locations & Bookings Admin ---
+from .models import Location, ResourceBooking
+
+@admin.register(Location)
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'name_en', 'order')
+    search_fields = ('name',)
+    list_editable = ('order',)
+
+@admin.register(ResourceBooking)
+class ResourceBookingAdmin(admin.ModelAdmin):
+    list_display = ('location', 'discipline', 'team', 'start_datetime', 'end_datetime')
+    list_filter = ('location', 'discipline')
+    search_fields = ('location__name', 'team__name', 'discipline__name')

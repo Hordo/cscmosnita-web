@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, Location, ResourceBooking
 # --- Team Photo Gallery ---
 class TeamPhotoSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.SerializerMethodField(read_only=True)
@@ -554,3 +554,102 @@ class OfficialDocumentSerializer(serializers.ModelSerializer):
         model = OfficialDocument
         fields = ['id', 'name', 'year', 'document_type', 'file_url', 'order', 'is_available', 'created_at', 'updated_at']
         read_only_fields = ['id', 'is_available', 'created_at', 'updated_at']
+
+
+# ── Resource Locations & Bookings ─────────────────────────────────────────────
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = ['id', 'name', 'name_en', 'description', 'order']
+
+
+class ResourceBookingSerializer(serializers.ModelSerializer):
+    location_name = serializers.SerializerMethodField(read_only=True)
+    discipline_name = serializers.SerializerMethodField(read_only=True)
+    team_name = serializers.SerializerMethodField(read_only=True)
+    location_id = serializers.PrimaryKeyRelatedField(
+        queryset=Location.objects.all(), source='location'
+    )
+    discipline_id = serializers.PrimaryKeyRelatedField(
+        queryset=Discipline.objects.all(), source='discipline',
+        required=False, allow_null=True
+    )
+    team_id = serializers.PrimaryKeyRelatedField(
+        queryset=Team.objects.all(), source='team',
+        required=False, allow_null=True
+    )
+    is_external = serializers.BooleanField(required=False)
+    external_organizer = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=200)
+    recurrence_type = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=16)
+    recurrence_group = serializers.UUIDField(read_only=True)
+    recurrence_end_date = serializers.DateField(write_only=True, required=False, allow_null=True)
+
+    class Meta:
+        model = ResourceBooking
+        fields = [
+            'id', 'location_id', 'location_name',
+            'discipline_id', 'discipline_name',
+            'team_id', 'team_name',
+            'start_datetime', 'end_datetime', 'notes', 'created_at',
+            'is_external', 'external_organizer',
+            'recurrence_type', 'recurrence_group', 'recurrence_end_date',
+        ]
+        read_only_fields = ['created_at', 'recurrence_group']
+
+    def get_location_name(self, obj):
+        return obj.location.name if obj.location else None
+
+    def get_discipline_name(self, obj):
+        return obj.discipline.name if obj.discipline else None
+
+    def get_team_name(self, obj):
+        return obj.team.name if obj.team else None
+
+    def create(self, validated_data):
+        from uuid import uuid4
+        from dateutil import rrule
+        import datetime
+
+        recurrence_type = validated_data.pop('recurrence_type', None)
+        recurrence_end_date = validated_data.pop('recurrence_end_date', None)
+        # If not recurring, just create as normal
+        if not recurrence_type or not recurrence_end_date:
+            return super().create(validated_data)
+
+        # Recurrence logic
+        start_dt = validated_data['start_datetime']
+        end_dt = validated_data['end_datetime']
+        duration = end_dt - start_dt
+        group_uuid = uuid4()
+
+        # Map recurrence_type to rrule
+        freq_map = {
+            'daily': rrule.DAILY,
+            'weekly': rrule.WEEKLY,
+            'biweekly': rrule.WEEKLY,
+            'monthly': rrule.MONTHLY,
+        }
+        interval = 2 if recurrence_type == 'biweekly' else 1
+        freq = freq_map.get(recurrence_type)
+        if not freq:
+            raise serializers.ValidationError({'recurrence_type': 'Invalid recurrence type.'})
+
+        # Generate all start datetimes
+        # Only use the date part of recurrence_end_date, but keep the time from start_dt
+        until_dt = start_dt.replace(
+            year=recurrence_end_date.year,
+            month=recurrence_end_date.month,
+            day=recurrence_end_date.day,
+        )
+        rule = rrule.rrule(freq, dtstart=start_dt, until=until_dt, interval=interval)
+        bookings = []
+        for dt in rule:
+            booking_data = dict(validated_data)
+            booking_data['start_datetime'] = dt
+            booking_data['end_datetime'] = dt + duration
+            booking_data['recurrence_type'] = recurrence_type
+            booking_data['recurrence_group'] = group_uuid
+            bookings.append(ResourceBooking(**booking_data))
+        ResourceBooking.objects.bulk_create(bookings)
+        return ResourceBooking.objects.filter(recurrence_group=group_uuid).order_by('start_datetime').first()
