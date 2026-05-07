@@ -2,9 +2,9 @@ import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 
 export interface AdminRole {
-  role: "head_admin" | "coach_admin";
-  discipline_id: number;
-  discipline_name: string;
+  role: "head_admin" | "coach_admin" | "accountant_admin";
+  discipline_id: number | null;
+  discipline_name: string | null;
   team_id: number | null;
   team_name: string | null;
 }
@@ -27,6 +27,7 @@ type AuthContextType = {
   isAnyAdmin: () => boolean;
   isHeadAdmin: (disciplineId?: number) => boolean;
   isCoachAdmin: (disciplineId?: number) => boolean;
+  isAccountantAdmin: () => boolean;
   getAdminDisciplines: (minRole?: "head_admin" | "coach_admin") => AdminRole[];
   hasAdminAccess: (
     disciplineId: number,
@@ -38,6 +39,11 @@ type AuthContextType = {
    * Returns [] if no matching roles.
    */
   getCoachTeamIds: (disciplineId?: number) => number[] | null;
+};
+const isAccountantAdmin = () => {
+  if (!user) return false;
+  if (user.is_superuser) return true;
+  return (user.admin_roles ?? []).some((r) => r.role === "accountant_admin");
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -167,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAnyAdmin,
         isHeadAdmin,
         isCoachAdmin,
+        isAccountantAdmin,
         getAdminDisciplines,
         hasAdminAccess,
         getCoachTeamIds,

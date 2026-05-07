@@ -370,10 +370,11 @@ class UserRole(models.Model):
     ROLE_CHOICES = [
         ('head_admin', 'Head Admin'),
         ('coach_admin', 'Coach Admin'),
+        ('accountant_admin', 'Accountant Admin'),
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='club_roles')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE, related_name='user_roles')
+    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE, related_name='user_roles', null=True, blank=True)
     team = models.ForeignKey(
         'Team', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='user_roles',
@@ -385,7 +386,8 @@ class UserRole(models.Model):
 
     def __str__(self):
         team_str = f" ({self.team.name})" if self.team else ""
-        return f"{self.user.username} - {self.role} - {self.discipline.name}{team_str}"
+        discipline_str = self.discipline.name if self.discipline else "No Discipline"
+        return f"{self.user.username} - {self.role} - {discipline_str}{team_str}"
 
 
 class TeamPhoto(models.Model):

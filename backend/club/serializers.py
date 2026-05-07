@@ -487,7 +487,7 @@ class SponsorSerializer(serializers.ModelSerializer):
 from django.contrib.auth.models import User
 
 class UserRoleSerializer(serializers.ModelSerializer):
-    discipline_name = serializers.CharField(source='discipline.name', read_only=True)
+    discipline_name = serializers.SerializerMethodField()
     username = serializers.CharField(source='user.username', read_only=True)
     team_name = serializers.SerializerMethodField()
 
@@ -495,18 +495,44 @@ class UserRoleSerializer(serializers.ModelSerializer):
         from .models import UserRole
         model = UserRole
         fields = ['id', 'user', 'username', 'role', 'discipline', 'discipline_name', 'team', 'team_name']
-        extra_kwargs = {'user': {'required': True}}
+        extra_kwargs = {
+            'user': {'required': True},
+            'discipline': {'required': False, 'allow_null': True},
+        }
+
+    def get_discipline_name(self, obj):
+        return obj.discipline.name if obj.discipline else None
 
     def get_team_name(self, obj):
         return obj.team.name if obj.team else None
 
     def validate(self, attrs):
+        from .models import UserRole
+        role = attrs.get('role')
         team = attrs.get('team')
         discipline = attrs.get('discipline')
-        if team and discipline and team.discipline_id != discipline.id:
-            raise serializers.ValidationError(
-                {'team': 'The selected team does not belong to the selected discipline.'}
-            )
+
+        if role == 'accountant_admin':
+            attrs['discipline'] = None
+            attrs['team'] = None
+            user = attrs.get('user')
+            qs = UserRole.objects.filter(user=user, role='accountant_admin')
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {'role': 'This user already has an accountant_admin role.'}
+                )
+        else:
+            if not discipline:
+                raise serializers.ValidationError(
+                    {'discipline': 'Discipline is required for this role.'}
+                )
+            if team and discipline and team.discipline_id != discipline.id:
+                raise serializers.ValidationError(
+                    {'team': 'The selected team does not belong to the selected discipline.'}
+                )
+
         return attrs
 
 

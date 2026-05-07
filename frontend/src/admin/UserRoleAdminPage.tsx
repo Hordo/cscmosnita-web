@@ -13,9 +13,9 @@ interface RoleEntry {
   id: number;
   user: number;
   username: string;
-  role: "head_admin" | "coach_admin";
-  discipline: number;
-  discipline_name: string;
+  role: "head_admin" | "coach_admin" | "accountant_admin";
+  discipline: number | null;
+  discipline_name: string | null;
 }
 
 interface UserEntry {
@@ -46,9 +46,9 @@ export default function UserRoleAdminPage() {
 
   // Per-row add-role form state
   const [addingForUser, setAddingForUser] = useState<number | null>(null);
-  const [newRole, setNewRole] = useState<"head_admin" | "coach_admin">(
-    "head_admin",
-  );
+  const [newRole, setNewRole] = useState<
+    "head_admin" | "coach_admin" | "accountant_admin"
+  >("head_admin");
   const [newDiscipline, setNewDiscipline] = useState<number | "">("");
   const [newTeam, setNewTeam] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
@@ -93,11 +93,16 @@ export default function UserRoleAdminPage() {
   };
 
   const handleAddRole = async (userId: number) => {
-    if (!newDiscipline) return;
+    if (newRole !== "accountant_admin" && !newDiscipline) return;
     setSaving(true);
     setSaveError(null);
     try {
-      if (newRole === "coach_admin" && newTeam.length > 0) {
+      if (newRole === "accountant_admin") {
+        await axios.post(API_URLS.adminUserRoles, {
+          user: userId,
+          role: newRole,
+        });
+      } else if (newRole === "coach_admin" && newTeam.length > 0) {
         await Promise.all(
           newTeam.map((teamId) =>
             axios.post(API_URLS.adminUserRoles, {
@@ -172,7 +177,11 @@ export default function UserRoleAdminPage() {
         coaches, players, matches, tournaments for their discipline
         &nbsp;·&nbsp;
         <span className="badge bg-info text-dark me-2">Coach Admin</span>{" "}
-        manages players, matches, tournaments for their discipline
+        manages players, matches, tournaments for their discipline &nbsp;·&nbsp;
+        <span className="badge bg-warning text-dark me-2">
+          Accountant Admin
+        </span>{" "}
+        can create news articles and upload public documents
       </div>
 
       <div className="table-responsive">
@@ -213,14 +222,25 @@ export default function UserRoleAdminPage() {
                           className={`badge d-inline-flex align-items-center gap-1 ${
                             r.role === "head_admin"
                               ? "bg-primary"
-                              : "bg-info text-dark"
+                              : r.role === "accountant_admin"
+                                ? "bg-warning text-dark"
+                                : "bg-info text-dark"
                           }`}
                         >
-                          {r.role === "head_admin" ? "Head" : "Coach"} ·{" "}
-                          {r.discipline_name}
-                          {(r as any).team_name
-                            ? ` / ${(r as any).team_name}`
-                            : ""}
+                          {r.role === "head_admin"
+                            ? "Head"
+                            : r.role === "accountant_admin"
+                              ? "Accountant"
+                              : "Coach"}
+                          {r.role !== "accountant_admin" && (
+                            <>
+                              {" · "}
+                              {r.discipline_name}
+                              {(r as any).team_name
+                                ? ` / ${(r as any).team_name}`
+                                : ""}
+                            </>
+                          )}
                           <button
                             type="button"
                             className="btn-close btn-close-white ms-1"
@@ -246,31 +266,39 @@ export default function UserRoleAdminPage() {
                           value={newRole}
                           onChange={(e) =>
                             setNewRole(
-                              e.target.value as "head_admin" | "coach_admin",
+                              e.target.value as
+                                | "head_admin"
+                                | "coach_admin"
+                                | "accountant_admin",
                             )
                           }
                         >
                           <option value="head_admin">Head Admin</option>
                           <option value="coach_admin">Coach Admin</option>
+                          <option value="accountant_admin">
+                            Accountant Admin
+                          </option>
                         </select>
-                        <select
-                          className="form-select form-select-sm"
-                          style={{ width: "auto" }}
-                          value={newDiscipline}
-                          onChange={(e) => {
-                            setNewDiscipline(
-                              e.target.value ? Number(e.target.value) : "",
-                            );
-                            setNewTeam([]);
-                          }}
-                        >
-                          <option value="">Discipline…</option>
-                          {disciplines.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              {d.name}
-                            </option>
-                          ))}
-                        </select>
+                        {newRole !== "accountant_admin" && (
+                          <select
+                            className="form-select form-select-sm"
+                            style={{ width: "auto" }}
+                            value={newDiscipline}
+                            onChange={(e) => {
+                              setNewDiscipline(
+                                e.target.value ? Number(e.target.value) : "",
+                              );
+                              setNewTeam([]);
+                            }}
+                          >
+                            <option value="">Discipline…</option>
+                            {disciplines.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                         {newRole === "coach_admin" && newDiscipline && (
                           <div>
                             <div
@@ -325,7 +353,11 @@ export default function UserRoleAdminPage() {
                         )}
                         <button
                           className="btn btn-sm btn-success"
-                          disabled={!newDiscipline || saving}
+                          disabled={
+                            (newRole !== "accountant_admin" &&
+                              !newDiscipline) ||
+                            saving
+                          }
                           onClick={() => handleAddRole(u.id)}
                         >
                           {saving ? "…" : "Save"}
