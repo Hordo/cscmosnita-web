@@ -388,16 +388,10 @@ export default function ResourceBookingsAdminPage() {
     }
   };
 
-  const handleBookDelete = async () => {
+  const handleBookDelete = async (scope?: "series") => {
     if (bookEditId === null) return;
-    const booking = bookings.find((b) => b.id === bookEditId);
-    if (!window.confirm(t("res.confirm_delete_booking"))) return;
     let url = `${API_URLS.resourceBookings}${bookEditId}/`;
-    if (booking?.recurrence_group) {
-      if (window.confirm(t("res.confirm_delete_series"))) {
-        url += "?scope=series";
-      }
-    }
+    if (scope === "series") url += "?scope=series";
     try {
       await api.delete(url);
       flash("success", t("res.ok_booking_deleted"));
@@ -1162,15 +1156,38 @@ export default function ResourceBookingsAdminPage() {
                       gap: 8,
                     }}
                   >
-                    {bookEditId !== null && (
-                      <button
-                        type="button"
-                        className="btn btn-outline-danger btn-sm me-auto d-flex align-items-center gap-1"
-                        onClick={handleBookDelete}
-                      >
-                        🗑 {t("res.btn_delete")}
-                      </button>
-                    )}
+                    {bookEditId !== null &&
+                      (() => {
+                        const editingBooking = bookings.find(
+                          (b) => b.id === bookEditId,
+                        );
+                        return editingBooking?.recurrence_group ? (
+                          <div className="d-flex gap-2 me-auto">
+                            <button
+                              type="button"
+                              className="btn btn-outline-danger btn-sm d-flex align-items-center gap-1"
+                              onClick={() => handleBookDelete()}
+                            >
+                              🗑 {t("res.btn_delete_occurrence")}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-sm d-flex align-items-center gap-1"
+                              onClick={() => handleBookDelete("series")}
+                            >
+                              🗑 {t("res.btn_delete_series")}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn btn-outline-danger btn-sm me-auto d-flex align-items-center gap-1"
+                            onClick={() => handleBookDelete()}
+                          >
+                            🗑 {t("res.btn_delete")}
+                          </button>
+                        );
+                      })()}
                     <button
                       type="button"
                       className="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
