@@ -153,7 +153,7 @@ const CoachAdminPage: React.FC = () => {
   // Auto-set table filter for head admin
   useEffect(() => {
     if (headAdminSingleDiscipline && !filterDiscipline) {
-      setFilterDiscipline(headAdminSingleDiscipline.discipline_name);
+      setFilterDiscipline(headAdminSingleDiscipline.discipline_name ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disciplines]);

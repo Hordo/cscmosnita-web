@@ -66,7 +66,7 @@ export const TeamGalleryAdminPage: React.FC = () => {
   // Auto-set discipline for single-discipline head admin
   useEffect(() => {
     if (headAdminSingleDiscipline && !filterDiscipline) {
-      setFilterDiscipline(headAdminSingleDiscipline.discipline_name);
+      setFilterDiscipline(headAdminSingleDiscipline.discipline_name ?? "");
     }
   }, [disciplines]);
 

@@ -76,7 +76,7 @@ export const PlayerAdminPage: React.FC = () => {
   // Auto-apply filter for head admin once disciplines load
   useEffect(() => {
     if (headAdminSingleDiscipline && !filterDiscipline) {
-      setFilterDiscipline(headAdminSingleDiscipline.discipline_name);
+      setFilterDiscipline(headAdminSingleDiscipline.discipline_name ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disciplines]);

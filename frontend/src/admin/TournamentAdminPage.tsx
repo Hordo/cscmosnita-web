@@ -110,7 +110,13 @@ const TournamentAdminPage: React.FC = () => {
   const adminRoles = getAdminDisciplines();
   const allowedDisciplineIds: number[] | null = isSuperAdmin()
     ? null
-    : [...new Set(adminRoles.map((r) => r.discipline_id))];
+    : [
+        ...new Set(
+          adminRoles
+            .map((r) => r.discipline_id)
+            .filter((id): id is number => id !== null),
+        ),
+      ];
   const visibleDisciplines =
     allowedDisciplineIds === null
       ? disciplines

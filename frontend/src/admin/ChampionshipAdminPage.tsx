@@ -109,10 +109,10 @@ const MatchAdminPage: React.FC = () => {
     setForm((prev) => ({
       ...prev,
       discipline_id:
-        prev.discipline_id || headAdminSingleDiscipline.discipline_name,
+        prev.discipline_id || headAdminSingleDiscipline.discipline_name || "",
     }));
     if (!filterDiscipline) {
-      setFilterDiscipline(headAdminSingleDiscipline.discipline_name);
+      setFilterDiscipline(headAdminSingleDiscipline.discipline_name ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disciplines]);
