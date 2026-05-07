@@ -78,6 +78,11 @@ export const menuConfig: MenuItem[] = [
           path: "/admin/resources",
           accountantAccessible: true,
         },
+        {
+          label: "menu.manage_resource_bookings",
+          path: "/admin/resource-bookings",
+          accountantAccessible: true,
+        },
       ],
       [
         { label: "menu.calendar", path: "/admin/calendar" },
@@ -108,7 +113,7 @@ export const menuConfig: MenuItem[] = [
         {
           label: "menu.manage_sponsors",
           path: "/admin/sponsors",
-          superAdminOnly: true,
+          accountantAccessible: true,
         },
       ],
     ],

@@ -39,6 +39,7 @@ import TransparentaPage from "../pages/TransparentaPage";
 
 import OfficialDocumentsAdminPage from "../admin/OfficialDocumentsAdminPage";
 import ResourcesAdminPage from "../admin/ResourcesAdminPage";
+import ResourceBookingsAdminPage from "../admin/ResourceBookingsAdminPage";
 
 const router = createBrowserRouter([
   {
@@ -114,6 +115,10 @@ const router = createBrowserRouter([
           {
             path: "resources",
             element: <ResourcesAdminPage />,
+          },
+          {
+            path: "resource-bookings",
+            element: <ResourceBookingsAdminPage />,
           },
         ],
       },

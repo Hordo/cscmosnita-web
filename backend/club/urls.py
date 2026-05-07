@@ -8,7 +8,7 @@ from .views import (
     TournamentViewSet, TournamentGroupViewSet, GroupTeamViewSet, TournamentMatchViewSet,
     SponsorViewSet, NewsArticleViewSet,
     RegisterView, VerifyEmailView,
-    UserListView, UserRoleViewSet,
+    UserListView, UserRoleViewSet, SetSuperuserView,
     TeamPhotoViewSet,
     OfficialDocumentViewSet,
     LocationViewSet, ResourceBookingViewSet
@@ -65,4 +65,5 @@ urlpatterns = [
     path('push/', PushSubscriptionView.as_view(), name='push_subscription'),
     path('push/send-notifications/', PushSendNotificationsView.as_view(), name='push_send_notifications'),
     path('admin/users/', UserListView.as_view(), name='admin-users'),
+    path('admin/users/<int:user_id>/set-superuser/', SetSuperuserView.as_view(), name='admin-set-superuser'),
 ]

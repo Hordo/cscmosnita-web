@@ -470,6 +470,7 @@ class ResourceBooking(models.Model):
             ('weekly', 'Weekly'),
             ('biweekly', 'Biweekly'),
             ('monthly', 'Monthly'),
+            ('weekdays', 'Weekdays (Mon-Fri)'),
         ],
         blank=True,
         null=True

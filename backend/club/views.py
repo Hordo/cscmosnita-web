@@ -12,7 +12,8 @@ from .serializers import (
 from .permissions import (
     IsSuperAdminOrReadOnly, IsSuperAdmin, IsAnyAdminOrReadOnly,
     assert_discipline_write_access, assert_super_admin, get_user_admin_discipline_ids, is_any_admin,
-    assert_team_write_access, get_user_admin_team_ids, IsAccountantOrAnyAdminOrReadOnly, is_accountant_admin
+    assert_team_write_access, get_user_admin_team_ids, IsAccountantOrAnyAdminOrReadOnly, is_accountant_admin,
+    IsAccountantAdminOrReadOnly
 )
 from rest_framework.exceptions import PermissionDenied
 
@@ -808,12 +809,12 @@ class TournamentMatchViewSet(viewsets.ModelViewSet):
 class SponsorViewSet(viewsets.ModelViewSet):
     queryset = Sponsor.objects.all()
     serializer_class = SponsorSerializer
-    permission_classes = [IsSuperAdminOrReadOnly]
+    permission_classes = [IsAccountantAdminOrReadOnly]
 
     def get_queryset(self):
         qs = Sponsor.objects.all()
-        # Show all sponsors to super admins
-        if self.request.user and self.request.user.is_superuser:
+        # Show all sponsors to super admins and accountant admins
+        if self.request.user and (self.request.user.is_superuser or is_accountant_admin(self.request.user)):
             return qs.order_by('order', 'name')
         # Unauthenticated users only see active sponsors
         if not (self.request.user and self.request.user.is_authenticated):
@@ -853,6 +854,33 @@ class UserRoleViewSet(viewsets.ModelViewSet):
         if user_id:
             qs = qs.filter(user_id=user_id)
         return qs
+
+
+class SetSuperuserView(APIView):
+    """Superuser-only: promote or demote another user's is_superuser flag."""
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request, user_id):
+        try:
+            target = DjangoUser.objects.get(pk=user_id)
+        except DjangoUser.DoesNotExist:
+            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if target.pk == request.user.pk:
+            return Response(
+                {'detail': 'You cannot change your own superuser status.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        make_super = bool(request.data.get('is_superuser', False))
+        target.is_superuser = make_super
+        # is_staff must be True for superusers; keep it if already True when demoting
+        if make_super:
+            target.is_staff = True
+        target.save(update_fields=['is_superuser', 'is_staff'])
+
+        serializer = UserWithRolesSerializer(target)
+        return Response(serializer.data)
 
 
 # ── Push Subscription View ────────────────────────────────────────────────────

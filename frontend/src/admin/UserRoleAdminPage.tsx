@@ -29,7 +29,7 @@ interface UserEntry {
 }
 
 export default function UserRoleAdminPage() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, user: currentUser } = useAuth();
 
   // Guard: only super admins can access this page
   if (!isSuperAdmin()) {
@@ -146,6 +146,27 @@ export default function UserRoleAdminPage() {
     }
   };
 
+  const handleToggleSuperuser = async (userId: number, makeSuper: boolean) => {
+    const msg = makeSuper
+      ? "Grant Super Admin access to this user?"
+      : "Remove Super Admin access from this user?";
+    if (!window.confirm(msg)) return;
+    try {
+      const updated = await axios.post(API_URLS.adminUserSetSuperuser(userId), {
+        is_superuser: makeSuper,
+      });
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === userId
+            ? { ...u, is_superuser: updated.data.is_superuser, is_staff: updated.data.is_staff }
+            : u,
+        ),
+      );
+    } catch (e: any) {
+      alert(e?.response?.data?.detail ?? "Failed to update superuser status.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="container py-4">
@@ -255,8 +276,15 @@ export default function UserRoleAdminPage() {
                   )}
                 </td>
                 <td>
-                  {u.is_superuser ? (
-                    <span className="text-muted fst-italic">—</span>
+                  {u.is_superuser && u.id === currentUser?.user_id ? (
+                    <span className="text-muted fst-italic">— (you)</span>
+                  ) : u.is_superuser ? (
+                    <button
+                      className="btn btn-sm btn-outline-danger"
+                      onClick={() => handleToggleSuperuser(u.id, false)}
+                    >
+                      Remove Super Admin
+                    </button>
                   ) : addingForUser === u.id ? (
                     <div className="d-flex flex-column gap-2">
                       <div className="d-flex gap-2 flex-wrap align-items-center">
@@ -374,12 +402,20 @@ export default function UserRoleAdminPage() {
                       )}
                     </div>
                   ) : (
-                    <button
-                      className="btn btn-sm btn-outline-primary"
-                      onClick={() => openAddRole(u.id)}
-                    >
-                      + Add Role
-                    </button>
+                    <div className="d-flex gap-2 flex-wrap">
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => openAddRole(u.id)}
+                      >
+                        + Add Role
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleToggleSuperuser(u.id, true)}
+                      >
+                        Make Super Admin
+                      </button>
+                    </div>
                   )}
                 </td>
               </tr>

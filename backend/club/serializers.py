@@ -623,12 +623,25 @@ class ResourceBookingSerializer(serializers.ModelSerializer):
         duration = end_dt - start_dt
         group_uuid = uuid4()
 
+        # For weekdays recurrence, snap start_dt to the Monday of its week
+        if recurrence_type == 'weekdays':
+            weekday = start_dt.weekday()  # 0=Monday … 6=Sunday
+            if weekday <= 4:  # Mon–Fri: go back to Monday of this week
+                start_dt = start_dt - datetime.timedelta(days=weekday)
+            elif weekday == 5:  # Saturday: go forward to next Monday
+                start_dt = start_dt + datetime.timedelta(days=2)
+            else:  # Sunday: go forward to next Monday
+                start_dt = start_dt + datetime.timedelta(days=1)
+            validated_data['start_datetime'] = start_dt
+            validated_data['end_datetime'] = start_dt + duration
+
         # Map recurrence_type to rrule
         freq_map = {
             'daily': rrule.DAILY,
             'weekly': rrule.WEEKLY,
             'biweekly': rrule.WEEKLY,
             'monthly': rrule.MONTHLY,
+            'weekdays': rrule.DAILY,
         }
         interval = 2 if recurrence_type == 'biweekly' else 1
         freq = freq_map.get(recurrence_type)
@@ -642,7 +655,8 @@ class ResourceBookingSerializer(serializers.ModelSerializer):
             month=recurrence_end_date.month,
             day=recurrence_end_date.day,
         )
-        rule = rrule.rrule(freq, dtstart=start_dt, until=until_dt, interval=interval)
+        byweekday = [rrule.MO, rrule.TU, rrule.WE, rrule.TH, rrule.FR] if recurrence_type == 'weekdays' else None
+        rule = rrule.rrule(freq, dtstart=start_dt, until=until_dt, interval=interval, byweekday=byweekday)
         bookings = []
         for dt in rule:
             booking_data = dict(validated_data)
