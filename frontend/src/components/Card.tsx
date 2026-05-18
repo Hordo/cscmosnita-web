@@ -14,6 +14,8 @@ export type CardProps = {
   badgesOnImage?: boolean;
   /** Phone number shown inside the card content */
   phone?: string;
+  /** Medal counts to display as a badge (individual sport players) */
+  medals?: { gold?: number; silver?: number; bronze?: number };
 };
 
 export const Card: React.FC<CardProps> = ({
@@ -26,7 +28,13 @@ export const Card: React.FC<CardProps> = ({
   status = "active",
   badgesOnImage = false,
   phone,
+  medals,
 }) => {
+  const hasMedals =
+    medals &&
+    ((medals.gold ?? 0) > 0 ||
+      (medals.silver ?? 0) > 0 ||
+      (medals.bronze ?? 0) > 0);
   return (
     <div className={`enhanced-card ${className}`} data-status={status}>
       <div className="card-image-container">
@@ -84,6 +92,26 @@ export const Card: React.FC<CardProps> = ({
         {phone && (
           <div className="card-phone">
             <a href={`tel:${phone}`}>📞 {phone}</a>
+          </div>
+        )}
+
+        {hasMedals && (
+          <div className="card-medals" aria-label="Medals">
+            {(medals!.gold ?? 0) > 0 && (
+              <span className="card-medal-item">
+                🥇 <span>{medals!.gold}</span>
+              </span>
+            )}
+            {(medals!.silver ?? 0) > 0 && (
+              <span className="card-medal-item">
+                🥈 <span>{medals!.silver}</span>
+              </span>
+            )}
+            {(medals!.bronze ?? 0) > 0 && (
+              <span className="card-medal-item">
+                🥉 <span>{medals!.bronze}</span>
+              </span>
+            )}
           </div>
         )}
 

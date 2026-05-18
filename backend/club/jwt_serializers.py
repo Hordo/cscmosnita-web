@@ -42,7 +42,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         try:
             roles = list(
                 user.club_roles.select_related("discipline", "team").values(
-                    "role", "discipline_id", "discipline__name", "team_id", "team__name"
+                    "role", "discipline_id", "discipline__name",
+                    "discipline__discipline_type", "team_id", "team__name"
                 )
             )
         except Exception:
@@ -52,6 +53,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 "role": r["role"],
                 "discipline_id": r["discipline_id"],
                 "discipline_name": r["discipline__name"],
+                "discipline_type": r["discipline__discipline_type"],
                 "team_id": r["team_id"],
                 "team_name": r["team__name"],
             }

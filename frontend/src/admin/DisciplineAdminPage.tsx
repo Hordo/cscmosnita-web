@@ -23,6 +23,12 @@ const disciplineColumns = [
     render: (row: any) => truncate(row.description_en),
   },
   {
+    key: "discipline_type",
+    label: "Type",
+    render: (row: any) =>
+      row.discipline_type === "individual" ? "Individual" : "Team",
+  },
+  {
     key: "head_coach",
     label: "Head Coach",
     render: (row: any) =>
@@ -121,6 +127,19 @@ const DisciplineAdminPage: React.FC = () => {
       type: "textarea",
       required: false,
       translateFrom: "description",
+    },
+    {
+      name: "discipline_type",
+      label: "Sport Type",
+      type: "select",
+      required: false,
+      options: [
+        { value: "team", label: "Team Sport (football, basketball…)" },
+        {
+          value: "individual",
+          label: "Individual Sport (karate, chess, athletics…)",
+        },
+      ],
     },
     {
       name: "head_coach_id",

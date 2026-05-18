@@ -7,6 +7,8 @@ export type MenuItem = {
   superAdminOnly?: boolean; // only superusers see this
   headAdminOnly?: boolean; // only head_admin or superuser see this
   accountantAccessible?: boolean; // visible to pure accountant admins (accountant-only, no other admin role)
+  teamSportOnly?: boolean; // only shown to users who admin a team-sport discipline (or superuser)
+  individualSportOnly?: boolean; // only shown to users who admin an individual-sport discipline (or superuser)
   // For normal dropdowns: children is MenuItem[]
   // For mega menus: children is Column[]
   children?: MenuItem[] | Column[];
@@ -89,8 +91,18 @@ export const menuConfig: MenuItem[] = [
         {
           label: "menu.manage_championships",
           path: "/admin/championship",
+          teamSportOnly: true,
         },
-        { label: "menu.manage_tournaments", path: "/admin/tournaments" },
+        {
+          label: "menu.manage_tournaments",
+          path: "/admin/tournaments",
+          teamSportOnly: true,
+        },
+        {
+          label: "menu.manage_individual_competitions",
+          path: "/admin/individual-competitions",
+          individualSportOnly: true,
+        },
       ],
       [
         {

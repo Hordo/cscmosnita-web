@@ -5,6 +5,7 @@ export interface AdminRole {
   role: "head_admin" | "coach_admin" | "accountant_admin";
   discipline_id: number | null;
   discipline_name: string | null;
+  discipline_type: "team" | "individual" | null;
   team_id: number | null;
   team_name: string | null;
 }
@@ -39,6 +40,10 @@ type AuthContextType = {
    * Returns [] if no matching roles.
    */
   getCoachTeamIds: (disciplineId?: number) => number[] | null;
+  /** True if user admins at least one team-sport discipline (or is superuser) */
+  hasTeamDisciplineAdmin: () => boolean;
+  /** True if user admins at least one individual-sport discipline (or is superuser) */
+  hasIndividualDisciplineAdmin: () => boolean;
 };
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -138,6 +143,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return roles.some((r) => r.discipline_id === disciplineId);
   };
 
+  const hasTeamDisciplineAdmin = () => {
+    if (!user) return false;
+    if (user.is_superuser) return true;
+    return (user.admin_roles ?? []).some(
+      (r) =>
+        (r.role === "head_admin" || r.role === "coach_admin") &&
+        (r.discipline_type === "team" || r.discipline_type === null),
+    );
+  };
+
+  const hasIndividualDisciplineAdmin = () => {
+    if (!user) return false;
+    if (user.is_superuser) return true;
+    return (user.admin_roles ?? []).some(
+      (r) =>
+        (r.role === "head_admin" || r.role === "coach_admin") &&
+        r.discipline_type === "individual",
+    );
+  };
+
   // Returns team IDs the current user can manage as coach_admin for a discipline.
   // Returns null if user has unrestricted access (superuser, head_admin, or coach_admin with no team constraint).
   // Returns [] if no matching roles.
@@ -177,6 +202,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         getAdminDisciplines,
         hasAdminAccess,
         getCoachTeamIds,
+        hasTeamDisciplineAdmin,
+        hasIndividualDisciplineAdmin,
       }}
     >
       {children}

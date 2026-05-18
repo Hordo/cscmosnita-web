@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, Location, ResourceBooking
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, Location, ResourceBooking, IndividualCompetition, IndividualResult
 # --- Team Photo Gallery ---
 class TeamPhotoSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.SerializerMethodField(read_only=True)
@@ -49,6 +49,7 @@ class TeamSerializer(serializers.ModelSerializer):
         queryset=Discipline.objects.all(), source="discipline", write_only=True, required=False
     )
     coaches = serializers.SerializerMethodField(read_only=True)
+    discipline_type = serializers.SerializerMethodField(read_only=True)
 
 
     class Meta:
@@ -62,6 +63,9 @@ class TeamSerializer(serializers.ModelSerializer):
 
     def get_coaches(self, obj):
         return [f"{coach.first_name} {coach.last_name}" for coach in obj.coaches.all()]
+
+    def get_discipline_type(self, obj):
+        return obj.discipline.discipline_type if obj.discipline else 'team'
 
     # No need for get_photo_url, direct field
 
@@ -667,3 +671,84 @@ class ResourceBookingSerializer(serializers.ModelSerializer):
             bookings.append(ResourceBooking(**booking_data))
         ResourceBooking.objects.bulk_create(bookings)
         return ResourceBooking.objects.filter(recurrence_group=group_uuid).order_by('start_datetime').first()
+
+
+# ── Individual Competition serializers ────────────────────────────────────────
+
+class IndividualResultSerializer(serializers.ModelSerializer):
+    medal_display = serializers.CharField(source='get_medal_display', read_only=True)
+    player_id = serializers.PrimaryKeyRelatedField(
+        queryset=Player.objects.all(), source='player',
+        required=False, allow_null=True,
+    )
+    player_name = serializers.SerializerMethodField(read_only=True)
+    athlete_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+
+    class Meta:
+        model = IndividualResult
+        fields = ['id', 'competition', 'player_id', 'player_name', 'athlete_name',
+                  'event_category', 'place', 'medal', 'medal_display', 'notes']
+
+    def get_player_name(self, obj):
+        if obj.player_id:
+            return f"{obj.player.first_name} {obj.player.last_name}"
+        return None
+
+    def _resolve_athlete_name(self, validated_data):
+        player = validated_data.get('player')
+        if player:
+            validated_data['athlete_name'] = f"{player.first_name} {player.last_name}"
+        elif not validated_data.get('athlete_name', '').strip():
+            raise serializers.ValidationError(
+                {'athlete_name': 'Required when no player is selected.'}
+            )
+        return validated_data
+
+    def create(self, validated_data):
+        self._resolve_athlete_name(validated_data)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        self._resolve_athlete_name(validated_data)
+        return super().update(instance, validated_data)
+
+
+class IndividualCompetitionListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer used for list views (no nested results)."""
+    discipline_name = serializers.CharField(source='discipline.name', read_only=True)
+    team_name = serializers.CharField(source='team.name', read_only=True)
+    medal_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = IndividualCompetition
+        fields = ['id', 'name', 'discipline', 'discipline_name', 'team', 'team_name',
+                  'date', 'location', 'season', 'description', 'medal_count', 'created_at']
+
+    def get_medal_count(self, obj):
+        return {
+            'gold': obj.results.filter(medal='gold').count(),
+            'silver': obj.results.filter(medal='silver').count(),
+            'bronze': obj.results.filter(medal='bronze').count(),
+        }
+
+
+class IndividualCompetitionSerializer(serializers.ModelSerializer):
+    """Full serializer with nested results, used for detail/create/update."""
+    results = IndividualResultSerializer(many=True, read_only=True)
+    discipline_name = serializers.CharField(source='discipline.name', read_only=True)
+    team_name = serializers.CharField(source='team.name', read_only=True)
+    discipline_id = serializers.PrimaryKeyRelatedField(
+        queryset=Discipline.objects.all(), source='discipline',
+        required=False, allow_null=True, write_only=False
+    )
+    team_id = serializers.PrimaryKeyRelatedField(
+        queryset=Team.objects.all(), source='team', write_only=False
+    )
+
+    class Meta:
+        model = IndividualCompetition
+        fields = ['id', 'name', 'discipline', 'discipline_id', 'discipline_name',
+                  'team', 'team_id', 'team_name',
+                  'date', 'location', 'season', 'description',
+                  'results', 'created_at']
+        read_only_fields = ['discipline', 'team', 'created_at']

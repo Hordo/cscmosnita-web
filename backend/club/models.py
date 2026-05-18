@@ -3,11 +3,19 @@ from django.contrib.auth.models import User
 
 
 class Discipline(models.Model):
+    DISCIPLINE_TYPE_CHOICES = [
+        ('team', 'Team Sport'),
+        ('individual', 'Individual Sport'),
+    ]
 
     name = models.CharField(max_length=100, unique=True)
     name_en = models.CharField(max_length=100, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     description_en = models.TextField(blank=True, null=True)
+    discipline_type = models.CharField(
+        max_length=20, choices=DISCIPLINE_TYPE_CHOICES, default='team',
+        help_text='Team sport (football, basketball) or individual sport (karate, chess, athletics, kempo)'
+    )
     head_coach = models.ForeignKey(
         'Coach', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='disciplines_headed',
@@ -486,3 +494,68 @@ class ResourceBooking(models.Model):
         else:
             label = self.team.name if self.team else (self.discipline.name if self.discipline else 'Unknown')
         return f"{self.location.name} - {label}"
+
+
+# ── Individual Sport Competitions ─────────────────────────────────────────────
+
+class IndividualCompetition(models.Model):
+    """A competition event for individual sports (karate, chess, athletics, kempo)."""
+    name = models.CharField(max_length=200)
+    discipline = models.ForeignKey(
+        Discipline, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='individual_competitions'
+    )
+    team = models.ForeignKey(
+        Team, on_delete=models.CASCADE,
+        related_name='individual_competitions'
+    )
+    date = models.DateField(null=True, blank=True)
+    location = models.CharField(max_length=200, blank=True)
+    season = models.CharField(max_length=20, blank=True)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-id']
+        verbose_name = 'Individual Competition'
+        verbose_name_plural = 'Individual Competitions'
+
+    def __str__(self):
+        return f"{self.name} ({self.season}) - {self.team}"
+
+
+class IndividualResult(models.Model):
+    """An athlete's result in an individual competition."""
+    MEDAL_CHOICES = [
+        ('gold', 'Gold'),
+        ('silver', 'Silver'),
+        ('bronze', 'Bronze'),
+        ('none', 'None'),
+    ]
+
+    competition = models.ForeignKey(
+        IndividualCompetition, on_delete=models.CASCADE, related_name='results'
+    )
+    player = models.ForeignKey(
+        'Player', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='individual_results',
+        help_text='Registered team player. If set, athlete_name is populated automatically.'
+    )
+    athlete_name = models.CharField(max_length=150)
+    event_category = models.CharField(
+        max_length=150, blank=True,
+        help_text='e.g. Kata U14, Kumite -55kg, 100m Senior, Rapid U12'
+    )
+    place = models.PositiveIntegerField(
+        null=True, blank=True, help_text='Final placement (1st, 2nd, 3rd…)'
+    )
+    medal = models.CharField(max_length=10, choices=MEDAL_CHOICES, default='none')
+    notes = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ['place', 'athlete_name']
+        verbose_name = 'Individual Result'
+        verbose_name_plural = 'Individual Results'
+
+    def __str__(self):
+        return f"{self.athlete_name} - {self.event_category} ({self.competition.name})"

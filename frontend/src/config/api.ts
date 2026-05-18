@@ -41,4 +41,6 @@ export const API_URLS = {
   uploadOfficialDocument: `${API_BASE}/api/upload/official-document/`,
   resourceLocations: `${API_BASE}/api/resource-locations/`,
   resourceBookings: `${API_BASE}/api/resource-bookings/`,
+  individualCompetitions: `${API_BASE}/api/individual-competitions/`,
+  individualResults: `${API_BASE}/api/individual-results/`,
 };

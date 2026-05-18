@@ -40,6 +40,8 @@ import TransparentaPage from "../pages/TransparentaPage";
 import OfficialDocumentsAdminPage from "../admin/OfficialDocumentsAdminPage";
 import ResourcesAdminPage from "../admin/ResourcesAdminPage";
 import ResourceBookingsAdminPage from "../admin/ResourceBookingsAdminPage";
+import IndividualCompetitionAdminPage from "../admin/IndividualCompetitionAdminPage";
+import { IndividualCompetitionsPage } from "../pages/IndividualCompetitionsPage";
 
 const router = createBrowserRouter([
   {
@@ -120,6 +122,10 @@ const router = createBrowserRouter([
             path: "resource-bookings",
             element: <ResourceBookingsAdminPage />,
           },
+          {
+            path: "individual-competitions",
+            element: <IndividualCompetitionAdminPage />,
+          },
         ],
       },
       { path: "news", element: <NewsPage /> },
@@ -128,6 +134,10 @@ const router = createBrowserRouter([
       { path: "teams/:teamId", element: <TeamViewerPage /> },
       { path: "teams/:teamId/matches", element: <TeamMatchesPage /> },
       { path: "teams/:teamId/tournaments", element: <TeamTournamentsPage /> },
+      {
+        path: "teams/:teamId/competitions",
+        element: <IndividualCompetitionsPage />,
+      },
       { path: "teams/:teamId/gallery", element: <TeamGalleryPage /> },
       { path: "tournaments/:tournamentId", element: <TournamentViewPage /> },
       { path: "disciplines/:discipline", element: <DisciplineDetailPage /> },

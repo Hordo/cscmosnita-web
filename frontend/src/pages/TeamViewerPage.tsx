@@ -12,6 +12,7 @@ export const TeamViewerPage: React.FC = () => {
   const [players, setPlayers] = useState<any[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
   const [weekEvents, setWeekEvents] = useState<any[]>([]);
+  const [individualResults, setIndividualResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,6 +53,18 @@ export const TeamViewerPage: React.FC = () => {
         setPlayers(playersData);
         setCoaches(coachesData);
         setWeekEvents(eventsData);
+        // Fetch individual results if this is an individual-sport team
+        const currentTeam = Array.isArray(teamsData)
+          ? teamsData.find((t: any) => String(t.id) === String(teamId))
+          : null;
+        if (currentTeam?.discipline_type === "individual" && teamId) {
+          fetch(`${API_BASE}/api/individual-results/?team_id=${teamId}`)
+            .then((res) => (res.ok ? res.json() : []))
+            .then((data) =>
+              setIndividualResults(Array.isArray(data) ? data : []),
+            )
+            .catch(() => setIndividualResults([]));
+        }
       })
       .catch((err) => setError(err.message || "Unknown error"))
       .finally(() => setLoading(false));
@@ -82,6 +95,24 @@ export const TeamViewerPage: React.FC = () => {
       c.teams && c.teams.some((t: any) => Number(t.id) === Number(team.id)),
   );
   const disciplineName = team.discipline || "";
+  const isIndividual = team.discipline_type === "individual";
+
+  // Build medal count map: player id → {gold, silver, bronze}
+  const medalsByPlayer: Record<
+    number,
+    { gold: number; silver: number; bronze: number }
+  > = {};
+  if (isIndividual) {
+    for (const r of individualResults) {
+      const pid = r.player_id;
+      if (!pid) continue;
+      if (!medalsByPlayer[pid])
+        medalsByPlayer[pid] = { gold: 0, silver: 0, bronze: 0 };
+      if (r.medal === "gold") medalsByPlayer[pid].gold++;
+      else if (r.medal === "silver") medalsByPlayer[pid].silver++;
+      else if (r.medal === "bronze") medalsByPlayer[pid].bronze++;
+    }
+  }
 
   return (
     <div className="container py-4">
@@ -102,18 +133,29 @@ export const TeamViewerPage: React.FC = () => {
         <h2 className="mb-0 text-center flex-grow-1">{team.name}</h2>
       </div>
       <div className="mb-4 d-flex gap-2 flex-wrap">
-        <Link
-          to={`/teams/${team.id}/matches`}
-          className="btn btn-outline-primary"
-        >
-          🏆 {t("view_matches")}
-        </Link>
-        <Link
-          to={`/teams/${team.id}/tournaments`}
-          className="btn btn-outline-success"
-        >
-          🥇 {t("view_tournaments")}
-        </Link>
+        {isIndividual ? (
+          <Link
+            to={`/teams/${team.id}/competitions`}
+            className="btn btn-outline-primary"
+          >
+            🏅 {t("ic.view_competitions")}
+          </Link>
+        ) : (
+          <>
+            <Link
+              to={`/teams/${team.id}/matches`}
+              className="btn btn-outline-primary"
+            >
+              🏆 {t("view_matches")}
+            </Link>
+            <Link
+              to={`/teams/${team.id}/tournaments`}
+              className="btn btn-outline-success"
+            >
+              🥇 {t("view_tournaments")}
+            </Link>
+          </>
+        )}
         <Link
           to={`/teams/${team.id}/gallery`}
           className="btn btn-outline-secondary"
@@ -224,6 +266,7 @@ export const TeamViewerPage: React.FC = () => {
                 imageUrl={player.photo_url || undefined}
                 className="player-card"
                 badgesOnImage
+                medals={isIndividual ? medalsByPlayer[player.id] : undefined}
               />
             </div>
           ))

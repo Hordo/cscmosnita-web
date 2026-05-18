@@ -9,8 +9,15 @@ import "../styles/topnavbar.css";
 import "../styles/cscmosnita-colors.css";
 
 export default function TopNavbar() {
-  const { user, logout, isSuperAdmin, isHeadAdmin, isAccountantAdmin } =
-    useAuth();
+  const {
+    user,
+    logout,
+    isSuperAdmin,
+    isHeadAdmin,
+    isAccountantAdmin,
+    hasTeamDisciplineAdmin,
+    hasIndividualDisciplineAdmin,
+  } = useAuth();
   const { i18n, t } = useTranslation();
   const { state: pushState } = usePushNotifications();
   const navigate = useNavigate();
@@ -93,6 +100,10 @@ export default function TopNavbar() {
         return false;
       if ((child as any).superAdminOnly && !isSuperAdmin()) return false;
       if ((child as any).headAdminOnly && !isHeadAdmin() && !isSuperAdmin())
+        return false;
+      if ((child as any).teamSportOnly && !hasTeamDisciplineAdmin())
+        return false;
+      if ((child as any).individualSportOnly && !hasIndividualDisciplineAdmin())
         return false;
       return true;
     };
