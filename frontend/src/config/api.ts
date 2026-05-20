@@ -45,4 +45,6 @@ export const API_URLS = {
   individualResults: `${API_BASE}/api/individual-results/`,
   individualRaces: `${API_BASE}/api/individual-races/`,
   individualRaceParticipants: `${API_BASE}/api/individual-race-participants/`,
+  sportRaceTemplates: `${API_BASE}/api/sport-race-templates/`,
+  sportAgeCategories: `${API_BASE}/api/sport-age-categories/`,
 };

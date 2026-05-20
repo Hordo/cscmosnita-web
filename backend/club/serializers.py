@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, Location, ResourceBooking, IndividualCompetition, IndividualResult, IndividualRace, IndividualRaceParticipant
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, Location, ResourceBooking, IndividualCompetition, IndividualResult, IndividualRace, IndividualRaceParticipant, SportRaceTemplate, SportAgeCategory
 # --- Team Photo Gallery ---
 class TeamPhotoSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.SerializerMethodField(read_only=True)
@@ -792,3 +792,20 @@ class IndividualCompetitionSerializer(serializers.ModelSerializer):
                   'date', 'location', 'season', 'description',
                   'races', 'created_at']
         read_only_fields = ['discipline', 'team', 'created_at']
+
+
+class SportRaceTemplateSerializer(serializers.ModelSerializer):
+    discipline_name = serializers.CharField(source='discipline.name', read_only=True)
+
+    class Meta:
+        model = SportRaceTemplate
+        fields = ['id', 'discipline', 'discipline_name', 'name', 'order']
+
+
+class SportAgeCategorySerializer(serializers.ModelSerializer):
+    discipline_name = serializers.CharField(source='discipline.name', read_only=True)
+    gender_display = serializers.CharField(source='get_gender_display', read_only=True)
+
+    class Meta:
+        model = SportAgeCategory
+        fields = ['id', 'discipline', 'discipline_name', 'name', 'gender', 'gender_display', 'order']

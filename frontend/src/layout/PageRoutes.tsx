@@ -41,6 +41,7 @@ import OfficialDocumentsAdminPage from "../admin/OfficialDocumentsAdminPage";
 import ResourcesAdminPage from "../admin/ResourcesAdminPage";
 import ResourceBookingsAdminPage from "../admin/ResourceBookingsAdminPage";
 import IndividualCompetitionAdminPage from "../admin/IndividualCompetitionAdminPage";
+import SportConfigAdminPage from "../admin/SportConfigAdminPage";
 import { IndividualCompetitionsPage } from "../pages/IndividualCompetitionsPage";
 import { CompetitionRacesPage } from "../pages/CompetitionRacesPage";
 
@@ -126,6 +127,10 @@ const router = createBrowserRouter([
           {
             path: "individual-competitions",
             element: <IndividualCompetitionAdminPage />,
+          },
+          {
+            path: "sport-config",
+            element: <SportConfigAdminPage />,
           },
         ],
       },

@@ -103,6 +103,11 @@ export const menuConfig: MenuItem[] = [
           path: "/admin/individual-competitions",
           individualSportOnly: true,
         },
+        {
+          label: "menu.sport_config",
+          path: "/admin/sport-config",
+          individualSportOnly: true,
+        },
       ],
       [
         {

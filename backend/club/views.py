@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, IndividualCompetition, IndividualResult, IndividualRace, IndividualRaceParticipant
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, IndividualCompetition, IndividualResult, IndividualRace, IndividualRaceParticipant, SportRaceTemplate, SportAgeCategory
 from .serializers import (
     TeamSerializer, CoachSerializer, PlayerSerializer,
     ChampionshipSerializer, MatchSerializer, DisciplineSerializer,
@@ -9,7 +9,8 @@ from .serializers import (
     GroupTeamSerializer, TournamentMatchSerializer, SponsorSerializer,
     NewsArticleSerializer, TeamPhotoSerializer,
     IndividualCompetitionSerializer, IndividualCompetitionListSerializer, IndividualResultSerializer,
-    IndividualRaceSerializer, IndividualRaceParticipantSerializer
+    IndividualRaceSerializer, IndividualRaceParticipantSerializer,
+    SportRaceTemplateSerializer, SportAgeCategorySerializer
 )
 from .permissions import (
     IsSuperAdminOrReadOnly, IsSuperAdmin, IsAnyAdminOrReadOnly,
@@ -1204,4 +1205,56 @@ class IndividualRaceParticipantViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         self._check_access(instance.race)
+        instance.delete()
+
+
+class SportRaceTemplateViewSet(viewsets.ModelViewSet):
+    serializer_class = SportRaceTemplateSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
+
+    def get_queryset(self):
+        qs = SportRaceTemplate.objects.select_related('discipline')
+        discipline_id = self.request.query_params.get('discipline_id')
+        if discipline_id:
+            qs = qs.filter(discipline_id=discipline_id)
+        return qs
+
+    def perform_create(self, serializer):
+        discipline = serializer.validated_data.get('discipline')
+        assert_discipline_write_access(self.request.user, discipline.id if discipline else None)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        discipline = serializer.validated_data.get('discipline', serializer.instance.discipline)
+        assert_discipline_write_access(self.request.user, discipline.id if discipline else None)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        assert_discipline_write_access(self.request.user, instance.discipline_id)
+        instance.delete()
+
+
+class SportAgeCategoryViewSet(viewsets.ModelViewSet):
+    serializer_class = SportAgeCategorySerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
+
+    def get_queryset(self):
+        qs = SportAgeCategory.objects.select_related('discipline')
+        discipline_id = self.request.query_params.get('discipline_id')
+        if discipline_id:
+            qs = qs.filter(discipline_id=discipline_id)
+        return qs
+
+    def perform_create(self, serializer):
+        discipline = serializer.validated_data.get('discipline')
+        assert_discipline_write_access(self.request.user, discipline.id if discipline else None)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        discipline = serializer.validated_data.get('discipline', serializer.instance.discipline)
+        assert_discipline_write_access(self.request.user, discipline.id if discipline else None)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        assert_discipline_write_access(self.request.user, instance.discipline_id)
         instance.delete()

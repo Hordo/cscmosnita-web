@@ -13,7 +13,8 @@ from .views import (
     OfficialDocumentViewSet,
     LocationViewSet, ResourceBookingViewSet,
     IndividualCompetitionViewSet, IndividualResultViewSet,
-    IndividualRaceViewSet, IndividualRaceParticipantViewSet
+    IndividualRaceViewSet, IndividualRaceParticipantViewSet,
+    SportRaceTemplateViewSet, SportAgeCategoryViewSet
 )
 from .signed_upload import (
     GeneratePlayerPhotoUploadURL, GenerateTeamPhotoUploadURL, GenerateCoachPhotoUploadURL,
@@ -54,6 +55,8 @@ router.register(r'individual-competitions', IndividualCompetitionViewSet, basena
 router.register(r'individual-results', IndividualResultViewSet, basename='individual-results')
 router.register(r'individual-races', IndividualRaceViewSet, basename='individual-races')
 router.register(r'individual-race-participants', IndividualRaceParticipantViewSet, basename='individual-race-participants')
+router.register(r'sport-race-templates', SportRaceTemplateViewSet, basename='sport-race-templates')
+router.register(r'sport-age-categories', SportAgeCategoryViewSet, basename='sport-age-categories')
 
 urlpatterns = [
     path('', include(router.urls)),

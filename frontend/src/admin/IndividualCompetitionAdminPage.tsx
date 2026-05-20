@@ -150,8 +150,6 @@ const IndividualCompetitionAdminPage: React.FC = () => {
   const loadCompetitions = useCallback(async (teamId: string) => {
     if (!teamId) return;
     setLoading(true);
-    setActiveComp(null);
-    setActiveRaceId(null);
     try {
       const res = await api.get(
         `${API_URLS.individualCompetitions}?team_id=${teamId}`,
@@ -166,6 +164,8 @@ const IndividualCompetitionAdminPage: React.FC = () => {
 
   useEffect(() => {
     if (selectedTeamId) {
+      setActiveComp(null);
+      setActiveRaceId(null);
       loadCompetitions(selectedTeamId);
       api
         .get(`${API_URLS.players}?team_id=${selectedTeamId}`)
@@ -183,11 +183,67 @@ const IndividualCompetitionAdminPage: React.FC = () => {
     setActiveComp(res.data);
   }, []);
 
+  // Load race templates and age categories
+  const [raceTemplates, setRaceTemplates] = useState<any[]>([]);
+  const [ageCategories, setAgeCategories] = useState<any[]>([]);
+  const [newCompCombos, setNewCompCombos] = useState<Set<string>>(new Set());
+
+  // Load sport config (race templates + age categories) when discipline changes
+  useEffect(() => {
+    if (!selectedDisciplineId || !user?.access) {
+      setRaceTemplates([]);
+      setAgeCategories([]);
+      return;
+    }
+    Promise.all([
+      api.get(API_URLS.sportRaceTemplates, {
+        params: { discipline_id: selectedDisciplineId },
+      }),
+      api.get(API_URLS.sportAgeCategories, {
+        params: { discipline_id: selectedDisciplineId },
+      }),
+    ])
+      .then(([tRes, cRes]) => {
+        setRaceTemplates(tRes.data);
+        setAgeCategories(cRes.data);
+      })
+      .catch(() => {});
+  }, [selectedDisciplineId, user?.access]);
+
+  const comboRaceName = (template: any, category: any) =>
+    `${template.name} ${category.name} ${t(`sc.gender_${category.gender}`)}`;
+
+  const quickAddRace = async (
+    competitionId: number,
+    name: string,
+    order: number,
+  ) => {
+    try {
+      await api.post(API_URLS.individualRaces, {
+        competition: competitionId,
+        name,
+        video_link: "",
+        order,
+      });
+      await loadCompetitions(selectedTeamId);
+      await loadCompDetail(competitionId);
+    } catch {
+      setError(t("ic.save_error"));
+    }
+  };
+
   // ── Competition CRUD ──────────────────────────────────────────────────────
 
   const openAddComp = () => {
     setCompForm({ ...emptyComp, team_id: selectedTeamId });
     setEditCompId(null);
+    setNewCompCombos(
+      new Set(
+        raceTemplates.flatMap((tmpl) =>
+          ageCategories.map((cat) => `${tmpl.id}_${cat.id}`),
+        ),
+      ),
+    );
     setShowCompModal(true);
   };
 
@@ -222,7 +278,25 @@ const IndividualCompetitionAdminPage: React.FC = () => {
           payload,
         );
       } else {
-        await api.post(API_URLS.individualCompetitions, payload);
+        const res = await api.post(API_URLS.individualCompetitions, payload);
+        const savedCompId = res.data.id;
+        if (newCompCombos.size > 0) {
+          const combosArr = [...newCompCombos];
+          await Promise.all(
+            combosArr.map((key, idx) => {
+              const [tId, cId] = key.split("_");
+              const template = raceTemplates.find((t) => String(t.id) === tId);
+              const category = ageCategories.find((c) => String(c.id) === cId);
+              if (!template || !category) return Promise.resolve();
+              return api.post(API_URLS.individualRaces, {
+                competition: savedCompId,
+                name: comboRaceName(template, category),
+                video_link: "",
+                order: idx,
+              });
+            }),
+          );
+        }
       }
       setShowCompModal(false);
       await loadCompetitions(selectedTeamId);
@@ -283,8 +357,8 @@ const IndividualCompetitionAdminPage: React.FC = () => {
         await api.post(API_URLS.individualRaces, payload);
       }
       setShowRaceModal(false);
-      await loadCompDetail(Number(raceForm.competition));
       await loadCompetitions(selectedTeamId);
+      await loadCompDetail(Number(raceForm.competition));
     } catch {
       setError(t("ic.save_error"));
     } finally {
@@ -296,8 +370,8 @@ const IndividualCompetitionAdminPage: React.FC = () => {
     if (!window.confirm(t("ic.confirm_delete_race"))) return;
     await api.delete(`${API_URLS.individualRaces}${raceId}/`);
     if (activeRaceId === raceId) setActiveRaceId(null);
-    await loadCompDetail(competitionId);
     await loadCompetitions(selectedTeamId);
+    await loadCompDetail(competitionId);
   };
 
   // ── Participant CRUD ──────────────────────────────────────────────────────
@@ -512,17 +586,79 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                         <tr>
                           <td colSpan={6} className="p-0">
                             <div className="bg-light p-3 border-top border-bottom">
-                              <div className="d-flex justify-content-between align-items-center mb-3">
+                              <div className="d-flex justify-content-between align-items-center mb-2">
                                 <strong>
                                   {t("ic.races")} — {comp.name}
                                 </strong>
                                 <button
-                                  className="btn btn-success btn-sm"
+                                  className="btn btn-outline-secondary btn-sm"
                                   onClick={() => openAddRace(comp.id)}
                                 >
                                   + {t("ic.add_race")}
                                 </button>
                               </div>
+                              {/* Race combo toggle grid */}
+                              {raceTemplates.length > 0 &&
+                                ageCategories.length > 0 && (
+                                  <div className="mb-3">
+                                    <p className="text-muted small mb-2">
+                                      {t("ic.race_toggle_hint")}
+                                    </p>
+                                    <div className="row g-2">
+                                      {raceTemplates.map((template) =>
+                                        ageCategories.map((category) => {
+                                          const name = comboRaceName(
+                                            template,
+                                            category,
+                                          );
+                                          const existingRace =
+                                            activeComp.races?.find(
+                                              (r: any) => r.name === name,
+                                            );
+                                          const isOn = !!existingRace;
+                                          const switchId = `inline-combo-${template.id}_${category.id}`;
+                                          return (
+                                            <div
+                                              key={switchId}
+                                              className="col-12 col-sm-6 col-md-4 col-lg-3"
+                                            >
+                                              <div className="form-check form-switch mb-0">
+                                                <input
+                                                  className="form-check-input"
+                                                  type="checkbox"
+                                                  role="switch"
+                                                  id={switchId}
+                                                  checked={isOn}
+                                                  onChange={() => {
+                                                    if (isOn) {
+                                                      deleteRace(
+                                                        existingRace.id,
+                                                        comp.id,
+                                                      );
+                                                    } else {
+                                                      quickAddRace(
+                                                        comp.id,
+                                                        name,
+                                                        activeComp.races
+                                                          ?.length ?? 0,
+                                                      );
+                                                    }
+                                                  }}
+                                                />
+                                                <label
+                                                  className="form-check-label"
+                                                  htmlFor={switchId}
+                                                >
+                                                  {name}
+                                                </label>
+                                              </div>
+                                            </div>
+                                          );
+                                        }),
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
 
                               {activeComp.races?.length === 0 ? (
                                 <p className="text-muted mb-0">
@@ -809,6 +945,58 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                     }
                   />
                 </div>
+                {/* Race selection toggles — only shown when adding a new competition */}
+                {!editCompId &&
+                  raceTemplates.length > 0 &&
+                  ageCategories.length > 0 && (
+                    <div className="mb-3">
+                      <label className="form-label fw-semibold">
+                        {t("ic.select_races")}
+                      </label>
+                      <p className="text-muted small mb-2">
+                        {t("ic.select_races_hint")}
+                      </p>
+                      <div className="row g-2">
+                        {raceTemplates.map((template) =>
+                          ageCategories.map((category) => {
+                            const key = `${template.id}_${category.id}`;
+                            const label = comboRaceName(template, category);
+                            const checked = newCompCombos.has(key);
+                            return (
+                              <div
+                                key={key}
+                                className="col-12 col-sm-6 col-md-4"
+                              >
+                                <div className="form-check form-switch mb-0">
+                                  <input
+                                    className="form-check-input"
+                                    type="checkbox"
+                                    role="switch"
+                                    id={`new-combo-${key}`}
+                                    checked={checked}
+                                    onChange={() =>
+                                      setNewCompCombos((prev) => {
+                                        const next = new Set(prev);
+                                        if (next.has(key)) next.delete(key);
+                                        else next.add(key);
+                                        return next;
+                                      })
+                                    }
+                                  />
+                                  <label
+                                    className="form-check-label"
+                                    htmlFor={`new-combo-${key}`}
+                                  >
+                                    {label}
+                                  </label>
+                                </div>
+                              </div>
+                            );
+                          }),
+                        )}
+                      </div>
+                    </div>
+                  )}
               </div>
               <div className="modal-footer">
                 <button

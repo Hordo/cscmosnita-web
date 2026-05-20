@@ -603,3 +603,46 @@ class IndividualRaceParticipant(models.Model):
     def __str__(self):
         place_str = f"#{self.place}" if self.place else "participant"
         return f"{self.athlete_name} ({place_str}) — {self.race}"
+
+
+class SportRaceTemplate(models.Model):
+    """A reusable race/event name template for a discipline (e.g. '50m Sprint', 'Long Jump')."""
+    discipline = models.ForeignKey(
+        Discipline, on_delete=models.CASCADE,
+        related_name='race_templates'
+    )
+    name = models.CharField(max_length=200, help_text='e.g. 50m, 200m, Long Jump, Kata')
+    order = models.PositiveIntegerField(default=0, help_text='Display order')
+
+    class Meta:
+        ordering = ['order', 'name']
+        verbose_name = 'Sport Race Template'
+        verbose_name_plural = 'Sport Race Templates'
+
+    def __str__(self):
+        return f"{self.name} ({self.discipline})"
+
+
+class SportAgeCategory(models.Model):
+    """An age/gender category for individual sport competitions (e.g. U9 Boys, U10 Girls)."""
+    GENDER_CHOICES = [
+        ('boys', 'Boys'),
+        ('girls', 'Girls'),
+        ('mixed', 'Mixed'),
+    ]
+
+    discipline = models.ForeignKey(
+        Discipline, on_delete=models.CASCADE,
+        related_name='age_categories'
+    )
+    name = models.CharField(max_length=100, help_text='e.g. U9, U10, U11, Senior')
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, default='mixed')
+    order = models.PositiveIntegerField(default=0, help_text='Display order')
+
+    class Meta:
+        ordering = ['order', 'name', 'gender']
+        verbose_name = 'Sport Age Category'
+        verbose_name_plural = 'Sport Age Categories'
+
+    def __str__(self):
+        return f"{self.name} ({self.get_gender_display()}) — {self.discipline}"
