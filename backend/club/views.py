@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, IndividualCompetition, IndividualResult
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, IndividualCompetition, IndividualResult, IndividualRace, IndividualRaceParticipant
 from .serializers import (
     TeamSerializer, CoachSerializer, PlayerSerializer,
     ChampionshipSerializer, MatchSerializer, DisciplineSerializer,
@@ -8,7 +8,8 @@ from .serializers import (
     TournamentListSerializer, TournamentSerializer, TournamentGroupSerializer,
     GroupTeamSerializer, TournamentMatchSerializer, SponsorSerializer,
     NewsArticleSerializer, TeamPhotoSerializer,
-    IndividualCompetitionSerializer, IndividualCompetitionListSerializer, IndividualResultSerializer
+    IndividualCompetitionSerializer, IndividualCompetitionListSerializer, IndividualResultSerializer,
+    IndividualRaceSerializer, IndividualRaceParticipantSerializer
 )
 from .permissions import (
     IsSuperAdminOrReadOnly, IsSuperAdmin, IsAnyAdminOrReadOnly,
@@ -1081,7 +1082,7 @@ class IndividualCompetitionViewSet(viewsets.ModelViewSet):
         return IndividualCompetitionSerializer
 
     def get_queryset(self):
-        qs = IndividualCompetition.objects.select_related('discipline', 'team').prefetch_related('results')
+        qs = IndividualCompetition.objects.select_related('discipline', 'team').prefetch_related('races')
         team_id = self.request.query_params.get('team_id')
         discipline_id = self.request.query_params.get('discipline_id')
         if team_id:
@@ -1139,4 +1140,68 @@ class IndividualResultViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         self._check_access(instance.competition)
+        instance.delete()
+
+
+class IndividualRaceViewSet(viewsets.ModelViewSet):
+    serializer_class = IndividualRaceSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
+
+    def get_queryset(self):
+        qs = IndividualRace.objects.select_related('competition').prefetch_related('participants__player')
+        competition_id = self.request.query_params.get('competition_id')
+        if competition_id:
+            qs = qs.filter(competition_id=competition_id)
+        return qs
+
+    def _check_access(self, competition):
+        assert_team_write_access(self.request.user, competition.team_id if competition else None)
+
+    def perform_create(self, serializer):
+        competition = serializer.validated_data.get('competition')
+        self._check_access(competition)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        competition = serializer.validated_data.get('competition', serializer.instance.competition)
+        self._check_access(competition)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._check_access(instance.competition)
+        instance.delete()
+
+
+class IndividualRaceParticipantViewSet(viewsets.ModelViewSet):
+    serializer_class = IndividualRaceParticipantSerializer
+    permission_classes = [IsAnyAdminOrReadOnly]
+
+    def get_queryset(self):
+        qs = IndividualRaceParticipant.objects.select_related('race__competition', 'player')
+        race_id = self.request.query_params.get('race_id')
+        if race_id:
+            qs = qs.filter(race_id=race_id)
+        competition_id = self.request.query_params.get('competition_id')
+        if competition_id:
+            qs = qs.filter(race__competition_id=competition_id)
+        team_id = self.request.query_params.get('team_id')
+        if team_id:
+            qs = qs.filter(race__competition__team_id=team_id)
+        return qs
+
+    def _check_access(self, race):
+        assert_team_write_access(self.request.user, race.competition.team_id if race else None)
+
+    def perform_create(self, serializer):
+        race = serializer.validated_data.get('race')
+        self._check_access(race)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        race = serializer.validated_data.get('race', serializer.instance.race)
+        self._check_access(race)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._check_access(instance.race)
         instance.delete()

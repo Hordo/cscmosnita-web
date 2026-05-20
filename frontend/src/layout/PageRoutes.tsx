@@ -42,6 +42,7 @@ import ResourcesAdminPage from "../admin/ResourcesAdminPage";
 import ResourceBookingsAdminPage from "../admin/ResourceBookingsAdminPage";
 import IndividualCompetitionAdminPage from "../admin/IndividualCompetitionAdminPage";
 import { IndividualCompetitionsPage } from "../pages/IndividualCompetitionsPage";
+import { CompetitionRacesPage } from "../pages/CompetitionRacesPage";
 
 const router = createBrowserRouter([
   {
@@ -137,6 +138,10 @@ const router = createBrowserRouter([
       {
         path: "teams/:teamId/competitions",
         element: <IndividualCompetitionsPage />,
+      },
+      {
+        path: "teams/:teamId/competitions/:compId",
+        element: <CompetitionRacesPage />,
       },
       { path: "teams/:teamId/gallery", element: <TeamGalleryPage /> },
       { path: "tournaments/:tournamentId", element: <TournamentViewPage /> },

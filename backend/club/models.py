@@ -559,3 +559,47 @@ class IndividualResult(models.Model):
 
     def __str__(self):
         return f"{self.athlete_name} - {self.event_category} ({self.competition.name})"
+
+
+class IndividualRace(models.Model):
+    """A race/event within an individual competition (e.g. Kata U14, 100m Senior)."""
+    competition = models.ForeignKey(
+        IndividualCompetition, on_delete=models.CASCADE, related_name='races'
+    )
+    name = models.CharField(max_length=200, help_text='e.g. Kata U14, Kumite -55kg, 100m Senior')
+    video_link = models.URLField(blank=True, help_text='Optional YouTube/video link for this race')
+    order = models.PositiveIntegerField(default=0, help_text='Display order within the competition')
+
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name = 'Individual Race'
+        verbose_name_plural = 'Individual Races'
+
+    def __str__(self):
+        return f"{self.name} — {self.competition}"
+
+
+class IndividualRaceParticipant(models.Model):
+    """A participant in an individual race, optionally linked to a registered player."""
+    race = models.ForeignKey(
+        IndividualRace, on_delete=models.CASCADE, related_name='participants'
+    )
+    player = models.ForeignKey(
+        'Player', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='race_participations',
+        help_text='Registered team player. If set, athlete_name is auto-populated.'
+    )
+    athlete_name = models.CharField(max_length=150)
+    place = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text='1=1st place, 2=2nd place, 3=3rd place, null=other participant'
+    )
+
+    class Meta:
+        ordering = ['place', 'athlete_name']
+        verbose_name = 'Race Participant'
+        verbose_name_plural = 'Race Participants'
+
+    def __str__(self):
+        place_str = f"#{self.place}" if self.place else "participant"
+        return f"{self.athlete_name} ({place_str}) — {self.race}"

@@ -43,4 +43,6 @@ export const API_URLS = {
   resourceBookings: `${API_BASE}/api/resource-bookings/`,
   individualCompetitions: `${API_BASE}/api/individual-competitions/`,
   individualResults: `${API_BASE}/api/individual-results/`,
+  individualRaces: `${API_BASE}/api/individual-races/`,
+  individualRaceParticipants: `${API_BASE}/api/individual-race-participants/`,
 };

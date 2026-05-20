@@ -5,12 +5,19 @@ import { API_URLS } from "../config/api";
 import api, { setAuthToken } from "../config/axios";
 import { useAuth } from "../context/AuthContext";
 
-const MEDAL_OPTIONS = [
-  { value: "gold", emoji: "🥇" },
-  { value: "silver", emoji: "🥈" },
-  { value: "bronze", emoji: "🥉" },
-  { value: "none", emoji: "" },
+const PLACE_OPTIONS = [
+  { value: "1", label: "ic.place_first" },
+  { value: "2", label: "ic.place_second" },
+  { value: "3", label: "ic.place_third" },
+  { value: "", label: "ic.place_participant" },
 ];
+
+const placeEmoji = (place: number | null | undefined) => {
+  if (place === 1) return "🥇";
+  if (place === 2) return "🥈";
+  if (place === 3) return "🥉";
+  return "";
+};
 
 const emptyComp = {
   name: "",
@@ -21,14 +28,18 @@ const emptyComp = {
   description: "",
 };
 
-const emptyResult = {
+const emptyRace = {
   competition: "",
+  name: "",
+  video_link: "",
+  order: "0",
+};
+
+const emptyParticipant = {
+  race: "",
   player_id: "",
   athlete_name: "",
-  event_category: "",
   place: "",
-  medal: "none",
-  notes: "",
 };
 
 const IndividualCompetitionAdminPage: React.FC = () => {
@@ -42,6 +53,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [competitions, setCompetitions] = useState<any[]>([]);
   const [activeComp, setActiveComp] = useState<any | null>(null);
+  const [activeRaceId, setActiveRaceId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,11 +63,19 @@ const IndividualCompetitionAdminPage: React.FC = () => {
   const [editCompId, setEditCompId] = useState<number | null>(null);
   const [compSaving, setCompSaving] = useState(false);
 
-  // Result form state
-  const [showResultModal, setShowResultModal] = useState(false);
-  const [resultForm, setResultForm] = useState(emptyResult);
-  const [editResultId, setEditResultId] = useState<number | null>(null);
-  const [resultSaving, setResultSaving] = useState(false);
+  // Race form state
+  const [showRaceModal, setShowRaceModal] = useState(false);
+  const [raceForm, setRaceForm] = useState(emptyRace);
+  const [editRaceId, setEditRaceId] = useState<number | null>(null);
+  const [raceSaving, setRaceSaving] = useState(false);
+
+  // Participant form state
+  const [showParticipantModal, setShowParticipantModal] = useState(false);
+  const [participantForm, setParticipantForm] = useState(emptyParticipant);
+  const [editParticipantId, setEditParticipantId] = useState<number | null>(
+    null,
+  );
+  const [participantSaving, setParticipantSaving] = useState(false);
 
   // Load teams + disciplines on mount, then auto-select discipline/team
   useEffect(() => {
@@ -131,6 +151,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
     if (!teamId) return;
     setLoading(true);
     setActiveComp(null);
+    setActiveRaceId(null);
     try {
       const res = await api.get(
         `${API_URLS.individualCompetitions}?team_id=${teamId}`,
@@ -156,7 +177,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
     }
   }, [selectedTeamId]);
 
-  // Load full competition detail (with results)
+  // Load full competition detail (with races + participants)
   const loadCompDetail = useCallback(async (compId: number) => {
     const res = await api.get(`${API_URLS.individualCompetitions}${compId}/`);
     setActiveComp(res.data);
@@ -216,82 +237,136 @@ const IndividualCompetitionAdminPage: React.FC = () => {
   const deleteComp = async (compId: number) => {
     if (!window.confirm(t("ic.confirm_delete_competition"))) return;
     await api.delete(`${API_URLS.individualCompetitions}${compId}/`);
-    if (activeComp?.id === compId) setActiveComp(null);
+    if (activeComp?.id === compId) {
+      setActiveComp(null);
+      setActiveRaceId(null);
+    }
     await loadCompetitions(selectedTeamId);
   };
 
-  // ── Result CRUD ───────────────────────────────────────────────────────────
+  // ── Race CRUD ─────────────────────────────────────────────────────────────
 
-  const openAddResult = (competitionId: number) => {
-    setResultForm({ ...emptyResult, competition: String(competitionId) });
-    setEditResultId(null);
-    setShowResultModal(true);
-  };
-
-  const openEditResult = (result: any) => {
-    setResultForm({
-      competition: String(result.competition),
-      player_id: result.player_id ? String(result.player_id) : "",
-      athlete_name: result.athlete_name,
-      event_category: result.event_category || "",
-      place:
-        result.place !== null && result.place !== undefined
-          ? String(result.place)
-          : "",
-      medal: result.medal,
-      notes: result.notes || "",
+  const openAddRace = (competitionId: number) => {
+    setRaceForm({
+      ...emptyRace,
+      competition: String(competitionId),
+      order: String(activeComp?.races?.length ?? 0),
     });
-    setEditResultId(result.id);
-    setShowResultModal(true);
+    setEditRaceId(null);
+    setShowRaceModal(true);
   };
 
-  const isResultValid =
-    (!!resultForm.player_id && resultForm.player_id !== "__other__") ||
-    (resultForm.player_id === "__other__" &&
-      !!resultForm.athlete_name.trim()) ||
-    (!resultForm.player_id && !!resultForm.athlete_name.trim());
+  const openEditRace = (race: any) => {
+    setRaceForm({
+      competition: String(race.competition),
+      name: race.name,
+      video_link: race.video_link || "",
+      order: String(race.order ?? 0),
+    });
+    setEditRaceId(race.id);
+    setShowRaceModal(true);
+  };
 
-  const saveResult = async () => {
-    if (!isResultValid) return;
-    setResultSaving(true);
-    const payload: any = {
-      competition: Number(resultForm.competition),
-      event_category: resultForm.event_category,
-      place: resultForm.place ? Number(resultForm.place) : null,
-      medal: resultForm.medal,
-      notes: resultForm.notes,
+  const saveRace = async () => {
+    if (!raceForm.name.trim()) return;
+    setRaceSaving(true);
+    const payload = {
+      competition: Number(raceForm.competition),
+      name: raceForm.name,
+      video_link: raceForm.video_link || "",
+      order: Number(raceForm.order) || 0,
     };
-    if (resultForm.player_id && resultForm.player_id !== "__other__") {
-      payload.player_id = Number(resultForm.player_id);
-    } else {
-      payload.athlete_name = resultForm.athlete_name;
-    }
     try {
-      if (editResultId) {
-        await api.put(`${API_URLS.individualResults}${editResultId}/`, payload);
+      if (editRaceId) {
+        await api.put(`${API_URLS.individualRaces}${editRaceId}/`, payload);
       } else {
-        await api.post(API_URLS.individualResults, payload);
+        await api.post(API_URLS.individualRaces, payload);
       }
-      setShowResultModal(false);
-      await loadCompDetail(Number(resultForm.competition));
-      // Refresh list to update medal counts
+      setShowRaceModal(false);
+      await loadCompDetail(Number(raceForm.competition));
       await loadCompetitions(selectedTeamId);
     } catch {
       setError(t("ic.save_error"));
     } finally {
-      setResultSaving(false);
+      setRaceSaving(false);
     }
   };
 
-  const deleteResult = async (resultId: number, competitionId: number) => {
-    if (!window.confirm(t("ic.confirm_delete_result"))) return;
-    await api.delete(`${API_URLS.individualResults}${resultId}/`);
+  const deleteRace = async (raceId: number, competitionId: number) => {
+    if (!window.confirm(t("ic.confirm_delete_race"))) return;
+    await api.delete(`${API_URLS.individualRaces}${raceId}/`);
+    if (activeRaceId === raceId) setActiveRaceId(null);
     await loadCompDetail(competitionId);
     await loadCompetitions(selectedTeamId);
   };
 
-  const medalEmoji = (medal: string) =>
-    MEDAL_OPTIONS.find((m) => m.value === medal)?.emoji ?? "";
+  // ── Participant CRUD ──────────────────────────────────────────────────────
+
+  const openAddParticipant = (raceId: number) => {
+    setParticipantForm({ ...emptyParticipant, race: String(raceId) });
+    setEditParticipantId(null);
+    setShowParticipantModal(true);
+  };
+
+  const openEditParticipant = (participant: any) => {
+    setParticipantForm({
+      race: String(participant.race),
+      player_id: participant.player_id ? String(participant.player_id) : "",
+      athlete_name: participant.athlete_name || "",
+      place:
+        participant.place !== null && participant.place !== undefined
+          ? String(participant.place)
+          : "",
+    });
+    setEditParticipantId(participant.id);
+    setShowParticipantModal(true);
+  };
+
+  const isParticipantValid =
+    (!!participantForm.player_id &&
+      participantForm.player_id !== "__other__") ||
+    (participantForm.player_id === "__other__" &&
+      !!participantForm.athlete_name.trim()) ||
+    (!participantForm.player_id && !!participantForm.athlete_name.trim());
+
+  const saveParticipant = async () => {
+    if (!isParticipantValid) return;
+    setParticipantSaving(true);
+    const payload: any = {
+      race: Number(participantForm.race),
+      place: participantForm.place ? Number(participantForm.place) : null,
+    };
+    if (
+      participantForm.player_id &&
+      participantForm.player_id !== "__other__"
+    ) {
+      payload.player_id = Number(participantForm.player_id);
+    } else {
+      payload.athlete_name = participantForm.athlete_name;
+    }
+    try {
+      if (editParticipantId) {
+        await api.put(
+          `${API_URLS.individualRaceParticipants}${editParticipantId}/`,
+          payload,
+        );
+      } else {
+        await api.post(API_URLS.individualRaceParticipants, payload);
+      }
+      setShowParticipantModal(false);
+      if (activeComp?.id) await loadCompDetail(activeComp.id);
+    } catch {
+      setError(t("ic.save_error"));
+    } finally {
+      setParticipantSaving(false);
+    }
+  };
+
+  const deleteParticipant = async (participantId: number) => {
+    if (!window.confirm(t("ic.confirm_delete_participant"))) return;
+    await api.delete(`${API_URLS.individualRaceParticipants}${participantId}/`);
+    if (activeComp?.id) await loadCompDetail(activeComp.id);
+  };
 
   return (
     <div className="container py-4">
@@ -307,7 +382,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* Discipline filter – only shown when more than one discipline is available */}
+      {/* Discipline filter */}
       {visibleDisciplines.length > 1 && (
         <div className="mb-3" style={{ maxWidth: 400 }}>
           <label className="form-label fw-semibold">
@@ -372,7 +447,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                     <th>{t("ic.col_season")}</th>
                     <th>{t("ic.col_date")}</th>
                     <th>{t("ic.col_location")}</th>
-                    <th>{t("ic.medal_count")}</th>
+                    <th>{t("ic.race_count")}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -391,24 +466,13 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                         <td>{comp.date || "—"}</td>
                         <td>{comp.location || "—"}</td>
                         <td>
-                          {comp.medal_count?.gold > 0 && (
-                            <span className="me-2">
-                              🥇 {comp.medal_count.gold}
+                          {comp.race_count > 0 ? (
+                            <span className="badge bg-secondary">
+                              {comp.race_count}
                             </span>
+                          ) : (
+                            <span className="text-muted">—</span>
                           )}
-                          {comp.medal_count?.silver > 0 && (
-                            <span className="me-2">
-                              🥈 {comp.medal_count.silver}
-                            </span>
-                          )}
-                          {comp.medal_count?.bronze > 0 && (
-                            <span>🥉 {comp.medal_count.bronze}</span>
-                          )}
-                          {!comp.medal_count?.gold &&
-                            !comp.medal_count?.silver &&
-                            !comp.medal_count?.bronze && (
-                              <span className="text-muted">—</span>
-                            )}
                         </td>
                         <td className="text-end text-nowrap">
                           <button
@@ -416,13 +480,15 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                             onClick={async () => {
                               if (activeComp?.id === comp.id) {
                                 setActiveComp(null);
+                                setActiveRaceId(null);
                               } else {
+                                setActiveRaceId(null);
                                 await loadCompDetail(comp.id);
                               }
                             }}
                           >
                             {activeComp?.id === comp.id ? "▲" : "▼"}{" "}
-                            {t("ic.manage_results")}
+                            {t("ic.manage_races")}
                           </button>
                           <button
                             className="btn btn-outline-secondary btn-sm me-1"
@@ -441,73 +507,213 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                         </td>
                       </tr>
 
-                      {/* Inline results panel */}
+                      {/* Inline races panel */}
                       {activeComp?.id === comp.id && (
                         <tr>
                           <td colSpan={6} className="p-0">
                             <div className="bg-light p-3 border-top border-bottom">
-                              <div className="d-flex justify-content-between align-items-center mb-2">
+                              <div className="d-flex justify-content-between align-items-center mb-3">
                                 <strong>
-                                  {t("ic.results")} — {comp.name}
+                                  {t("ic.races")} — {comp.name}
                                 </strong>
                                 <button
                                   className="btn btn-success btn-sm"
-                                  onClick={() => openAddResult(comp.id)}
+                                  onClick={() => openAddRace(comp.id)}
                                 >
-                                  + {t("ic.add_result")}
+                                  + {t("ic.add_race")}
                                 </button>
                               </div>
-                              {activeComp.results?.length === 0 ? (
+
+                              {activeComp.races?.length === 0 ? (
                                 <p className="text-muted mb-0">
-                                  {t("ic.no_results")}
+                                  {t("ic.no_races")}
                                 </p>
                               ) : (
-                                <table className="table table-sm mb-0 bg-white">
-                                  <thead className="table-light">
-                                    <tr>
-                                      <th>{t("ic.place")}</th>
-                                      <th>{t("ic.athlete_name")}</th>
-                                      <th>{t("ic.event_category")}</th>
-                                      <th>{t("ic.medal")}</th>
-                                      <th>{t("ic.notes")}</th>
-                                      <th></th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {activeComp.results.map((r: any) => (
-                                      <tr key={r.id}>
-                                        <td>{r.place ? `${r.place}.` : "—"}</td>
-                                        <td>
-                                          <strong>{r.athlete_name}</strong>
-                                        </td>
-                                        <td>{r.event_category || "—"}</td>
-                                        <td>
-                                          {medalEmoji(r.medal)}{" "}
-                                          {r.medal !== "none"
-                                            ? r.medal_display
-                                            : "—"}
-                                        </td>
-                                        <td>{r.notes || "—"}</td>
-                                        <td className="text-end text-nowrap">
-                                          <button
-                                            className="btn btn-outline-secondary btn-sm me-1"
-                                            onClick={() => openEditResult(r)}
+                                activeComp.races?.map((race: any) => (
+                                  <div
+                                    key={race.id}
+                                    className="card mb-2 border"
+                                  >
+                                    <div className="card-header d-flex justify-content-between align-items-center py-2 px-3">
+                                      <div className="d-flex align-items-center gap-2">
+                                        <strong>{race.name}</strong>
+                                        {race.video_link && (
+                                          <a
+                                            href={race.video_link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="btn btn-outline-danger btn-sm py-0 px-1"
+                                            title={race.video_link}
                                           >
-                                            ✏️
-                                          </button>
+                                            ▶ Video
+                                          </a>
+                                        )}
+                                      </div>
+                                      <div className="d-flex gap-1">
+                                        <button
+                                          className="btn btn-outline-primary btn-sm"
+                                          onClick={() =>
+                                            setActiveRaceId(
+                                              activeRaceId === race.id
+                                                ? null
+                                                : race.id,
+                                            )
+                                          }
+                                        >
+                                          {activeRaceId === race.id ? "▲" : "▼"}{" "}
+                                          {t("ic.participants")}
+                                        </button>
+                                        <button
+                                          className="btn btn-outline-secondary btn-sm"
+                                          onClick={() => openEditRace(race)}
+                                          title={t("ic.edit_race")}
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          className="btn btn-outline-danger btn-sm"
+                                          onClick={() =>
+                                            deleteRace(race.id, comp.id)
+                                          }
+                                          title={t("ic.delete_race")}
+                                        >
+                                          🗑️
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Participants panel */}
+                                    {activeRaceId === race.id && (
+                                      <div className="card-body p-3">
+                                        <div className="d-flex justify-content-between align-items-center mb-2">
+                                          <span className="fw-semibold small text-muted">
+                                            {t("ic.participants")}
+                                          </span>
                                           <button
-                                            className="btn btn-outline-danger btn-sm"
+                                            className="btn btn-success btn-sm"
                                             onClick={() =>
-                                              deleteResult(r.id, comp.id)
+                                              openAddParticipant(race.id)
                                             }
                                           >
-                                            🗑️
+                                            + {t("ic.add_participant")}
                                           </button>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                                        </div>
+
+                                        {race.participants?.length === 0 ? (
+                                          <p className="text-muted small mb-0">
+                                            {t("ic.no_participants")}
+                                          </p>
+                                        ) : (
+                                          <table className="table table-sm mb-0 bg-white">
+                                            <thead className="table-light">
+                                              <tr>
+                                                <th style={{ width: 120 }}>
+                                                  {t("ic.place")}
+                                                </th>
+                                                <th>{t("ic.athlete_name")}</th>
+                                                <th></th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {[1, 2, 3].map((p) => {
+                                                const participant =
+                                                  race.participants?.find(
+                                                    (pt: any) => pt.place === p,
+                                                  );
+                                                return (
+                                                  <tr key={`place-${p}`}>
+                                                    <td>
+                                                      {placeEmoji(p)}{" "}
+                                                      {t(
+                                                        `ic.place_${p === 1 ? "first" : p === 2 ? "second" : "third"}`,
+                                                      )}
+                                                    </td>
+                                                    <td>
+                                                      {participant ? (
+                                                        <strong>
+                                                          {
+                                                            participant.athlete_name
+                                                          }
+                                                        </strong>
+                                                      ) : (
+                                                        <span className="text-muted fst-italic small">
+                                                          —
+                                                        </span>
+                                                      )}
+                                                    </td>
+                                                    <td className="text-end text-nowrap">
+                                                      {participant && (
+                                                        <>
+                                                          <button
+                                                            className="btn btn-outline-secondary btn-sm me-1"
+                                                            onClick={() =>
+                                                              openEditParticipant(
+                                                                participant,
+                                                              )
+                                                            }
+                                                          >
+                                                            ✏️
+                                                          </button>
+                                                          <button
+                                                            className="btn btn-outline-danger btn-sm"
+                                                            onClick={() =>
+                                                              deleteParticipant(
+                                                                participant.id,
+                                                              )
+                                                            }
+                                                          >
+                                                            🗑️
+                                                          </button>
+                                                        </>
+                                                      )}
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })}
+                                              {race.participants
+                                                ?.filter(
+                                                  (pt: any) =>
+                                                    !pt.place || pt.place > 3,
+                                                )
+                                                .map((pt: any) => (
+                                                  <tr key={pt.id}>
+                                                    <td className="text-muted small">
+                                                      {t(
+                                                        "ic.place_participant",
+                                                      )}
+                                                    </td>
+                                                    <td>{pt.athlete_name}</td>
+                                                    <td className="text-end text-nowrap">
+                                                      <button
+                                                        className="btn btn-outline-secondary btn-sm me-1"
+                                                        onClick={() =>
+                                                          openEditParticipant(
+                                                            pt,
+                                                          )
+                                                        }
+                                                      >
+                                                        ✏️
+                                                      </button>
+                                                      <button
+                                                        className="btn btn-outline-danger btn-sm"
+                                                        onClick={() =>
+                                                          deleteParticipant(
+                                                            pt.id,
+                                                          )
+                                                        }
+                                                      >
+                                                        🗑️
+                                                      </button>
+                                                    </td>
+                                                  </tr>
+                                                ))}
+                                            </tbody>
+                                          </table>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))
                               )}
                             </div>
                           </td>
@@ -624,24 +830,93 @@ const IndividualCompetitionAdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* ── Result Modal ──────────────────────────────────────────────────── */}
-      {showResultModal && (
+      {/* ── Race Modal ────────────────────────────────────────────────────── */}
+      {showRaceModal && (
         <div
           className="modal show d-block"
           style={{ background: "rgba(0,0,0,0.5)" }}
           onClick={(e) =>
-            e.target === e.currentTarget && setShowResultModal(false)
+            e.target === e.currentTarget && setShowRaceModal(false)
           }
         >
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {editResultId ? t("ic.edit_result") : t("ic.add_result")}
+                  {editRaceId ? t("ic.edit_race") : t("ic.add_race")}
                 </h5>
                 <button
                   className="btn-close"
-                  onClick={() => setShowResultModal(false)}
+                  onClick={() => setShowRaceModal(false)}
+                />
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">
+                    {t("ic.race_name")} <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    className="form-control"
+                    placeholder={t("ic.event_category_placeholder")}
+                    value={raceForm.name}
+                    onChange={(e) =>
+                      setRaceForm({ ...raceForm, name: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">{t("ic.video_link")}</label>
+                  <input
+                    type="url"
+                    className="form-control"
+                    placeholder={t("ic.video_link_placeholder")}
+                    value={raceForm.video_link}
+                    onChange={(e) =>
+                      setRaceForm({ ...raceForm, video_link: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setShowRaceModal(false)}
+                >
+                  {t("ic.cancel")}
+                </button>
+                <button
+                  className="btn btn-primary"
+                  onClick={saveRace}
+                  disabled={raceSaving || !raceForm.name.trim()}
+                >
+                  {raceSaving ? "…" : t("ic.save")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Participant Modal ─────────────────────────────────────────────── */}
+      {showParticipantModal && (
+        <div
+          className="modal show d-block"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={(e) =>
+            e.target === e.currentTarget && setShowParticipantModal(false)
+          }
+        >
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  {editParticipantId
+                    ? t("ic.edit_participant")
+                    : t("ic.add_participant")}
+                </h5>
+                <button
+                  className="btn-close"
+                  onClick={() => setShowParticipantModal(false)}
                 />
               </div>
               <div className="modal-body">
@@ -652,10 +927,10 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                   </label>
                   <select
                     className="form-select"
-                    value={resultForm.player_id}
+                    value={participantForm.player_id}
                     onChange={(e) =>
-                      setResultForm({
-                        ...resultForm,
+                      setParticipantForm({
+                        ...participantForm,
                         player_id: e.target.value,
                         athlete_name: "",
                       })
@@ -672,17 +947,18 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                     </option>
                   </select>
                 </div>
-                {(resultForm.player_id === "__other__" ||
-                  (!resultForm.player_id && resultForm.athlete_name)) && (
+                {(participantForm.player_id === "__other__" ||
+                  (!participantForm.player_id &&
+                    participantForm.athlete_name)) && (
                   <div className="mb-3">
                     <label className="form-label">{t("ic.athlete_name")}</label>
                     <input
                       className="form-control"
                       placeholder={t("ic.athlete_name")}
-                      value={resultForm.athlete_name}
+                      value={participantForm.athlete_name}
                       onChange={(e) =>
-                        setResultForm({
-                          ...resultForm,
+                        setParticipantForm({
+                          ...participantForm,
                           athlete_name: e.target.value,
                         })
                       }
@@ -690,73 +966,55 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                   </div>
                 )}
                 <div className="mb-3">
-                  <label className="form-label">{t("ic.event_category")}</label>
-                  <input
-                    className="form-control"
-                    placeholder={t("ic.event_category_placeholder")}
-                    value={resultForm.event_category}
-                    onChange={(e) =>
-                      setResultForm({
-                        ...resultForm,
-                        event_category: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div className="row">
-                  <div className="col-6 mb-3">
-                    <label className="form-label">{t("ic.place")}</label>
-                    <input
-                      type="number"
-                      min="1"
-                      className="form-control"
-                      value={resultForm.place}
-                      onChange={(e) =>
-                        setResultForm({ ...resultForm, place: e.target.value })
-                      }
-                    />
+                  <label className="form-label">{t("ic.place")}</label>
+                  <div className="d-flex flex-column gap-2 mt-1">
+                    {PLACE_OPTIONS.map((opt) => (
+                      <div className="form-check" key={opt.value || "none"}>
+                        <input
+                          className="form-check-input"
+                          type="radio"
+                          id={`place-${opt.value || "none"}`}
+                          name="place"
+                          value={opt.value}
+                          checked={participantForm.place === opt.value}
+                          onChange={(e) =>
+                            setParticipantForm({
+                              ...participantForm,
+                              place: e.target.value,
+                            })
+                          }
+                        />
+                        <label
+                          className="form-check-label"
+                          htmlFor={`place-${opt.value || "none"}`}
+                        >
+                          {opt.value === "1"
+                            ? "🥇 "
+                            : opt.value === "2"
+                              ? "🥈 "
+                              : opt.value === "3"
+                                ? "🥉 "
+                                : ""}
+                          {t(opt.label)}
+                        </label>
+                      </div>
+                    ))}
                   </div>
-                  <div className="col-6 mb-3">
-                    <label className="form-label">{t("ic.medal")}</label>
-                    <select
-                      className="form-select"
-                      value={resultForm.medal}
-                      onChange={(e) =>
-                        setResultForm({ ...resultForm, medal: e.target.value })
-                      }
-                    >
-                      {MEDAL_OPTIONS.map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.emoji} {t(`ic.medal_${m.value}`)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="mb-3">
-                  <label className="form-label">{t("ic.notes")}</label>
-                  <input
-                    className="form-control"
-                    value={resultForm.notes}
-                    onChange={(e) =>
-                      setResultForm({ ...resultForm, notes: e.target.value })
-                    }
-                  />
                 </div>
               </div>
               <div className="modal-footer">
                 <button
                   className="btn btn-secondary"
-                  onClick={() => setShowResultModal(false)}
+                  onClick={() => setShowParticipantModal(false)}
                 >
                   {t("ic.cancel")}
                 </button>
                 <button
                   className="btn btn-primary"
-                  onClick={saveResult}
-                  disabled={resultSaving || !isResultValid}
+                  onClick={saveParticipant}
+                  disabled={participantSaving || !isParticipantValid}
                 >
-                  {resultSaving ? "…" : t("ic.save")}
+                  {participantSaving ? "…" : t("ic.save")}
                 </button>
               </div>
             </div>

@@ -4,37 +4,17 @@ import { useTranslation } from "react-i18next";
 
 const API_BASE = import.meta.env.VITE_API_URL as string;
 
-const MEDAL_EMOJI: Record<string, string> = {
-  gold: "🥇",
-  silver: "🥈",
-  bronze: "🥉",
-};
+// ── Single competition card ───────────────────────────────────────────────────
 
-// ── Single competition card with expandable results ───────────────────────────
-
-function CompetitionCard({ comp, t }: { comp: any; t: (k: string) => string }) {
-  const [expanded, setExpanded] = useState(false);
-  const [results, setResults] = useState<any[] | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const toggleResults = async () => {
-    if (results !== null) {
-      setExpanded((v) => !v);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/individual-competitions/${comp.id}/`,
-      );
-      const data = await res.json();
-      setResults(data.results ?? []);
-      setExpanded(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+function CompetitionCard({
+  comp,
+  teamId,
+  t,
+}: {
+  comp: any;
+  teamId: string;
+  t: (k: string) => string;
+}) {
   return (
     <div className="card shadow-sm">
       <div className="card-body">
@@ -49,77 +29,25 @@ function CompetitionCard({ comp, t }: { comp: any; t: (k: string) => string }) {
             </div>
           </div>
           <div className="d-flex align-items-center gap-3 flex-wrap">
-            {comp.medal_count?.gold > 0 && (
-              <span className="fw-semibold">🥇 {comp.medal_count.gold}</span>
+            {comp.race_count > 0 && (
+              <span className="badge bg-secondary">
+                {comp.race_count} {t("ic.races")}
+              </span>
             )}
-            {comp.medal_count?.silver > 0 && (
-              <span className="fw-semibold">🥈 {comp.medal_count.silver}</span>
-            )}
-            {comp.medal_count?.bronze > 0 && (
-              <span className="fw-semibold">🥉 {comp.medal_count.bronze}</span>
-            )}
-            <button
+            <Link
+              to={`/teams/${teamId}/competitions/${comp.id}`}
               className="btn btn-outline-primary btn-sm"
-              onClick={toggleResults}
-              disabled={loading}
             >
-              {loading
-                ? "…"
-                : expanded
-                  ? `▲ ${t("ic.hide_results")}`
-                  : `▼ ${t("ic.view_results")}`}
-            </button>
+              {t("ic.view_races")} →
+            </Link>
           </div>
         </div>
 
         {/* Description */}
         {comp.description && (
-          <p className="text-muted mt-2 mb-2" style={{ fontSize: "0.9rem" }}>
+          <p className="text-muted mt-2 mb-0" style={{ fontSize: "0.9rem" }}>
             {comp.description}
           </p>
-        )}
-
-        {/* Results table */}
-        {expanded && results !== null && (
-          <div className="mt-3">
-            {results.length === 0 ? (
-              <p className="text-muted mb-0">{t("ic.no_results")}</p>
-            ) : (
-              <div className="table-responsive">
-                <table className="table table-sm table-bordered mb-0">
-                  <thead className="table-light">
-                    <tr>
-                      <th style={{ width: 60 }}>{t("ic.place")}</th>
-                      <th>{t("ic.athlete_name")}</th>
-                      <th>{t("ic.event_category")}</th>
-                      <th style={{ width: 100 }}>{t("ic.medal")}</th>
-                      <th>{t("ic.notes")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {results.map((r: any) => (
-                      <tr key={r.id}>
-                        <td className="text-center">
-                          {r.place ? <strong>{r.place}.</strong> : "—"}
-                        </td>
-                        <td>
-                          <strong>{r.athlete_name}</strong>
-                        </td>
-                        <td>{r.event_category || "—"}</td>
-                        <td>
-                          {MEDAL_EMOJI[r.medal] && (
-                            <span className="me-1">{MEDAL_EMOJI[r.medal]}</span>
-                          )}
-                          {r.medal !== "none" ? r.medal_display : "—"}
-                        </td>
-                        <td className="text-muted">{r.notes || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
         )}
       </div>
     </div>
@@ -215,7 +143,7 @@ export const IndividualCompetitionsPage: React.FC = () => {
       ) : (
         <div className="d-flex flex-column gap-3">
           {displayed.map((comp: any) => (
-            <CompetitionCard key={comp.id} comp={comp} t={t} />
+            <CompetitionCard key={comp.id} comp={comp} teamId={teamId!} t={t} />
           ))}
         </div>
       )}

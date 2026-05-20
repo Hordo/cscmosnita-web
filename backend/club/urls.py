@@ -12,7 +12,8 @@ from .views import (
     TeamPhotoViewSet,
     OfficialDocumentViewSet,
     LocationViewSet, ResourceBookingViewSet,
-    IndividualCompetitionViewSet, IndividualResultViewSet
+    IndividualCompetitionViewSet, IndividualResultViewSet,
+    IndividualRaceViewSet, IndividualRaceParticipantViewSet
 )
 from .signed_upload import (
     GeneratePlayerPhotoUploadURL, GenerateTeamPhotoUploadURL, GenerateCoachPhotoUploadURL,
@@ -51,6 +52,8 @@ router.register(r'resource-locations', LocationViewSet, basename='resource-locat
 router.register(r'resource-bookings', ResourceBookingViewSet, basename='resource-bookings')
 router.register(r'individual-competitions', IndividualCompetitionViewSet, basename='individual-competitions')
 router.register(r'individual-results', IndividualResultViewSet, basename='individual-results')
+router.register(r'individual-races', IndividualRaceViewSet, basename='individual-races')
+router.register(r'individual-race-participants', IndividualRaceParticipantViewSet, basename='individual-race-participants')
 
 urlpatterns = [
     path('', include(router.urls)),

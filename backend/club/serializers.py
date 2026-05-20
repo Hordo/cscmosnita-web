@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, Location, ResourceBooking, IndividualCompetition, IndividualResult
+from .models import Team, Coach, Player, Championship, Match, Discipline, EventType, CalendarEvent, TrainingSession, EventAttendance, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, TeamPhoto, Location, ResourceBooking, IndividualCompetition, IndividualResult, IndividualRace, IndividualRaceParticipant
 # --- Team Photo Gallery ---
 class TeamPhotoSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.SerializerMethodField(read_only=True)
@@ -713,28 +713,68 @@ class IndividualResultSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
+class IndividualRaceParticipantSerializer(serializers.ModelSerializer):
+    player_id = serializers.PrimaryKeyRelatedField(
+        queryset=Player.objects.all(), source='player',
+        required=False, allow_null=True,
+    )
+    player_name = serializers.SerializerMethodField(read_only=True)
+    athlete_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+
+    class Meta:
+        model = IndividualRaceParticipant
+        fields = ['id', 'race', 'player_id', 'player_name', 'athlete_name', 'place']
+
+    def get_player_name(self, obj):
+        if obj.player_id:
+            return f"{obj.player.first_name} {obj.player.last_name}"
+        return None
+
+    def _resolve_athlete_name(self, validated_data):
+        player = validated_data.get('player')
+        if player:
+            validated_data['athlete_name'] = f"{player.first_name} {player.last_name}"
+        elif not validated_data.get('athlete_name', '').strip():
+            raise serializers.ValidationError(
+                {'athlete_name': 'Required when no player is selected.'}
+            )
+        return validated_data
+
+    def create(self, validated_data):
+        self._resolve_athlete_name(validated_data)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        self._resolve_athlete_name(validated_data)
+        return super().update(instance, validated_data)
+
+
+class IndividualRaceSerializer(serializers.ModelSerializer):
+    participants = IndividualRaceParticipantSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = IndividualRace
+        fields = ['id', 'competition', 'name', 'video_link', 'order', 'participants']
+
+
 class IndividualCompetitionListSerializer(serializers.ModelSerializer):
-    """Lightweight serializer used for list views (no nested results)."""
+    """Lightweight serializer used for list views (no nested races)."""
     discipline_name = serializers.CharField(source='discipline.name', read_only=True)
     team_name = serializers.CharField(source='team.name', read_only=True)
-    medal_count = serializers.SerializerMethodField()
+    race_count = serializers.SerializerMethodField()
 
     class Meta:
         model = IndividualCompetition
         fields = ['id', 'name', 'discipline', 'discipline_name', 'team', 'team_name',
-                  'date', 'location', 'season', 'description', 'medal_count', 'created_at']
+                  'date', 'location', 'season', 'description', 'race_count', 'created_at']
 
-    def get_medal_count(self, obj):
-        return {
-            'gold': obj.results.filter(medal='gold').count(),
-            'silver': obj.results.filter(medal='silver').count(),
-            'bronze': obj.results.filter(medal='bronze').count(),
-        }
+    def get_race_count(self, obj):
+        return obj.races.count()
 
 
 class IndividualCompetitionSerializer(serializers.ModelSerializer):
-    """Full serializer with nested results, used for detail/create/update."""
-    results = IndividualResultSerializer(many=True, read_only=True)
+    """Full serializer with nested races, used for detail/create/update."""
+    races = IndividualRaceSerializer(many=True, read_only=True)
     discipline_name = serializers.CharField(source='discipline.name', read_only=True)
     team_name = serializers.CharField(source='team.name', read_only=True)
     discipline_id = serializers.PrimaryKeyRelatedField(
@@ -750,5 +790,5 @@ class IndividualCompetitionSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'discipline', 'discipline_id', 'discipline_name',
                   'team', 'team_id', 'team_name',
                   'date', 'location', 'season', 'description',
-                  'results', 'created_at']
+                  'races', 'created_at']
         read_only_fields = ['discipline', 'team', 'created_at']

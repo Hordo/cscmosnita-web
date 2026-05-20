@@ -12,7 +12,7 @@ export const TeamViewerPage: React.FC = () => {
   const [players, setPlayers] = useState<any[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
   const [weekEvents, setWeekEvents] = useState<any[]>([]);
-  const [individualResults, setIndividualResults] = useState<any[]>([]);
+  const [raceParticipants, setRaceParticipants] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,12 +58,14 @@ export const TeamViewerPage: React.FC = () => {
           ? teamsData.find((t: any) => String(t.id) === String(teamId))
           : null;
         if (currentTeam?.discipline_type === "individual" && teamId) {
-          fetch(`${API_BASE}/api/individual-results/?team_id=${teamId}`)
+          fetch(
+            `${API_BASE}/api/individual-race-participants/?team_id=${teamId}`,
+          )
             .then((res) => (res.ok ? res.json() : []))
             .then((data) =>
-              setIndividualResults(Array.isArray(data) ? data : []),
+              setRaceParticipants(Array.isArray(data) ? data : []),
             )
-            .catch(() => setIndividualResults([]));
+            .catch(() => setRaceParticipants([]));
         }
       })
       .catch((err) => setError(err.message || "Unknown error"))
@@ -103,14 +105,14 @@ export const TeamViewerPage: React.FC = () => {
     { gold: number; silver: number; bronze: number }
   > = {};
   if (isIndividual) {
-    for (const r of individualResults) {
-      const pid = r.player_id;
+    for (const p of raceParticipants) {
+      const pid = p.player_id;
       if (!pid) continue;
       if (!medalsByPlayer[pid])
         medalsByPlayer[pid] = { gold: 0, silver: 0, bronze: 0 };
-      if (r.medal === "gold") medalsByPlayer[pid].gold++;
-      else if (r.medal === "silver") medalsByPlayer[pid].silver++;
-      else if (r.medal === "bronze") medalsByPlayer[pid].bronze++;
+      if (p.place === 1) medalsByPlayer[pid].gold++;
+      else if (p.place === 2) medalsByPlayer[pid].silver++;
+      else if (p.place === 3) medalsByPlayer[pid].bronze++;
     }
   }
 
