@@ -17,6 +17,7 @@ interface RaceTemplate {
   discipline_name: string;
   name: string;
   order: number;
+  unit: string;
 }
 
 interface AgeCategory {
@@ -38,7 +39,8 @@ const GENDER_OPTIONS: {
   { value: "mixed", labelKey: "sc.gender_mixed" },
 ];
 
-const emptyRace = { name: "", order: 0 };
+const emptyRace = { name: "", order: 0, unit: "none" };
+const SC_KNOWN_UNITS = ["none", "seconds", "centimeters", "meters", "points"];
 const emptyCategory = {
   name: "",
   gender: "mixed" as "boys" | "girls" | "mixed",
@@ -60,6 +62,7 @@ export default function SportConfigAdminPage() {
   const [raceForm, setRaceForm] = useState({ ...emptyRace });
   const [raceEditId, setRaceEditId] = useState<number | null>(null);
   const [raceSaving, setRaceSaving] = useState(false);
+  const [customUnit, setCustomUnit] = useState("");
 
   const [catForm, setCatForm] = useState({ ...emptyCategory });
   const [catEditId, setCatEditId] = useState<number | null>(null);
@@ -147,7 +150,15 @@ export default function SportConfigAdminPage() {
       return flash("error", t("sc.race_name_required"));
     setRaceSaving(true);
     try {
-      const payload = { ...raceForm, discipline: selectedDisciplineId };
+      const resolvedUnit =
+        raceForm.unit === "custom"
+          ? customUnit.trim() || "none"
+          : raceForm.unit;
+      const payload = {
+        ...raceForm,
+        unit: resolvedUnit,
+        discipline: selectedDisciplineId,
+      };
       if (raceEditId !== null) {
         await api.patch(
           `${API_URLS.sportRaceTemplates}${raceEditId}/`,
@@ -160,6 +171,7 @@ export default function SportConfigAdminPage() {
       }
       setRaceForm({ ...emptyRace });
       setRaceEditId(null);
+      setCustomUnit("");
       loadRaceTemplates();
     } catch {
       flash("error", t("sc.save_error"));
@@ -170,7 +182,11 @@ export default function SportConfigAdminPage() {
 
   const handleRaceEdit = (r: RaceTemplate) => {
     setRaceEditId(r.id);
-    setRaceForm({ name: r.name, order: r.order });
+    const knownUnit = SC_KNOWN_UNITS.includes(r.unit ?? "none")
+      ? (r.unit ?? "none")
+      : "custom";
+    setRaceForm({ name: r.name, order: r.order, unit: knownUnit });
+    setCustomUnit(knownUnit === "custom" ? (r.unit ?? "") : "");
   };
 
   const handleRaceDelete = async (id: number) => {
@@ -248,6 +264,14 @@ export default function SportConfigAdminPage() {
       {msg && (
         <div
           className={`alert alert-${msg.type === "success" ? "success" : "danger"} py-2`}
+          style={{
+            position: "fixed",
+            top: "1rem",
+            right: "1rem",
+            zIndex: 1055,
+            maxWidth: "420px",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+          }}
         >
           {msg.text}
         </div>
@@ -299,6 +323,39 @@ export default function SportConfigAdminPage() {
                       onChange={handleRaceChange}
                       placeholder={t("sc.race_name_placeholder")}
                     />
+                  </div>
+                  <div className="col-auto" style={{ minWidth: 140 }}>
+                    <label className="form-label">{t("sc.unit")}</label>
+                    <select
+                      className="form-select"
+                      name="unit"
+                      value={(raceForm as any).unit ?? "none"}
+                      onChange={(e) =>
+                        setRaceForm((prev) => ({
+                          ...prev,
+                          unit: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="none">{t("sc.unit_none")}</option>
+                      <option value="seconds">{t("sc.unit_seconds")}</option>
+                      <option value="centimeters">
+                        {t("sc.unit_centimeters")}
+                      </option>
+                      <option value="meters">{t("sc.unit_meters")}</option>
+                      <option value="points">{t("sc.unit_points")}</option>
+                      <option value="custom">{t("sc.unit_custom")}</option>
+                    </select>
+                    {(raceForm as any).unit === "custom" && (
+                      <input
+                        type="text"
+                        className="form-control mt-1"
+                        placeholder={t("sc.unit_custom_placeholder")}
+                        value={customUnit}
+                        onChange={(e) => setCustomUnit(e.target.value)}
+                        autoFocus
+                      />
+                    )}
                   </div>
                   <div className="col-auto" style={{ minWidth: 90 }}>
                     <label className="form-label">{t("sc.order")}</label>
@@ -354,6 +411,13 @@ export default function SportConfigAdminPage() {
                           {r.order}
                         </span>
                         {r.name}
+                        {r.unit && r.unit !== "none" && (
+                          <span className="badge bg-info text-dark ms-2 fw-normal">
+                            {SC_KNOWN_UNITS.includes(r.unit)
+                              ? t(`sc.unit_${r.unit}`)
+                              : r.unit}
+                          </span>
+                        )}
                       </span>
                       <span className="d-flex gap-1">
                         <button

@@ -561,6 +561,15 @@ class IndividualResult(models.Model):
         return f"{self.athlete_name} - {self.event_category} ({self.competition.name})"
 
 
+RACE_UNIT_CHOICES = [
+    ('none', 'None'),
+    ('seconds', 'Seconds (s)'),
+    ('centimeters', 'Centimeters (cm)'),
+    ('meters', 'Meters (m)'),
+    ('points', 'Points'),
+]
+
+
 class IndividualRace(models.Model):
     """A race/event within an individual competition (e.g. Kata U14, 100m Senior)."""
     competition = models.ForeignKey(
@@ -569,6 +578,10 @@ class IndividualRace(models.Model):
     name = models.CharField(max_length=200, help_text='e.g. Kata U14, Kumite -55kg, 100m Senior')
     video_link = models.URLField(blank=True, help_text='Optional YouTube/video link for this race')
     order = models.PositiveIntegerField(default=0, help_text='Display order within the competition')
+    unit = models.CharField(
+        max_length=20, choices=RACE_UNIT_CHOICES, default='none',
+        help_text='Unit for participant results (e.g. seconds, centimeters, meters)'
+    )
 
     class Meta:
         ordering = ['order', 'id']
@@ -594,6 +607,10 @@ class IndividualRaceParticipant(models.Model):
         null=True, blank=True,
         help_text='1=1st place, 2=2nd place, 3=3rd place, null=other participant'
     )
+    result_value = models.DecimalField(
+        max_digits=10, decimal_places=3, null=True, blank=True,
+        help_text='Measured result (seconds, centimeters, meters, points, etc.)'
+    )
 
     class Meta:
         ordering = ['place', 'athlete_name']
@@ -613,6 +630,10 @@ class SportRaceTemplate(models.Model):
     )
     name = models.CharField(max_length=200, help_text='e.g. 50m, 200m, Long Jump, Kata')
     order = models.PositiveIntegerField(default=0, help_text='Display order')
+    unit = models.CharField(
+        max_length=20, choices=RACE_UNIT_CHOICES, default='none',
+        help_text='Default unit for this race type (e.g. seconds for 50m, centimeters for long jump)'
+    )
 
     class Meta:
         ordering = ['order', 'name']

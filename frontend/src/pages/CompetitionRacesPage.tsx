@@ -11,6 +11,13 @@ const placeEmoji = (place: number | null | undefined) => {
   return null;
 };
 
+const UNIT_ABBREV: Record<string, string> = {
+  seconds: "s",
+  centimeters: "cm",
+  meters: "m",
+  points: "pts",
+};
+
 function RaceCard({ race, t }: { race: any; t: (k: string) => string }) {
   const podium = (race.participants ?? [])
     .filter((p: any) => p.place === 1 || p.place === 2 || p.place === 3)
@@ -38,23 +45,41 @@ function RaceCard({ race, t }: { race: any; t: (k: string) => string }) {
         ) : (
           <div>
             {podium.map((p: any) => (
-              <div key={p.id} className="d-flex align-items-center gap-2 mb-1">
-                <span style={{ fontSize: "1.1rem" }}>
-                  {placeEmoji(p.place)}
-                </span>
-                <span className="fw-semibold">{p.athlete_name}</span>
+              <div
+                key={p.id}
+                className="d-flex align-items-center justify-content-between mb-1"
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <span style={{ fontSize: "1.1rem" }}>
+                    {placeEmoji(p.place)}
+                  </span>
+                  <span className="fw-semibold">{p.athlete_name}</span>
+                </div>
+                {race.unit &&
+                  race.unit !== "none" &&
+                  p.result_value != null && (
+                    <span className="text-muted small ms-3 text-nowrap">
+                      {p.result_value} {UNIT_ABBREV[race.unit] ?? race.unit}
+                    </span>
+                  )}
               </div>
             ))}
             {others.length > 0 && (
               <div className="mt-1">
-                <span className="text-muted small me-2">
-                  {t("ic.participants")}:
-                </span>
-                {others.map((p: any, i: number) => (
-                  <span key={p.id} className="small">
-                    {p.athlete_name}
-                    {i < others.length - 1 ? ", " : ""}
-                  </span>
+                {others.map((p: any) => (
+                  <div
+                    key={p.id}
+                    className="d-flex align-items-center justify-content-between small"
+                  >
+                    <span className="text-muted">{p.athlete_name}</span>
+                    {race.unit &&
+                      race.unit !== "none" &&
+                      p.result_value != null && (
+                        <span className="text-muted ms-3 text-nowrap">
+                          {p.result_value} {UNIT_ABBREV[race.unit] ?? race.unit}
+                        </span>
+                      )}
+                  </div>
                 ))}
               </div>
             )}

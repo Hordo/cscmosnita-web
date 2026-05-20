@@ -723,7 +723,7 @@ class IndividualRaceParticipantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = IndividualRaceParticipant
-        fields = ['id', 'race', 'player_id', 'player_name', 'athlete_name', 'place']
+        fields = ['id', 'race', 'player_id', 'player_name', 'athlete_name', 'place', 'result_value']
 
     def get_player_name(self, obj):
         if obj.player_id:
@@ -754,7 +754,7 @@ class IndividualRaceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = IndividualRace
-        fields = ['id', 'competition', 'name', 'video_link', 'order', 'participants']
+        fields = ['id', 'competition', 'name', 'video_link', 'order', 'unit', 'participants']
 
 
 class IndividualCompetitionListSerializer(serializers.ModelSerializer):
@@ -799,7 +799,7 @@ class SportRaceTemplateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SportRaceTemplate
-        fields = ['id', 'discipline', 'discipline_name', 'name', 'order']
+        fields = ['id', 'discipline', 'discipline_name', 'name', 'order', 'unit']
 
 
 class SportAgeCategorySerializer(serializers.ModelSerializer):

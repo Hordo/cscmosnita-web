@@ -98,6 +98,12 @@ export default function TopNavbar() {
       }
       if (isPureAccountant && item.adminOnly && !child.accountantAccessible)
         return false;
+      if (
+        (child as any).accountantOnly &&
+        !isAccountantAdmin() &&
+        !isSuperAdmin()
+      )
+        return false;
       if ((child as any).superAdminOnly && !isSuperAdmin()) return false;
       if ((child as any).headAdminOnly && !isHeadAdmin() && !isSuperAdmin())
         return false;

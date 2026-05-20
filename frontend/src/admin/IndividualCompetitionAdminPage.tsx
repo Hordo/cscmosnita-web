@@ -40,6 +40,14 @@ const emptyParticipant = {
   player_id: "",
   athlete_name: "",
   place: "",
+  result_value: "",
+};
+
+const UNIT_ABBREV: Record<string, string> = {
+  seconds: "s",
+  centimeters: "cm",
+  meters: "m",
+  points: "pts",
 };
 
 const IndividualCompetitionAdminPage: React.FC = () => {
@@ -222,6 +230,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
     competitionId: number,
     name: string,
     order: number,
+    unit: string,
   ) => {
     try {
       await api.post(API_URLS.individualRaces, {
@@ -229,6 +238,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
         name,
         video_link: "",
         order,
+        unit: unit || "none",
       });
       await loadCompetitions(selectedTeamId);
       await loadCompDetail(competitionId);
@@ -371,6 +381,11 @@ const IndividualCompetitionAdminPage: React.FC = () => {
         participant.place !== null && participant.place !== undefined
           ? String(participant.place)
           : "",
+      result_value:
+        participant.result_value !== null &&
+        participant.result_value !== undefined
+          ? String(participant.result_value)
+          : "",
     });
     setEditParticipantId(participant.id);
     setShowParticipantModal(true);
@@ -389,6 +404,10 @@ const IndividualCompetitionAdminPage: React.FC = () => {
     const payload: any = {
       race: Number(participantForm.race),
       place: participantForm.place ? Number(participantForm.place) : null,
+      result_value:
+        participantForm.result_value !== ""
+          ? Number(participantForm.result_value)
+          : null,
     };
     if (
       participantForm.player_id &&
@@ -430,9 +449,19 @@ const IndividualCompetitionAdminPage: React.FC = () => {
       </p>
 
       {error && (
-        <div className="alert alert-danger d-flex justify-content-between align-items-center">
+        <div
+          className="alert alert-danger d-flex justify-content-between align-items-center"
+          style={{
+            position: "fixed",
+            top: "1rem",
+            right: "1rem",
+            zIndex: 1055,
+            maxWidth: "420px",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
+          }}
+        >
           {error}
-          <button className="btn-close" onClick={() => setError(null)} />
+          <button className="btn-close ms-2" onClick={() => setError(null)} />
         </div>
       )}
 
@@ -693,6 +722,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                                                 name,
                                                 (activeComp.races?.length ??
                                                   0) + i,
+                                                template.unit || "none",
                                               );
                                             }
                                           }
@@ -764,6 +794,62 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                                       </div>
                                     </div>
 
+                                    {/* Inline results summary */}
+                                    {race.participants?.length > 0 && (
+                                      <div className="px-3 py-2 border-top bg-white small">
+                                        {[1, 2, 3].map((p) => {
+                                          const pt = race.participants?.find(
+                                            (x: any) => x.place === p,
+                                          );
+                                          if (!pt) return null;
+                                          return (
+                                            <div
+                                              key={p}
+                                              className="d-flex align-items-center justify-content-between"
+                                            >
+                                              <span>
+                                                {placeEmoji(p)}{" "}
+                                                <strong>
+                                                  {pt.athlete_name}
+                                                </strong>
+                                              </span>
+                                              {race.unit &&
+                                                race.unit !== "none" &&
+                                                pt.result_value != null && (
+                                                  <span className="text-muted ms-3 text-nowrap">
+                                                    {pt.result_value}{" "}
+                                                    {UNIT_ABBREV[race.unit] ??
+                                                      race.unit}
+                                                  </span>
+                                                )}
+                                            </div>
+                                          );
+                                        })}
+                                        {race.participants
+                                          ?.filter(
+                                            (pt: any) =>
+                                              !pt.place || pt.place > 3,
+                                          )
+                                          .map((pt: any) => (
+                                            <div
+                                              key={pt.id}
+                                              className="d-flex align-items-center justify-content-between text-muted"
+                                            >
+                                              <span>{pt.athlete_name}</span>
+                                              {race.unit &&
+                                                race.unit !== "none" &&
+                                                pt.result_value != null && (
+                                                  <span className="ms-3 text-nowrap">
+                                                    {pt.result_value}{" "}
+                                                    {UNIT_ABBREV[race.unit] ??
+                                                      race.unit}
+                                                  </span>
+                                                )}
+                                            </div>
+                                          ))}
+                                      </div>
+                                    )}
+
                                     {/* Participants panel */}
                                     {activeRaceId === race.id && (
                                       <div className="card-body p-3">
@@ -793,6 +879,19 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                                                   {t("ic.place")}
                                                 </th>
                                                 <th>{t("ic.athlete_name")}</th>
+                                                {race.unit &&
+                                                  race.unit !== "none" && (
+                                                    <th style={{ width: 100 }}>
+                                                      {t("ic.result_value")}{" "}
+                                                      <span className="text-muted">
+                                                        (
+                                                        {UNIT_ABBREV[
+                                                          race.unit
+                                                        ] ?? race.unit}
+                                                        )
+                                                      </span>
+                                                    </th>
+                                                  )}
                                                 <th></th>
                                               </tr>
                                             </thead>
@@ -823,6 +922,28 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                                                         </span>
                                                       )}
                                                     </td>
+                                                    {race.unit &&
+                                                      race.unit !== "none" && (
+                                                        <td>
+                                                          {participant?.result_value !=
+                                                          null ? (
+                                                            <span>
+                                                              {
+                                                                participant.result_value
+                                                              }{" "}
+                                                              <span className="text-muted small">
+                                                                {UNIT_ABBREV[
+                                                                  race.unit
+                                                                ] ?? race.unit}
+                                                              </span>
+                                                            </span>
+                                                          ) : (
+                                                            <span className="text-muted">
+                                                              —
+                                                            </span>
+                                                          )}
+                                                        </td>
+                                                      )}
                                                     <td className="text-end text-nowrap">
                                                       {participant && (
                                                         <>
@@ -865,6 +986,26 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                                                       )}
                                                     </td>
                                                     <td>{pt.athlete_name}</td>
+                                                    {race.unit &&
+                                                      race.unit !== "none" && (
+                                                        <td>
+                                                          {pt.result_value !=
+                                                          null ? (
+                                                            <span>
+                                                              {pt.result_value}{" "}
+                                                              <span className="text-muted small">
+                                                                {UNIT_ABBREV[
+                                                                  race.unit
+                                                                ] ?? race.unit}
+                                                              </span>
+                                                            </span>
+                                                          ) : (
+                                                            <span className="text-muted">
+                                                              —
+                                                            </span>
+                                                          )}
+                                                        </td>
+                                                      )}
                                                     <td className="text-end text-nowrap">
                                                       <button
                                                         className="btn btn-outline-secondary btn-sm me-1"
@@ -1183,6 +1324,39 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                     ))}
                   </div>
                 </div>
+                {(() => {
+                  const race = activeComp?.races?.find(
+                    (r: any) => String(r.id) === participantForm.race,
+                  );
+                  const unit = race?.unit ?? "none";
+                  if (unit === "none") return null;
+                  const abbrev = UNIT_ABBREV[unit] ?? unit;
+                  return (
+                    <div className="mb-3">
+                      <label className="form-label">
+                        {t("ic.result_value")}{" "}
+                        <span className="text-muted small">({abbrev})</span>
+                      </label>
+                      <div className="input-group">
+                        <input
+                          type="number"
+                          className="form-control"
+                          step="0.001"
+                          min="0"
+                          placeholder={`0.000`}
+                          value={participantForm.result_value}
+                          onChange={(e) =>
+                            setParticipantForm({
+                              ...participantForm,
+                              result_value: e.target.value,
+                            })
+                          }
+                        />
+                        <span className="input-group-text">{abbrev}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
               <div className="modal-footer">
                 <button

@@ -7,6 +7,7 @@ export type MenuItem = {
   superAdminOnly?: boolean; // only superusers see this
   headAdminOnly?: boolean; // only head_admin or superuser see this
   accountantAccessible?: boolean; // visible to pure accountant admins (accountant-only, no other admin role)
+  accountantOnly?: boolean; // hidden from non-accountant admins (requires accountant_admin or superuser)
   teamSportOnly?: boolean; // only shown to users who admin a team-sport discipline (or superuser)
   individualSportOnly?: boolean; // only shown to users who admin an individual-sport discipline (or superuser)
   // For normal dropdowns: children is MenuItem[]
@@ -74,16 +75,19 @@ export const menuConfig: MenuItem[] = [
           label: "menu.manage_official_docs",
           path: "/admin/official-documents",
           accountantAccessible: true,
+          accountantOnly: true,
         },
         {
           label: "menu.manage_resources",
           path: "/admin/resources",
           accountantAccessible: true,
+          accountantOnly: true,
         },
         {
           label: "menu.manage_resource_bookings",
           path: "/admin/resource-bookings",
           accountantAccessible: true,
+          accountantOnly: true,
         },
       ],
       [
@@ -131,6 +135,7 @@ export const menuConfig: MenuItem[] = [
           label: "menu.manage_sponsors",
           path: "/admin/sponsors",
           accountantAccessible: true,
+          accountantOnly: true,
         },
       ],
     ],
