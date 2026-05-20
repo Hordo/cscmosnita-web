@@ -186,7 +186,12 @@ const IndividualCompetitionAdminPage: React.FC = () => {
   // Load race templates and age categories
   const [raceTemplates, setRaceTemplates] = useState<any[]>([]);
   const [ageCategories, setAgeCategories] = useState<any[]>([]);
-  const [newCompCombos, setNewCompCombos] = useState<Set<string>>(new Set());
+  // Inline races panel quick-add
+  const [inlineSelectedCategory, setInlineSelectedCategory] =
+    useState<string>("");
+  const [inlineSelectedTemplates, setInlineSelectedTemplates] = useState<
+    string[]
+  >([]);
 
   // Load sport config (race templates + age categories) when discipline changes
   useEffect(() => {
@@ -237,13 +242,6 @@ const IndividualCompetitionAdminPage: React.FC = () => {
   const openAddComp = () => {
     setCompForm({ ...emptyComp, team_id: selectedTeamId });
     setEditCompId(null);
-    setNewCompCombos(
-      new Set(
-        raceTemplates.flatMap((tmpl) =>
-          ageCategories.map((cat) => `${tmpl.id}_${cat.id}`),
-        ),
-      ),
-    );
     setShowCompModal(true);
   };
 
@@ -278,25 +276,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
           payload,
         );
       } else {
-        const res = await api.post(API_URLS.individualCompetitions, payload);
-        const savedCompId = res.data.id;
-        if (newCompCombos.size > 0) {
-          const combosArr = [...newCompCombos];
-          await Promise.all(
-            combosArr.map((key, idx) => {
-              const [tId, cId] = key.split("_");
-              const template = raceTemplates.find((t) => String(t.id) === tId);
-              const category = ageCategories.find((c) => String(c.id) === cId);
-              if (!template || !category) return Promise.resolve();
-              return api.post(API_URLS.individualRaces, {
-                competition: savedCompId,
-                name: comboRaceName(template, category),
-                video_link: "",
-                order: idx,
-              });
-            }),
-          );
-        }
+        await api.post(API_URLS.individualCompetitions, payload);
       }
       setShowCompModal(false);
       await loadCompetitions(selectedTeamId);
@@ -597,65 +577,131 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                                   + {t("ic.add_race")}
                                 </button>
                               </div>
-                              {/* Race combo toggle grid */}
+                              {/* Race quick-add panel */}
                               {raceTemplates.length > 0 &&
                                 ageCategories.length > 0 && (
-                                  <div className="mb-3">
-                                    <p className="text-muted small mb-2">
-                                      {t("ic.race_toggle_hint")}
-                                    </p>
-                                    <div className="row g-2">
-                                      {raceTemplates.map((template) =>
-                                        ageCategories.map((category) => {
-                                          const name = comboRaceName(
-                                            template,
-                                            category,
-                                          );
-                                          const existingRace =
-                                            activeComp.races?.find(
-                                              (r: any) => r.name === name,
+                                  <div
+                                    className="mb-3 border rounded"
+                                    style={{ overflow: "hidden" }}
+                                  >
+                                    <div className="px-3 py-2 bg-light border-bottom d-flex align-items-center gap-2">
+                                      <span className="fw-semibold small">
+                                        ⚡ {t("ic.select_races")}
+                                      </span>
+                                      <span className="text-muted small">
+                                        — {t("ic.quick_add_races")}
+                                      </span>
+                                    </div>
+                                    <div className="p-3">
+                                      <div className="mb-2">
+                                        <label className="form-label small fw-semibold mb-1">
+                                          {t("ic.age_category")}
+                                        </label>
+                                        <select
+                                          className="form-select form-select-sm"
+                                          style={{ maxWidth: 260 }}
+                                          value={inlineSelectedCategory}
+                                          onChange={(e) =>
+                                            setInlineSelectedCategory(
+                                              e.target.value,
+                                            )
+                                          }
+                                        >
+                                          <option value="">
+                                            — {t("ic.choose_category")} —
+                                          </option>
+                                          {ageCategories.map((cat: any) => (
+                                            <option key={cat.id} value={cat.id}>
+                                              {cat.name} (
+                                              {t(`sc.gender_${cat.gender}`)})
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div className="mb-3">
+                                        <label className="form-label small fw-semibold mb-1">
+                                          {t("ic.races")}
+                                        </label>
+                                        <div className="d-flex flex-wrap gap-1">
+                                          {raceTemplates.map((tmpl: any) => {
+                                            const isSel =
+                                              inlineSelectedTemplates.includes(
+                                                String(tmpl.id),
+                                              );
+                                            return (
+                                              <button
+                                                key={tmpl.id}
+                                                type="button"
+                                                className={`btn btn-sm ${isSel ? "btn-primary" : "btn-outline-secondary"}`}
+                                                onClick={() =>
+                                                  setInlineSelectedTemplates(
+                                                    (prev) =>
+                                                      isSel
+                                                        ? prev.filter(
+                                                            (id) =>
+                                                              id !==
+                                                              String(tmpl.id),
+                                                          )
+                                                        : [
+                                                            ...prev,
+                                                            String(tmpl.id),
+                                                          ],
+                                                  )
+                                                }
+                                              >
+                                                {tmpl.name}
+                                              </button>
                                             );
-                                          const isOn = !!existingRace;
-                                          const switchId = `inline-combo-${template.id}_${category.id}`;
-                                          return (
-                                            <div
-                                              key={switchId}
-                                              className="col-12 col-sm-6 col-md-4 col-lg-3"
-                                            >
-                                              <div className="form-check form-switch mb-0">
-                                                <input
-                                                  className="form-check-input"
-                                                  type="checkbox"
-                                                  role="switch"
-                                                  id={switchId}
-                                                  checked={isOn}
-                                                  onChange={() => {
-                                                    if (isOn) {
-                                                      deleteRace(
-                                                        existingRace.id,
-                                                        comp.id,
-                                                      );
-                                                    } else {
-                                                      quickAddRace(
-                                                        comp.id,
-                                                        name,
-                                                        activeComp.races
-                                                          ?.length ?? 0,
-                                                      );
-                                                    }
-                                                  }}
-                                                />
-                                                <label
-                                                  className="form-check-label"
-                                                  htmlFor={switchId}
-                                                >
-                                                  {name}
-                                                </label>
-                                              </div>
-                                            </div>
+                                          })}
+                                        </div>
+                                      </div>
+                                      <button
+                                        className="btn btn-sm btn-success"
+                                        disabled={
+                                          !inlineSelectedCategory ||
+                                          inlineSelectedTemplates.length === 0
+                                        }
+                                        onClick={async () => {
+                                          const category = ageCategories.find(
+                                            (c: any) =>
+                                              String(c.id) ===
+                                              inlineSelectedCategory,
                                           );
-                                        }),
-                                      )}
+                                          if (!category) return;
+                                          for (
+                                            let i = 0;
+                                            i < inlineSelectedTemplates.length;
+                                            i++
+                                          ) {
+                                            const template = raceTemplates.find(
+                                              (t: any) =>
+                                                String(t.id) ===
+                                                inlineSelectedTemplates[i],
+                                            );
+                                            if (!template) continue;
+                                            const name = comboRaceName(
+                                              template,
+                                              category,
+                                            );
+                                            const exists =
+                                              activeComp.races?.find(
+                                                (r: any) => r.name === name,
+                                              );
+                                            if (!exists) {
+                                              await quickAddRace(
+                                                comp.id,
+                                                name,
+                                                (activeComp.races?.length ??
+                                                  0) + i,
+                                              );
+                                            }
+                                          }
+                                        }}
+                                      >
+                                        + {t("ic.add_races")}
+                                        {inlineSelectedTemplates.length > 0 &&
+                                          ` (${inlineSelectedTemplates.length})`}
+                                      </button>
                                     </div>
                                   </div>
                                 )}
@@ -945,58 +991,6 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                     }
                   />
                 </div>
-                {/* Race selection toggles — only shown when adding a new competition */}
-                {!editCompId &&
-                  raceTemplates.length > 0 &&
-                  ageCategories.length > 0 && (
-                    <div className="mb-3">
-                      <label className="form-label fw-semibold">
-                        {t("ic.select_races")}
-                      </label>
-                      <p className="text-muted small mb-2">
-                        {t("ic.select_races_hint")}
-                      </p>
-                      <div className="row g-2">
-                        {raceTemplates.map((template) =>
-                          ageCategories.map((category) => {
-                            const key = `${template.id}_${category.id}`;
-                            const label = comboRaceName(template, category);
-                            const checked = newCompCombos.has(key);
-                            return (
-                              <div
-                                key={key}
-                                className="col-12 col-sm-6 col-md-4"
-                              >
-                                <div className="form-check form-switch mb-0">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    role="switch"
-                                    id={`new-combo-${key}`}
-                                    checked={checked}
-                                    onChange={() =>
-                                      setNewCompCombos((prev) => {
-                                        const next = new Set(prev);
-                                        if (next.has(key)) next.delete(key);
-                                        else next.add(key);
-                                        return next;
-                                      })
-                                    }
-                                  />
-                                  <label
-                                    className="form-check-label"
-                                    htmlFor={`new-combo-${key}`}
-                                  >
-                                    {label}
-                                  </label>
-                                </div>
-                              </div>
-                            );
-                          }),
-                        )}
-                      </div>
-                    </div>
-                  )}
               </div>
               <div className="modal-footer">
                 <button
