@@ -3,6 +3,7 @@ import "../styles/adminStyles.css";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../config/axios";
+import { sanitizeQuillHtml } from "../utils/sanitizeQuillHtml";
 
 interface NewsArticle {
   id: number;
@@ -63,11 +64,7 @@ export default function NewsDetailPage() {
 
   const title = isRO ? article.title : article.title_en || article.title;
   const rawBody = isRO ? article.body : article.body_en || article.body;
-  // Strip invisible Quill artifacts (zero-width spaces, soft hyphens) that create mid-word break opportunities
-  const body = rawBody
-    .replace(/\u200B/g, "")
-    .replace(/\u00AD/g, "")
-    .replace(/[\u200C\u200D\uFEFF]/g, "");
+  const body = sanitizeQuillHtml(rawBody);
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString(isRO ? "ro-RO" : "en-GB", {

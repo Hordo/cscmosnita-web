@@ -5,6 +5,7 @@ import "react-quill-new/dist/quill.snow.css";
 import api from "../config/axios";
 import { API_URLS } from "../config/api";
 import "../styles/adminStyles.css";
+import { sanitizeQuillHtml } from "../utils/sanitizeQuillHtml";
 
 const quillModules = {
   toolbar: [
@@ -152,7 +153,8 @@ export default function NewsAdminPage() {
       const payload = {
         ...form,
         title_en: form.title_en || null,
-        body_en: form.body_en || null,
+        body: sanitizeQuillHtml(form.body),
+        body_en: form.body_en ? sanitizeQuillHtml(form.body_en) : null,
         cover_url: form.cover_url || null,
       };
       if (editId !== null) {
