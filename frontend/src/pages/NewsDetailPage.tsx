@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import "../styles/adminStyles.css";
 import { useParams, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import api from "../config/axios";

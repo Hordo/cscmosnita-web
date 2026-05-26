@@ -42,8 +42,8 @@
   min-width: 0;
 }
 .news-article-body * {
-  word-break: normal;
-  overflow-wrap: break-word;
+  word-break: normal !important; /* prevent Quill inline styles from breaking words mid-character */
+  overflow-wrap: break-word; /* still allow very long words/URLs to wrap */
 }
 .news-article-body img {
   max-width: 100%;
