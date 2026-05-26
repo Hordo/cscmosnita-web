@@ -1,10 +1,14 @@
 /**
  * Cleans Quill-generated HTML from common AI-paste artifacts:
  *  1. Invisible Unicode characters (zero-width spaces, soft hyphens, BOM, etc.)
- *  2. Quill cursor sentinel spans (<span class="ql-cursor">)
- *  3. Bare <span> elements with no class/style that wrap individual characters
+ *  2. &nbsp; → regular space: AI tools often replace every space with &nbsp;,
+ *     which removes ALL line-break opportunities in a paragraph — the browser
+ *     is then forced to break only at element boundaries (<strong>, <em>, etc.),
+ *     causing text to split in the middle of sentences or words.
+ *  3. Quill cursor sentinel spans (<span class="ql-cursor">)
+ *  4. Bare <span> elements with no class/style that wrap individual characters
  *     (these create mid-word break opportunities when pasted from AI tools)
- *  4. Truly empty inline elements
+ *  5. Truly empty inline elements
  *
  * Safe to call on both body and body_en fields; does not alter semantic content.
  */
@@ -14,7 +18,12 @@ export function sanitizeQuillHtml(html: string): string {
   // --- 1. Strip invisible break-opportunity characters ---
   let clean = html.replace(/[\u200B\u200C\u200D\u00AD\uFEFF]/g, "");
 
-  // --- 2. Remove Quill editor cursor sentinels ---
+  // --- 2. Replace &nbsp; / U+00A0 with regular spaces ---
+  // AI-generated content frequently uses &nbsp; for every space, which
+  // makes entire paragraphs unbreakable except at inline-element boundaries.
+  clean = clean.replace(/&nbsp;/g, " ").replace(/\u00A0/g, " ");
+
+  // --- 3. Remove Quill editor cursor sentinels ---
   clean = clean.replace(
     /<span[^>]*class="ql-cursor"[^>]*>[\s\S]*?<\/span>/g,
     "",
@@ -26,7 +35,7 @@ export function sanitizeQuillHtml(html: string): string {
   const div = document.createElement("div");
   div.innerHTML = clean;
 
-  // --- 3. Unwrap bare <span> elements (no class, no style, no attributes) ---
+  // --- 4. Unwrap bare <span> elements (no class, no style, no attributes) ---
   // Quill never emits unstyled <span> elements itself; they come from pasted
   // content (e.g. AI tools) and split words across element boundaries, which
   // can trigger line-break opportunities inside words.
@@ -40,7 +49,7 @@ export function sanitizeQuillHtml(html: string): string {
     parent.removeChild(span);
   });
 
-  // --- 4. Remove empty inline elements left behind ---
+  // --- 5. Remove empty inline elements left behind ---
   div.querySelectorAll("strong, em, u, s, b, i, span, a").forEach((el) => {
     if (!el.innerHTML.trim()) el.remove();
   });
