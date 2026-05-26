@@ -45,6 +45,16 @@
   word-break: normal !important; /* prevent Quill inline styles from breaking words mid-character */
   overflow-wrap: break-word; /* still allow very long words/URLs to wrap */
 }
+/* Force inline display so Quill spans can't act as inline-block atomic units */
+.news-article-body p span,
+.news-article-body li span,
+.news-article-body p strong,
+.news-article-body p em,
+.news-article-body p u,
+.news-article-body p b,
+.news-article-body p i {
+  display: inline !important;
+}
 .news-article-body img {
   max-width: 100%;
   height: auto;

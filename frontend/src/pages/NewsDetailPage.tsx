@@ -62,7 +62,12 @@ export default function NewsDetailPage() {
   }
 
   const title = isRO ? article.title : article.title_en || article.title;
-  const body = isRO ? article.body : article.body_en || article.body;
+  const rawBody = isRO ? article.body : article.body_en || article.body;
+  // Strip invisible Quill artifacts (zero-width spaces, soft hyphens) that create mid-word break opportunities
+  const body = rawBody
+    .replace(/\u200B/g, "")
+    .replace(/\u00AD/g, "")
+    .replace(/[\u200C\u200D\uFEFF]/g, "");
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString(isRO ? "ro-RO" : "en-GB", {
