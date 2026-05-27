@@ -33,7 +33,16 @@ const emptyRace = {
   name: "",
   video_link: "",
   order: "0",
+  unit: "none",
 };
+
+const RACE_UNIT_OPTIONS = [
+  { value: "none", label: "ic.unit_none" },
+  { value: "seconds", label: "ic.unit_seconds" },
+  { value: "centimeters", label: "ic.unit_centimeters" },
+  { value: "meters", label: "ic.unit_meters" },
+  { value: "points", label: "ic.unit_points" },
+];
 
 const emptyParticipant = {
   race: "",
@@ -326,6 +335,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
       name: race.name,
       video_link: race.video_link || "",
       order: String(race.order ?? 0),
+      unit: race.unit || "none",
     });
     setEditRaceId(race.id);
     setShowRaceModal(true);
@@ -339,6 +349,7 @@ const IndividualCompetitionAdminPage: React.FC = () => {
       name: raceForm.name,
       video_link: raceForm.video_link || "",
       order: Number(raceForm.order) || 0,
+      unit: raceForm.unit || "none",
     };
     try {
       if (editRaceId) {
@@ -1186,6 +1197,22 @@ const IndividualCompetitionAdminPage: React.FC = () => {
                       setRaceForm({ ...raceForm, name: e.target.value })
                     }
                   />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">{t("ic.race_unit")}</label>
+                  <select
+                    className="form-select"
+                    value={raceForm.unit}
+                    onChange={(e) =>
+                      setRaceForm({ ...raceForm, unit: e.target.value })
+                    }
+                  >
+                    {RACE_UNIT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {t(opt.label)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="mb-3">
                   <label className="form-label">{t("ic.video_link")}</label>

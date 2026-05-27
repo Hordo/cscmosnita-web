@@ -107,9 +107,17 @@ export default function TopNavbar() {
       if ((child as any).superAdminOnly && !isSuperAdmin()) return false;
       if ((child as any).headAdminOnly && !isHeadAdmin() && !isSuperAdmin())
         return false;
-      if ((child as any).teamSportOnly && !hasTeamDisciplineAdmin())
+      if (
+        (child as any).teamSportOnly &&
+        !hasTeamDisciplineAdmin() &&
+        !isSuperAdmin()
+      )
         return false;
-      if ((child as any).individualSportOnly && !hasIndividualDisciplineAdmin())
+      if (
+        (child as any).individualSportOnly &&
+        !hasIndividualDisciplineAdmin() &&
+        !isSuperAdmin()
+      )
         return false;
       return true;
     };

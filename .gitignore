@@ -128,6 +128,23 @@ check_data.py
 
 # Configuration files with secrets
 config/secrets.py
+
+# Hostinger / Kubernetes deployment (project canceled)
+k8s/
+k8s-prod/
+deploy-hostinger.sh
+deploy-minikube.sh
+export-images.sh
+setup-production-server.sh
+reset-db.sh
+docs/
+generate_hosting_pdf.py
+hosting_options.pdf
+backend/Dockerfile
+backend/.dockerignore
+frontend/Dockerfile
+frontend/.dockerignore
+frontend/nginx.conf
 secrets.json
 credentials.json
 *.pem

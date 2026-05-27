@@ -64,6 +64,7 @@ export function usePushNotifications() {
       return;
     }
     setState("loading");
+    let browserSub: PushSubscription | null = null;
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
@@ -71,19 +72,32 @@ export function usePushNotifications() {
         return;
       }
       const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
+      browserSub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
       const prefs = loadStoredPrefs();
-      await fetch(`${API_BASE}/api/push/?action=subscribe`, {
+      const res = await fetch(`${API_BASE}/api/push/?action=subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...sub.toJSON(), ...prefs }),
+        body: JSON.stringify({ ...browserSub.toJSON(), ...prefs }),
       });
+      if (!res.ok) {
+        // Server failed to save — roll back browser subscription so state stays consistent
+        await browserSub.unsubscribe();
+        setState("unsubscribed");
+        return;
+      }
       setState("subscribed");
     } catch (err) {
       console.error("Push subscribe failed:", err);
+      if (browserSub) {
+        try {
+          await browserSub.unsubscribe();
+        } catch {
+          /* ignore */
+        }
+      }
       setState("unsubscribed");
     }
   };
@@ -101,7 +115,20 @@ export function usePushNotifications() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endpoint: sub.endpoint }),
       });
-      if (!res.ok) return null;
+      if (!res.ok) {
+        if (res.status === 404) {
+          // Orphaned browser subscription (DB record missing) — re-register silently
+          const prefs = loadStoredPrefs();
+          fetch(`${API_BASE}/api/push/?action=subscribe`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...sub.toJSON(), ...prefs }),
+          }).catch(() => {
+            /* best-effort */
+          });
+        }
+        return null;
+      }
       return await res.json();
     } catch {
       return null;
@@ -113,7 +140,7 @@ export function usePushNotifications() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (!sub) return;
-      await fetch(`${API_BASE}/api/push/?action=update-prefs`, {
+      const res = await fetch(`${API_BASE}/api/push/?action=update-prefs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,6 +149,16 @@ export function usePushNotifications() {
           team_ids,
         }),
       });
+      if (!res.ok && res.status === 404) {
+        // Orphaned — re-register with current prefs
+        fetch(`${API_BASE}/api/push/?action=subscribe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...sub.toJSON(), discipline_ids, team_ids }),
+        }).catch(() => {
+          /* best-effort */
+        });
+      }
     } catch (err) {
       console.error("Push update prefs failed:", err);
     }

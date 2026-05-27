@@ -127,12 +127,17 @@ const NotificationPreferencesPage: React.FC = () => {
   const effectiveDisciplineIds = prefs.follow_all ? [] : prefs.discipline_ids;
   const effectiveTeamIds = prefs.follow_all ? [] : prefs.team_ids;
 
-  const handleSave = async () => {
-    savePrefs(prefs);
+  const handleSave = () => {
+    try {
+      savePrefs(prefs);
+    } catch {
+      // localStorage may be unavailable (private mode, quota exceeded)
+    }
     if (state === "subscribed") {
-      await updatePrefs(effectiveDisciplineIds, effectiveTeamIds);
+      updatePrefs(effectiveDisciplineIds, effectiveTeamIds).catch(() => {});
     }
     setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   const handleSubscribe = async () => {
