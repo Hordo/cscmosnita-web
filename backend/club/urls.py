@@ -14,7 +14,8 @@ from .views import (
     LocationViewSet, ResourceBookingViewSet,
     IndividualCompetitionViewSet, IndividualResultViewSet,
     IndividualRaceViewSet, IndividualRaceParticipantViewSet,
-    SportRaceTemplateViewSet, SportAgeCategoryViewSet
+    SportRaceTemplateViewSet, SportAgeCategoryViewSet,
+    GenerateTrainingPlanView, AITrainingPlanListView, SaveTrainingPlanView,
 )
 from .signed_upload import (
     GeneratePlayerPhotoUploadURL, GenerateTeamPhotoUploadURL, GenerateCoachPhotoUploadURL,
@@ -75,4 +76,8 @@ urlpatterns = [
     path('push/send-notifications/', PushSendNotificationsView.as_view(), name='push_send_notifications'),
     path('admin/users/', UserListView.as_view(), name='admin-users'),
     path('admin/users/<int:user_id>/set-superuser/', SetSuperuserView.as_view(), name='admin-set-superuser'),
+    # AI Training Plan endpoints
+    path('ai/training-plans/', AITrainingPlanListView.as_view(), name='ai-training-plans'),
+    path('ai/generate-training/', GenerateTrainingPlanView.as_view(), name='ai-generate-training'),
+    path('ai/save-training/', SaveTrainingPlanView.as_view(), name='ai-save-training'),
 ]

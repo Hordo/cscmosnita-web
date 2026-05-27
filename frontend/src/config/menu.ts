@@ -112,6 +112,10 @@ export const menuConfig: MenuItem[] = [
           path: "/admin/sport-config",
           individualSportOnly: true,
         },
+        {
+          label: "menu.training_planner",
+          path: "/admin/training-planner",
+        },
       ],
       [
         {

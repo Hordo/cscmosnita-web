@@ -667,3 +667,44 @@ class SportAgeCategory(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_gender_display()}) — {self.discipline}"
+
+
+class AITrainingPlan(models.Model):
+    """Stores AI-generated training session plans so the AI can build on previous sessions."""
+    team = models.ForeignKey(
+        'Team', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='ai_training_plans',
+        help_text='Team this plan was generated for (optional).'
+    )
+    discipline = models.ForeignKey(
+        'Discipline', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='ai_training_plans',
+    )
+    age_label = models.CharField(
+        max_length=100, blank=True,
+        help_text='Free-text age group label (e.g. "U10 – born 2015", "U12").'
+    )
+    # JSON list of focus areas, e.g. ["passing", "finishing"]
+    focus_areas = models.JSONField(default=list)
+    expected_players = models.PositiveIntegerField(default=15)
+    player_range_min = models.PositiveIntegerField(default=12)
+    player_range_max = models.PositiveIntegerField(default=18)
+    coach_notes = models.TextField(blank=True, help_text='Optional coach notes / context sent to the AI.')
+    # The full text returned by the AI
+    generated_plan = models.TextField()
+    # Notes the AI extracted about things to follow-up in the next session
+    followup_notes = models.TextField(blank=True, help_text='Auto-extracted follow-up hints for the next session.')
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='ai_training_plans'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'AI Training Plan'
+        verbose_name_plural = 'AI Training Plans'
+
+    def __str__(self):
+        team_str = self.team.name if self.team else 'No team'
+        return f"AI Plan [{team_str}] {self.created_at:%Y-%m-%d %H:%M}"

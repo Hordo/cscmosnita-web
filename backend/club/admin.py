@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Discipline, Match, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle
+from .models import Discipline, Match, Tournament, TournamentGroup, GroupTeam, TournamentMatch, Sponsor, NewsArticle, AITrainingPlan
 
 @admin.register(Discipline)
 class DisciplineAdmin(admin.ModelAdmin):
@@ -55,6 +55,15 @@ class NewsArticleAdmin(admin.ModelAdmin):
     list_editable = ("is_published",)
     search_fields = ("title", "body")
     readonly_fields = ("published_at", "updated_at", "slug")
+
+
+# --- AITrainingPlan Admin ---
+@admin.register(AITrainingPlan)
+class AITrainingPlanAdmin(admin.ModelAdmin):
+    list_display = ("__str__", "team", "age_label", "expected_players", "created_by", "created_at")
+    list_filter = ("team", "discipline")
+    search_fields = ("age_label", "coach_notes", "generated_plan")
+    readonly_fields = ("created_at", "created_by", "generated_plan", "followup_notes")
 
 
 # --- UserRole Admin ---

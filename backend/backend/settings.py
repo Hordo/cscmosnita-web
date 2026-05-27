@@ -1,8 +1,10 @@
 from pathlib import Path
 import os
 import dj_database_url
+from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 # -----------------------------
 # SECURITY
@@ -18,6 +20,9 @@ R2_ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
 R2_SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
 R2_ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
 R2_BUCKET_NAME = os.environ.get("R2_BUCKET_NAME")
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
 
 ALLOWED_HOSTS = [
     "*",  # Railway assigns dynamic hostnames

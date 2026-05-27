@@ -83,3 +83,14 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+// Initialize token from localStorage so authenticated requests work immediately on page load
+const _savedAuth = localStorage.getItem("auth");
+if (_savedAuth) {
+  try {
+    const _parsed = JSON.parse(_savedAuth);
+    if (_parsed?.access) setAuthToken(_parsed.access);
+  } catch {
+    // ignore malformed auth data
+  }
+}

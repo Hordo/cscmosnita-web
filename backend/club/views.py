@@ -1258,3 +1258,325 @@ class SportAgeCategoryViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         assert_discipline_write_access(self.request.user, instance.discipline_id)
         instance.delete()
+
+
+# ---------------------------------------------------------------------------
+# AI Training Plan
+# ---------------------------------------------------------------------------
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from .models import AITrainingPlan
+
+
+def _enrich_youtube_links(text: str, api_key: str) -> str:
+    """
+    Replace YouTube search-result links with direct watch links by calling
+    the YouTube Data API v3.  Falls back to the original search URL on any error.
+    All lookups run in parallel so total added latency ≈ one API call.
+    """
+    import re
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    import requests as _req
+
+    pattern = r'https://www\.youtube\.com/results\?search_query=([^)\s]+)'
+    matches = list(re.finditer(pattern, text))
+    if not matches or not api_key:
+        return text
+
+    unique_queries = list({m.group(1) for m in matches})
+
+    def lookup(query_encoded: str):
+        query = query_encoded.replace('+', ' ')
+        try:
+            r = _req.get(
+                'https://www.googleapis.com/youtube/v3/search',
+                params={
+                    'part': 'snippet',
+                    'q': query,
+                    'type': 'video',
+                    'maxResults': 1,
+                    'key': api_key,
+                    'relevanceLanguage': 'en',
+                    'safeSearch': 'strict',
+                },
+                timeout=5,
+            )
+            items = r.json().get('items', [])
+            if items:
+                vid = items[0]['id']['videoId']
+                return query_encoded, f'https://www.youtube.com/watch?v={vid}'
+        except Exception:
+            pass
+        return query_encoded, None
+
+    replacements: dict = {}
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        futures = {ex.submit(lookup, q): q for q in unique_queries}
+        for future in as_completed(futures, timeout=8):
+            try:
+                q, url = future.result()
+                if url:
+                    replacements[q] = url
+            except Exception:
+                pass
+
+    def replacer(m):
+        return replacements.get(m.group(1), m.group(0))
+
+    return re.sub(pattern, replacer, text)
+
+
+class AITrainingPlanListView(APIView):
+    """
+    GET  /api/ai/training-plans/?team_id=<id>   – list plans for a team
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not is_any_admin(request.user):
+            raise PermissionDenied("Admin access required.")
+        qs = AITrainingPlan.objects.select_related('team', 'discipline', 'created_by')
+        team_id = request.query_params.get('team_id')
+        discipline_id = request.query_params.get('discipline_id')
+        if team_id:
+            qs = qs.filter(team_id=team_id)
+        if discipline_id:
+            qs = qs.filter(discipline_id=discipline_id)
+        qs = qs[:20]  # latest 20
+        data = [
+            {
+                'id': p.id,
+                'team_id': p.team_id,
+                'team_name': p.team.name if p.team else None,
+                'discipline_id': p.discipline_id,
+                'discipline_name': p.discipline.name if p.discipline else None,
+                'age_label': p.age_label,
+                'focus_areas': p.focus_areas,
+                'expected_players': p.expected_players,
+                'player_range_min': p.player_range_min,
+                'player_range_max': p.player_range_max,
+                'coach_notes': p.coach_notes,
+                'generated_plan': p.generated_plan,
+                'followup_notes': p.followup_notes,
+                'created_by': p.created_by.username if p.created_by else None,
+                'created_at': p.created_at.isoformat(),
+            }
+            for p in qs
+        ]
+        return Response(data)
+
+
+class GenerateTrainingPlanView(APIView):
+    """
+    POST /api/ai/generate-training/
+    Body:
+      {
+        "team_id": 3,            // optional
+        "discipline_id": 1,      // optional
+        "age_label": "U10",
+        "focus_areas": ["passing", "finishing"],
+        "expected_players": 16,
+        "player_range_min": 12,
+        "player_range_max": 20,
+        "coach_notes": "Some kids struggled with long balls last week."
+      }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        import traceback
+        try:
+            return self._post_inner(request)
+        except Exception as _top_exc:
+            traceback.print_exc()
+            return Response({'error': f'Unhandled server error: {_top_exc}'}, status=500)
+
+    def _post_inner(self, request):
+        import os
+        import traceback
+        import requests as http_requests
+
+        if not is_any_admin(request.user):
+            raise PermissionDenied("Admin access required.")
+
+        gemini_api_key = os.environ.get('GEMINI_API_KEY', '')
+
+        if not gemini_api_key:
+            return Response({'error': 'Gemini API key is not configured on the server.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        data = request.data
+        team_id = data.get('team_id')
+        discipline_id = data.get('discipline_id')
+        age_label = (data.get('age_label') or '').strip()
+        focus_areas = data.get('focus_areas') or []
+        expected_players = int(data.get('expected_players') or 15)
+        player_range_min = int(data.get('player_range_min') or max(expected_players - 3, 1))
+        player_range_max = int(data.get('player_range_max') or expected_players + 3)
+        coach_notes = (data.get('coach_notes') or '').strip()
+        language_code = (data.get('language') or 'en').strip().lower()[:2]
+        LANGUAGE_NAMES = {'ro': 'Romanian', 'en': 'English', 'de': 'German', 'fr': 'French', 'es': 'Spanish', 'it': 'Italian', 'hu': 'Hungarian'}
+        language_name = LANGUAGE_NAMES.get(language_code, 'English')
+
+        if not age_label:
+            return Response({'error': 'age_label is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not focus_areas:
+            return Response({'error': 'At least one focus area is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Fetch last 5 plans for memory context
+        history_qs = AITrainingPlan.objects.all()
+        if team_id:
+            history_qs = history_qs.filter(team_id=team_id)
+        elif discipline_id:
+            history_qs = history_qs.filter(discipline_id=discipline_id)
+        previous_plans = list(history_qs.order_by('-created_at')[:5])
+
+        # Build the AI prompt
+        history_context = ""
+        if previous_plans:
+            history_lines = []
+            for idx, plan in enumerate(reversed(previous_plans), 1):
+                session_date = plan.created_at.strftime('%d %b %Y')
+                focuses = ', '.join(plan.focus_areas) if plan.focus_areas else 'general'
+                snippet = plan.generated_plan[:400].replace('\n', ' ')
+                followup = plan.followup_notes[:200].replace('\n', ' ') if plan.followup_notes else ''
+                line = f"Session {idx} ({session_date}) — Focus: {focuses}. Summary: {snippet}..."
+                if followup:
+                    line += f" Follow-up notes: {followup}"
+                history_lines.append(line)
+            history_context = (
+                "\n\nPREVIOUS SESSIONS (most recent last, use these to avoid repetition and build progression):\n"
+                + "\n".join(history_lines)
+            )
+
+        focus_str = ', '.join(focus_areas)
+        team_info = ""
+        if team_id:
+            try:
+                team = Team.objects.get(pk=team_id)
+                birth_year = team.year
+                if birth_year:
+                    import datetime
+                    age_approx = datetime.date.today().year - birth_year
+                    team_info = f"Team: {team.name} (born ~{birth_year}, approx. {age_approx} years old). "
+                else:
+                    team_info = f"Team: {team.name}. "
+            except Team.DoesNotExist:
+                pass
+
+        system_prompt = (
+            "You are an expert youth football (soccer) coach and sports educator. "
+            "Your role is to design detailed, age-appropriate training sessions for youth teams. "
+            "Always structure the session with: warm-up, technical drills, small-sided games, and cool-down. "
+            "Include clear coaching points, time allocations, and variations for more or fewer players. "
+            f"You MUST respond entirely in {language_name}. Do not use any other language. "
+            "For EACH drill or exercise, add a YouTube search link on its own line using this exact markdown format: "
+            "[▶ Watch on YouTube](https://www.youtube.com/results?search_query=QUERY) "
+            "where QUERY is a URL-encoded English search term: replace every space with a + sign, e.g. 'u9+passing+rondo+football+drill'. "
+            "Never include raw spaces inside the parentheses of a markdown URL. "
+            "Always use English for the YouTube search query regardless of the response language. "
+            f"At the END of the plan, add a short section titled '## Urmărire pentru următoarea sesiune' if Romanian, or '## Follow-up for next session' otherwise, with 2-3 bullet points "
+            "about what to consolidate or build upon in the next training."
+        )
+
+        user_message = (
+            f"{team_info}"
+            f"Age group: {age_label}. "
+            f"Focus areas for today: {focus_str}. "
+            f"Expected number of players: {expected_players} (plan must also work with {player_range_min}–{player_range_max} players). "
+        )
+        if coach_notes:
+            user_message += f"\nCoach's additional notes: {coach_notes}"
+        user_message += history_context
+        user_message += "\n\nPlease generate a complete, detailed training session plan."
+
+        try:
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
+            payload = {
+                "system_instruction": {"parts": [{"text": system_prompt}]},
+                "contents": [{"role": "user", "parts": [{"text": user_message}]}],
+                "generationConfig": {"temperature": 0.7},
+            }
+            resp = http_requests.post(gemini_url, json=payload, timeout=60)
+            if resp.status_code != 200:
+                return Response({'error': f'Gemini API error {resp.status_code}: {resp.text[:300]}'}, status=status.HTTP_502_BAD_GATEWAY)
+            resp_json = resp.json()
+            generated_text = resp_json['candidates'][0]['content']['parts'][0]['text']
+        except Exception as exc:
+            return Response({'error': f'Gemini API error: {str(exc)}'}, status=status.HTTP_502_BAD_GATEWAY)
+
+        # Enrich YouTube search links → direct watch links (requires YOUTUBE_API_KEY)
+        youtube_api_key = os.environ.get('YOUTUBE_API_KEY', '')
+        if youtube_api_key:
+            generated_text = _enrich_youtube_links(generated_text, youtube_api_key)
+
+        # Extract follow-up notes from the generated text
+        followup_notes = ""
+        for marker in ["## Urmărire pentru următoarea sesiune", "## Follow-up for next session"]:
+            if marker.lower() in generated_text.lower():
+                idx = generated_text.lower().index(marker.lower())
+                followup_notes = generated_text[idx + len(marker):].strip()
+                break
+
+        # Return plan WITHOUT saving — coach must confirm they used the session
+        return Response({
+            'generated_plan': generated_text,
+            'followup_notes': followup_notes,
+            # Echo back the original params so the frontend can send them to /save-training/
+            'team_id': team_id,
+            'discipline_id': discipline_id,
+            'age_label': age_label,
+            'focus_areas': focus_areas,
+            'expected_players': expected_players,
+            'player_range_min': player_range_min,
+            'player_range_max': player_range_max,
+            'coach_notes': coach_notes,
+        }, status=status.HTTP_200_OK)
+
+
+class SaveTrainingPlanView(APIView):
+    """
+    POST /api/ai/save-training/
+    Called by the coach after reviewing the generated plan to confirm it was used.
+    Body: same fields returned by GenerateTrainingPlanView
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not is_any_admin(request.user):
+            raise PermissionDenied("Admin access required.")
+
+        data = request.data
+        generated_plan = (data.get('generated_plan') or '').strip()
+        if not generated_plan:
+            return Response({'error': 'generated_plan is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        team_id = data.get('team_id') or None
+        discipline_id = data.get('discipline_id') or None
+        age_label = (data.get('age_label') or '').strip()
+        focus_areas = data.get('focus_areas') or []
+        expected_players = int(data.get('expected_players') or 15)
+        player_range_min = int(data.get('player_range_min') or max(expected_players - 3, 1))
+        player_range_max = int(data.get('player_range_max') or expected_players + 3)
+        coach_notes = (data.get('coach_notes') or '').strip()
+        followup_notes = (data.get('followup_notes') or '').strip()
+
+        plan = AITrainingPlan.objects.create(
+            team_id=team_id,
+            discipline_id=discipline_id,
+            age_label=age_label,
+            focus_areas=focus_areas,
+            expected_players=expected_players,
+            player_range_min=player_range_min,
+            player_range_max=player_range_max,
+            coach_notes=coach_notes,
+            generated_plan=generated_plan,
+            followup_notes=followup_notes,
+            created_by=request.user,
+        )
+
+        return Response({
+            'id': plan.id,
+            'created_at': plan.created_at.isoformat(),
+        }, status=status.HTTP_201_CREATED)

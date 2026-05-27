@@ -93,3 +93,41 @@
   color: #6c757d;
   margin: 1rem 0;
 }
+
+/* ── Training Plan Generator – responsive layout ────────────────────────── */
+.tp-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.tp-history-panel {
+  position: sticky;
+  top: 80px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.tp-players-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .tp-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .tp-history-panel {
+    position: static;
+  }
+
+  .tp-players-grid {
+    grid-template-columns: 1fr;
+  }
+}

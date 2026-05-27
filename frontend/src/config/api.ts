@@ -47,4 +47,8 @@ export const API_URLS = {
   individualRaceParticipants: `${API_BASE}/api/individual-race-participants/`,
   sportRaceTemplates: `${API_BASE}/api/sport-race-templates/`,
   sportAgeCategories: `${API_BASE}/api/sport-age-categories/`,
+  // AI Training Planner
+  aiTrainingPlans: `${API_BASE}/api/ai/training-plans/`,
+  aiGenerateTraining: `${API_BASE}/api/ai/generate-training/`,
+  aiSaveTraining: `${API_BASE}/api/ai/save-training/`,
 };
