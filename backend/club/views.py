@@ -1496,9 +1496,12 @@ class GenerateTrainingPlanView(APIView):
             payload = {
                 "system_instruction": {"parts": [{"text": system_prompt}]},
                 "contents": [{"role": "user", "parts": [{"text": user_message}]}],
-                "generationConfig": {"temperature": 0.7},
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "thinkingConfig": {"thinkingBudget": 0},
+                },
             }
-            resp = http_requests.post(gemini_url, json=payload, timeout=60)
+            resp = http_requests.post(gemini_url, json=payload, timeout=45)
             if resp.status_code != 200:
                 return Response({'error': f'Gemini API error {resp.status_code}: {resp.text[:300]}'}, status=status.HTTP_502_BAD_GATEWAY)
             resp_json = resp.json()
