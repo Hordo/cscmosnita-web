@@ -157,8 +157,20 @@ export default function TrainingPlanGeneratorPage() {
         language: i18n.language,
       };
       const res = await api.post(API_URLS.aiGenerateTraining, payload);
+      const savePayload = {
+        team_id: teamId === "" ? null : teamId,
+        age_label: ageLabel.trim(),
+        focus_areas: focusAreas,
+        expected_players: expectedPlayers,
+        player_range_min: Math.max(1, expectedPlayers - playerVariance),
+        player_range_max: expectedPlayers + playerVariance,
+        coach_notes: coachNotes.trim(),
+        generated_plan: res.data.generated_plan,
+        followup_notes: res.data.followup_notes,
+      };
+      const saveRes = await api.post(API_URLS.aiSaveTraining, savePayload);
       const plan: TrainingPlan = {
-        id: null, // not saved yet — coach must confirm
+        id: saveRes.data.id,
         team_id: teamId === "" ? null : (teamId as number),
         team_name: teams.find((t) => t.id === teamId)?.name ?? null,
         age_label: ageLabel,
@@ -170,10 +182,11 @@ export default function TrainingPlanGeneratorPage() {
         generated_plan: res.data.generated_plan,
         followup_notes: res.data.followup_notes,
         created_by: null,
-        created_at: new Date().toISOString(),
+        created_at: saveRes.data.created_at,
       };
       setGeneratedPlan(plan);
-      // Do NOT add to history yet — only after coach confirms
+      setSaved(true);
+      setHistory((prev) => [plan, ...prev]);
     } catch (err: any) {
       const msg =
         err?.response?.data?.error ||
