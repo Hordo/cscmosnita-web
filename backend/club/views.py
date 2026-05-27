@@ -1496,18 +1496,36 @@ class GenerateTrainingPlanView(APIView):
             payload = {
                 "system_instruction": {"parts": [{"text": system_prompt}]},
                 "contents": [{"role": "user", "parts": [{"text": user_message}]}],
-                "generationConfig": {
-                    "temperature": 0.7,
-                    "thinkingConfig": {"thinkingBudget": 0},
-                },
+                "generationConfig": {"temperature": 0.7},
             }
             resp = http_requests.post(gemini_url, json=payload, timeout=45)
+            if resp.status_code == 429:
+                try:
+                    err_body = resp.json()
+                    violations = (
+                        err_body.get('error', {})
+                        .get('details', [{}])[0]
+                        .get('violations', [{}])
+                    )
+                    metric = violations[0].get('quotaMetric', '') if violations else ''
+                except Exception:
+                    metric = ''
+                if 'per_day' in metric or 'per_project_per_day' in metric:
+                    error_msg = 'Daily AI generation limit reached. Please try again tomorrow.'
+                else:
+                    error_msg = 'Too many AI requests. Please wait about a minute before trying again.'
+                return Response({'error': error_msg}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            if resp.status_code == 503:
+                return Response(
+                    {'error': 'AI service is temporarily unavailable. Please try again in a few minutes.'},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
             if resp.status_code != 200:
-                return Response({'error': f'Gemini API error {resp.status_code}: {resp.text[:300]}'}, status=status.HTTP_502_BAD_GATEWAY)
+                return Response({'error': f'AI service error ({resp.status_code}). Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             resp_json = resp.json()
             generated_text = resp_json['candidates'][0]['content']['parts'][0]['text']
         except Exception as exc:
-            return Response({'error': f'Gemini API error: {str(exc)}'}, status=status.HTTP_502_BAD_GATEWAY)
+            return Response({'error': f'AI service error: {str(exc)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Enrich YouTube search links → direct watch links (requires YOUTUBE_API_KEY)
         youtube_api_key = os.environ.get('YOUTUBE_API_KEY', '')
