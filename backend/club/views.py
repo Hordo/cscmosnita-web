@@ -1505,9 +1505,7 @@ class GenerateTrainingPlanView(APIView):
             "contents": [{"role": "user", "parts": [{"text": user_message}]}],
             "generationConfig": {"temperature": 0.7},
         }
-        print("[AI DEBUG] Backend Gemini request payload:")
-        print(payload)
-
+        
         user_message = (
             f"{team_info}"
             f"Age group: {age_label}. "
@@ -1519,7 +1517,8 @@ class GenerateTrainingPlanView(APIView):
             user_message += f"\nCoach's additional notes: {coach_notes}"
         user_message += history_context
         user_message += "\n\nPlease generate a complete, detailed training session plan."
-
+        print("[AI DEBUG] Backend Gemini request payload:")
+        print(payload)
         fallback_used = False
         try:
             gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
