@@ -1388,13 +1388,6 @@ class GenerateTrainingPlanView(APIView):
     def post(self, request):
         import traceback
         try:
-            payload = {
-                "system_instruction": {"parts": [{"text": system_prompt}]},
-                "contents": [{"role": "user", "parts": [{"text": user_message}]}],
-                "generationConfig": {"temperature": 0.7},
-            }
-            print("[AI DEBUG] Backend Gemini request payload:")
-            print(payload)
             return self._post_inner(request)
         except Exception as _top_exc:
             traceback.print_exc()
@@ -1479,21 +1472,41 @@ class GenerateTrainingPlanView(APIView):
             except Team.DoesNotExist:
                 pass
 
+        # Get discipline name for prompt
+        discipline_name = None
+        if discipline_id:
+            try:
+                discipline_obj = Discipline.objects.get(pk=discipline_id)
+                discipline_name = discipline_obj.name
+            except Discipline.DoesNotExist:
+                pass
+        if not discipline_name:
+            discipline_name = "football (soccer)"  # fallback
+
         system_prompt = (
-            "You are an expert youth football (soccer) coach and sports educator. "
+            f"You are an expert youth {discipline_name} coach and sports educator. "
             "Your role is to design detailed, age-appropriate training sessions for youth teams. "
             "Always structure the session with: warm-up, technical drills, small-sided games, and cool-down. "
             "Include clear coaching points, time allocations, and variations for more or fewer players. "
             f"You MUST respond entirely in {language_name}. Do not use any other language. "
             "For EACH drill or exercise, add a YouTube search link on its own line using this exact markdown format: "
             "[▶ Watch on YouTube](https://www.youtube.com/results?search_query=QUERY) "
-            "where QUERY is a URL-encoded English search term: replace every space with a + sign, e.g. 'u9+passing+rondo+football+drill'. "
+            f"where QUERY is a URL-encoded English search term: replace every space with a + sign, e.g. 'u9+passing+rondo+{discipline_name}+drill'. "
             "Never include raw spaces inside the parentheses of a markdown URL. "
             "Always use English for the YouTube search query regardless of the response language. "
             f"At the END of the plan, add a short section titled '## Urmărire pentru următoarea sesiune' if Romanian, or '## Follow-up for next session' otherwise, with 2-3 bullet points "
             "about what to consolidate or build upon in the next training. "
             f"The ENTIRE session (including all exercises, warm-up, and cool-down) MUST fit within a total duration of {duration_minutes} minutes. Do NOT exceed this total duration. Distribute time for each exercise accordingly."
         )
+        system_prompt = "".join(system_prompt)
+
+        payload = {
+            "system_instruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_message}]}],
+            "generationConfig": {"temperature": 0.7},
+        }
+        print("[AI DEBUG] Backend Gemini request payload:")
+        print(payload)
 
         user_message = (
             f"{team_info}"
