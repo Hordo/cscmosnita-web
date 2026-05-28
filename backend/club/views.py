@@ -1388,6 +1388,8 @@ class GenerateTrainingPlanView(APIView):
     def post(self, request):
         import traceback
         try:
+            print("[AI DEBUG] Backend Gemini request payload:")
+            print(payload)
             return self._post_inner(request)
         except Exception as _top_exc:
             traceback.print_exc()
@@ -1509,11 +1511,17 @@ class GenerateTrainingPlanView(APIView):
                 "generationConfig": {"temperature": 0.7},
             }
             resp = http_requests.post(gemini_url, json=payload, timeout=45)
+            print(f"[AI DEBUG] Gemini API response status: {resp.status_code}")
+            try:
+                print(f"[AI DEBUG] Gemini API response body: {resp.text}")
+            except Exception as e:
+                print(f"[AI DEBUG] Could not print Gemini response body: {e}")
             if resp.status_code == 429:
                 try:
                     err_body = resp.json()
                     details = err_body.get('error', {}).get('details', [])
                     found_per_day = False
+                    found_per_minute = False
                     for d in details:
                         violations = d.get('violations', [])
                         for v in violations:
@@ -1524,16 +1532,31 @@ class GenerateTrainingPlanView(APIView):
                                 or 'free_tier_requests' in metric
                             ):
                                 found_per_day = True
+                            if 'per_minute' in metric or 'GenerateRequestsPerMinute' in metric or 'InputTokensPerMinute' in metric:
+                                found_per_minute = True
+                    from datetime import datetime, timedelta
+                    import pytz
+                    now_utc = datetime.utcnow().replace(tzinfo=pytz.utc)
+                    pacific = pytz.timezone('America/Los_Angeles')
+                    now_pacific = now_utc.astimezone(pacific)
+                    # Per-day quota reset
+                    tomorrow_midnight_pacific = (now_pacific + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+                    bucharest = pytz.timezone('Europe/Bucharest')
+                    reset_bucharest = tomorrow_midnight_pacific.astimezone(bucharest)
+                    reset_time_str = reset_bucharest.strftime('%H:%M, %d %B %Y')
+                    # Per-minute quota reset (next minute)
+                    next_minute_pacific = (now_pacific + timedelta(minutes=1)).replace(second=0, microsecond=0)
+                    reset_minute_bucharest = next_minute_pacific.astimezone(bucharest)
+                    reset_minute_str = reset_minute_bucharest.strftime('%H:%M:%S')
                     if found_per_day:
-                        fallback_used = True
-                        # Try Gemini 2.0 Flash
-                        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_api_key}"
-                        resp = http_requests.post(gemini_url, json=payload, timeout=45)
-                        if resp.status_code != 200:
-                            return Response({'error': f'AI service error ({resp.status_code}) [fallback]. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                        error_msg = f"Limita zilnică pentru generarea planurilor AI a fost atinsă. Poți încerca din nou după ora {reset_time_str} (ora României), când se resetează cota."
+                        return Response({'error': error_msg, 'quota_reset_bucharest': reset_time_str}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                    elif found_per_minute:
+                        error_msg = f"Limita de cereri pe minut a fost atinsă. Poți încerca din nou după ora {reset_minute_str} (ora României). Te rugăm să nu reîncarci sau să apeși de mai multe ori."
+                        return Response({'error': error_msg, 'quota_reset_bucharest': reset_minute_str}, status=status.HTTP_429_TOO_MANY_REQUESTS)
                     else:
-                        error_msg = 'Too many AI requests. Please wait about a minute before trying again.'
-                        return Response({'error': error_msg}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                        error_msg = 'Prea multe cereri către AI. Încearcă din nou în câteva momente.'
+                        return Response({'error': error_msg}, status=status.HTTP_429_TOO_MANY_REQUESTS)
                 except Exception as e:
                     return Response({'error': 'AI quota error.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
             if resp.status_code == 503:
