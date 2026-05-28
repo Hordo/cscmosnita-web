@@ -69,7 +69,7 @@ export default function TrainingPlanGeneratorPage() {
   const [expectedPlayers, setExpectedPlayers] = useState(15);
   const [playerVariance, setPlayerVariance] = useState(3);
   const [coachNotes, setCoachNotes] = useState("");
-  // Training duration in minutes (default 90)
+  // Training duration in minutes (default 60)
   const [duration, setDuration] = useState(60);
 
   // UI state
@@ -77,6 +77,8 @@ export default function TrainingPlanGeneratorPage() {
   const [error, setError] = useState<string | null>(null);
   const [generatedPlan, setGeneratedPlan] = useState<TrainingPlan | null>(null);
   const [copied, setCopied] = useState(false);
+  // New: restrict one training per team per day
+  const [alreadyGeneratedToday, setAlreadyGeneratedToday] = useState(false);
 
   // History state
   const [history, setHistory] = useState<TrainingPlan[]>([]);
@@ -108,15 +110,25 @@ export default function TrainingPlanGeneratorPage() {
   useEffect(() => {
     setLoadingHistory(true);
     setHistory([]);
+    setAlreadyGeneratedToday(false);
     const params: Record<string, string> = {};
     if (teamId !== "") params.team_id = String(teamId);
     api
       .get(API_URLS.aiTrainingPlans, { params })
       .then((res) => {
-        setHistory(res.data ?? []);
+        const plans = res.data ?? [];
+        setHistory(plans);
+        // Check if any plan for today exists
+        const today = new Date().toISOString().slice(0, 10);
+        const hasToday = plans.some(
+          (plan: TrainingPlan) =>
+            plan.created_at && plan.created_at.slice(0, 10) === today,
+        );
+        setAlreadyGeneratedToday(hasToday);
       })
       .catch(() => {
         setHistory([]);
+        setAlreadyGeneratedToday(false);
       })
       .finally(() => setLoadingHistory(false));
   }, [teamId]);
@@ -138,6 +150,13 @@ export default function TrainingPlanGeneratorPage() {
 
   // ── Generate ─────────────────────────────────────────────────────────────
   const handleGenerate = async () => {
+    if (alreadyGeneratedToday) {
+      setError(
+        t("tp.already_generated_today") ||
+          "Try again tomorrow or use previous trainings.",
+      );
+      return;
+    }
     const validationError = validate();
     if (validationError) {
       setError(validationError);
@@ -311,6 +330,7 @@ export default function TrainingPlanGeneratorPage() {
               error={error}
               onGenerate={handleGenerate}
               t={t}
+              alreadyGeneratedToday={alreadyGeneratedToday}
             />
           )}
         </div>
@@ -355,6 +375,7 @@ function GeneratorForm({
   error,
   onGenerate,
   t,
+  alreadyGeneratedToday,
 }: {
   teams: Team[];
   teamId: number | "";
@@ -375,6 +396,7 @@ function GeneratorForm({
   error: string | null;
   onGenerate: () => void;
   t: (k: string) => string;
+  alreadyGeneratedToday: boolean;
 }) {
   return (
     <div
@@ -589,17 +611,18 @@ function GeneratorForm({
       <button
         type="button"
         onClick={onGenerate}
-        disabled={generating}
+        disabled={generating || alreadyGeneratedToday}
         style={{
           width: "100%",
           padding: "0.75rem",
-          background: generating ? "#999" : "#1a73e8",
+          background: generating || alreadyGeneratedToday ? "#999" : "#1a73e8",
           color: "#fff",
           border: "none",
           borderRadius: 8,
           fontSize: "1rem",
           fontWeight: 600,
-          cursor: generating ? "not-allowed" : "pointer",
+          cursor:
+            generating || alreadyGeneratedToday ? "not-allowed" : "pointer",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -620,6 +643,12 @@ function GeneratorForm({
               }}
             />
             {t("tp.generating")}
+          </>
+        ) : alreadyGeneratedToday ? (
+          <>
+            ⏳{" "}
+            {t("tp.already_generated_today") ||
+              "Try again tomorrow or use previous trainings."}
           </>
         ) : (
           <>✨ {t("tp.generate")}</>

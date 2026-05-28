@@ -769,5 +769,6 @@
   "tp.focus_physical": "Physical Conditioning",
   "tp.focus_fun_games": "Fun Games / Warm-up Games",
   "tp.focus_transition": "Transition Play",
-  "tp.new_session": "New Session"
+  "tp.new_session": "New Session",
+  "tp.already_generated_today": "A training session has already been generated for this team today. Try again tomorrow or use a previous session."
 }
