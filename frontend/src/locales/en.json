@@ -323,6 +323,8 @@
   "news.col_actions": "Actions",
   "news.empty": "No articles yet.",
   "news.toggle_hint": "Click to toggle published/unpublished",
+  "tp.duration": "Training Duration",
+  "tp.duration_hint": "Select the total duration for the training session (30 min to 5 hours). Exercises will fit within this time.",
   "news.yes": "Yes",
   "news.no": "No",
   "news.load_error": "Failed to load articles.",

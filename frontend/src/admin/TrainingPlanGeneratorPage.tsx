@@ -69,6 +69,8 @@ export default function TrainingPlanGeneratorPage() {
   const [expectedPlayers, setExpectedPlayers] = useState(15);
   const [playerVariance, setPlayerVariance] = useState(3);
   const [coachNotes, setCoachNotes] = useState("");
+  // Training duration in minutes (default 90)
+  const [duration, setDuration] = useState(60);
 
   // UI state
   const [generating, setGenerating] = useState(false);
@@ -155,6 +157,7 @@ export default function TrainingPlanGeneratorPage() {
         player_range_max: expectedPlayers + playerVariance,
         coach_notes: coachNotes.trim(),
         language: i18n.language,
+        duration_minutes: duration,
       };
       const res = await api.post(API_URLS.aiGenerateTraining, payload);
       const savePayload = {
@@ -302,6 +305,8 @@ export default function TrainingPlanGeneratorPage() {
               setPlayerVariance={setPlayerVariance}
               coachNotes={coachNotes}
               setCoachNotes={setCoachNotes}
+              duration={duration}
+              setDuration={setDuration}
               generating={generating}
               error={error}
               onGenerate={handleGenerate}
@@ -344,6 +349,8 @@ function GeneratorForm({
   setPlayerVariance,
   coachNotes,
   setCoachNotes,
+  duration,
+  setDuration,
   generating,
   error,
   onGenerate,
@@ -362,6 +369,8 @@ function GeneratorForm({
   setPlayerVariance: (v: number) => void;
   coachNotes: string;
   setCoachNotes: (v: string) => void;
+  duration: number;
+  setDuration: (v: number) => void;
   generating: boolean;
   error: string | null;
   onGenerate: () => void;
@@ -505,6 +514,36 @@ function GeneratorForm({
             {expectedPlayers + playerVariance})
           </small>
         </div>
+      </div>
+
+      {/* Duration */}
+      <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+        <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+          {t("tp.duration")}
+        </label>
+        <select
+          className="form-control"
+          value={duration}
+          onChange={(e) => setDuration(Number(e.target.value))}
+          style={{
+            width: "100%",
+            padding: "0.5rem 0.75rem",
+            borderRadius: 6,
+            border: "1px solid #ccc",
+          }}
+        >
+          {Array.from({ length: 10 }, (_, i) => 30 * (i + 1)).map((mins) => (
+            <option key={mins} value={mins}>
+              {Math.floor(mins / 60) > 0 ? `${Math.floor(mins / 60)}h ` : ""}
+              {mins % 60 !== 0 ? `${mins % 60}min` : ""}
+              {mins % 60 === 0 ? "" : ""}
+            </option>
+          ))}
+        </select>
+        <small style={{ color: "#888", fontSize: "0.78rem" }}>
+          {t("tp.duration_hint") ||
+            "Select total training duration (30 min to 5 hours)"}
+        </small>
       </div>
 
       {/* Coach notes */}

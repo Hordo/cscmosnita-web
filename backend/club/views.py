@@ -1397,13 +1397,17 @@ class GenerateTrainingPlanView(APIView):
         import os
         import traceback
         import requests as http_requests
+        print("[AI] GenerateTrainingPlanView._post_inner called")
+        print(f"[AI] User: {request.user}")
+        print(f"[AI] Request data: {request.data}")
 
         if not is_any_admin(request.user):
+            print("[AI] Permission denied: not admin")
             raise PermissionDenied("Admin access required.")
 
         gemini_api_key = os.environ.get('GEMINI_API_KEY', '')
-
         if not gemini_api_key:
+            print("[AI] Gemini API key missing!")
             return Response({'error': 'Gemini API key is not configured on the server.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         data = request.data
@@ -1414,7 +1418,14 @@ class GenerateTrainingPlanView(APIView):
         expected_players = int(data.get('expected_players') or 15)
         player_range_min = int(data.get('player_range_min') or max(expected_players - 3, 1))
         player_range_max = int(data.get('player_range_max') or expected_players + 3)
+
         coach_notes = (data.get('coach_notes') or '').strip()
+        duration_minutes = int(data.get('duration_minutes') or 90)
+        # Clamp duration between 30 and 300
+        if duration_minutes < 30:
+            duration_minutes = 30
+        if duration_minutes > 300:
+            duration_minutes = 300
         language_code = (data.get('language') or 'en').strip().lower()[:2]
         LANGUAGE_NAMES = {'ro': 'Romanian', 'en': 'English', 'de': 'German', 'fr': 'French', 'es': 'Spanish', 'it': 'Italian', 'hu': 'Hungarian'}
         language_name = LANGUAGE_NAMES.get(language_code, 'English')
@@ -1477,7 +1488,8 @@ class GenerateTrainingPlanView(APIView):
             "Never include raw spaces inside the parentheses of a markdown URL. "
             "Always use English for the YouTube search query regardless of the response language. "
             f"At the END of the plan, add a short section titled '## Urmărire pentru următoarea sesiune' if Romanian, or '## Follow-up for next session' otherwise, with 2-3 bullet points "
-            "about what to consolidate or build upon in the next training."
+            "about what to consolidate or build upon in the next training. "
+            f"The ENTIRE session (including all exercises, warm-up, and cool-down) MUST fit within a total duration of {duration_minutes} minutes. Do NOT exceed this total duration. Distribute time for each exercise accordingly."
         )
 
         user_message = (
@@ -1485,12 +1497,14 @@ class GenerateTrainingPlanView(APIView):
             f"Age group: {age_label}. "
             f"Focus areas for today: {focus_str}. "
             f"Expected number of players: {expected_players} (plan must also work with {player_range_min}–{player_range_max} players). "
+            f"Total training duration: {duration_minutes} minutes."
         )
         if coach_notes:
             user_message += f"\nCoach's additional notes: {coach_notes}"
         user_message += history_context
         user_message += "\n\nPlease generate a complete, detailed training session plan."
 
+        fallback_used = False
         try:
             gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}"
             payload = {
@@ -1498,33 +1512,59 @@ class GenerateTrainingPlanView(APIView):
                 "contents": [{"role": "user", "parts": [{"text": user_message}]}],
                 "generationConfig": {"temperature": 0.7},
             }
+            print(f"[AI] Gemini URL: {gemini_url}")
+            print(f"[AI] Gemini payload: {payload}")
             resp = http_requests.post(gemini_url, json=payload, timeout=45)
+            print(f"[AI] Gemini response status: {resp.status_code}")
             if resp.status_code == 429:
                 try:
                     err_body = resp.json()
-                    violations = (
-                        err_body.get('error', {})
-                        .get('details', [{}])[0]
-                        .get('violations', [{}])
-                    )
-                    metric = violations[0].get('quotaMetric', '') if violations else ''
-                except Exception:
-                    metric = ''
-                if 'per_day' in metric or 'per_project_per_day' in metric:
-                    error_msg = 'Daily AI generation limit reached. Please try again tomorrow.'
-                else:
-                    error_msg = 'Too many AI requests. Please wait about a minute before trying again.'
-                return Response({'error': error_msg}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                    print(f"[AI] Gemini 429 error body: {err_body}")
+                    details = err_body.get('error', {}).get('details', [])
+                    found_per_day = False
+                    for d in details:
+                        violations = d.get('violations', [])
+                        for v in violations:
+                            metric = v.get('quotaMetric', '')
+                            # Accept all known daily quota metric names
+                            if (
+                                'per_day' in metric
+                                or 'per_project_per_day' in metric
+                                or 'free_tier_requests' in metric
+                            ):
+                                found_per_day = True
+                    if found_per_day:
+                        print("[AI] Falling back to gemini-2.0-flash due to daily quota on 2.5-flash.")
+                        fallback_used = True
+                        # Try Gemini 2.0 Flash
+                        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_api_key}"
+                        resp = http_requests.post(gemini_url, json=payload, timeout=45)
+                        print(f"[AI] Gemini 2.0 Flash response status: {resp.status_code}")
+                        if resp.status_code != 200:
+                            print(f"[AI] Gemini 2.0 error: status {resp.status_code}, body: {resp.text}")
+                            return Response({'error': f'AI service error ({resp.status_code}) [fallback]. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    else:
+                        error_msg = 'Too many AI requests. Please wait about a minute before trying again.'
+                        print(f"[AI] Quota error: {error_msg}")
+                        return Response({'error': error_msg}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                except Exception as e:
+                    print(f"[AI] Failed to parse 429 error body: {e}")
+                    return Response({'error': 'AI quota error.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
             if resp.status_code == 503:
+                print("[AI] Gemini 503 Service Unavailable")
                 return Response(
                     {'error': 'AI service is temporarily unavailable. Please try again in a few minutes.'},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
             if resp.status_code != 200:
+                print(f"[AI] Gemini error: status {resp.status_code}, body: {resp.text}")
                 return Response({'error': f'AI service error ({resp.status_code}). Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             resp_json = resp.json()
+            print(f"[AI] Gemini response JSON: {resp_json}")
             generated_text = resp_json['candidates'][0]['content']['parts'][0]['text']
         except Exception as exc:
+            print(f"[AI] Exception: {exc}")
+            traceback.print_exc()
             return Response({'error': f'AI service error: {str(exc)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Enrich YouTube search links → direct watch links (requires YOUTUBE_API_KEY)
@@ -1541,7 +1581,7 @@ class GenerateTrainingPlanView(APIView):
                 break
 
         # Return plan WITHOUT saving — coach must confirm they used the session
-        return Response({
+        response_data = {
             'generated_plan': generated_text,
             'followup_notes': followup_notes,
             # Echo back the original params so the frontend can send them to /save-training/
@@ -1553,7 +1593,11 @@ class GenerateTrainingPlanView(APIView):
             'player_range_min': player_range_min,
             'player_range_max': player_range_max,
             'coach_notes': coach_notes,
-        }, status=status.HTTP_200_OK)
+            'duration_minutes': duration_minutes,
+        }
+        if fallback_used:
+            response_data['ai_fallback'] = 'Gemini 2.0 Flash was used due to daily quota limit on Gemini 2.5 Flash.'
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class SaveTrainingPlanView(APIView):
