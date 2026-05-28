@@ -1397,17 +1397,13 @@ class GenerateTrainingPlanView(APIView):
         import os
         import traceback
         import requests as http_requests
-        print("[AI] GenerateTrainingPlanView._post_inner called")
-        print(f"[AI] User: {request.user}")
-        print(f"[AI] Request data: {request.data}")
+        # Debug prints removed
 
         if not is_any_admin(request.user):
-            print("[AI] Permission denied: not admin")
             raise PermissionDenied("Admin access required.")
 
         gemini_api_key = os.environ.get('GEMINI_API_KEY', '')
         if not gemini_api_key:
-            print("[AI] Gemini API key missing!")
             return Response({'error': 'Gemini API key is not configured on the server.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         data = request.data
@@ -1512,21 +1508,16 @@ class GenerateTrainingPlanView(APIView):
                 "contents": [{"role": "user", "parts": [{"text": user_message}]}],
                 "generationConfig": {"temperature": 0.7},
             }
-            print(f"[AI] Gemini URL: {gemini_url}")
-            print(f"[AI] Gemini payload: {payload}")
             resp = http_requests.post(gemini_url, json=payload, timeout=45)
-            print(f"[AI] Gemini response status: {resp.status_code}")
             if resp.status_code == 429:
                 try:
                     err_body = resp.json()
-                    print(f"[AI] Gemini 429 error body: {err_body}")
                     details = err_body.get('error', {}).get('details', [])
                     found_per_day = False
                     for d in details:
                         violations = d.get('violations', [])
                         for v in violations:
                             metric = v.get('quotaMetric', '')
-                            # Accept all known daily quota metric names
                             if (
                                 'per_day' in metric
                                 or 'per_project_per_day' in metric
@@ -1534,37 +1525,37 @@ class GenerateTrainingPlanView(APIView):
                             ):
                                 found_per_day = True
                     if found_per_day:
-                        print("[AI] Falling back to gemini-2.0-flash due to daily quota on 2.5-flash.")
                         fallback_used = True
                         # Try Gemini 2.0 Flash
                         gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={gemini_api_key}"
                         resp = http_requests.post(gemini_url, json=payload, timeout=45)
-                        print(f"[AI] Gemini 2.0 Flash response status: {resp.status_code}")
                         if resp.status_code != 200:
-                            print(f"[AI] Gemini 2.0 error: status {resp.status_code}, body: {resp.text}")
                             return Response({'error': f'AI service error ({resp.status_code}) [fallback]. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                     else:
                         error_msg = 'Too many AI requests. Please wait about a minute before trying again.'
-                        print(f"[AI] Quota error: {error_msg}")
                         return Response({'error': error_msg}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
                 except Exception as e:
-                    print(f"[AI] Failed to parse 429 error body: {e}")
                     return Response({'error': 'AI quota error.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
             if resp.status_code == 503:
-                print("[AI] Gemini 503 Service Unavailable")
                 return Response(
                     {'error': 'AI service is temporarily unavailable. Please try again in a few minutes.'},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
             if resp.status_code != 200:
-                print(f"[AI] Gemini error: status {resp.status_code}, body: {resp.text}")
                 return Response({'error': f'AI service error ({resp.status_code}). Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             resp_json = resp.json()
-            print(f"[AI] Gemini response JSON: {resp_json}")
-            generated_text = resp_json['candidates'][0]['content']['parts'][0]['text']
+            # Robustly extract generated text from Gemini response
+            try:
+                candidate = resp_json['candidates'][0]['content']
+                if 'parts' in candidate and candidate['parts'] and 'text' in candidate['parts'][0]:
+                    generated_text = candidate['parts'][0]['text']
+                elif 'text' in candidate:
+                    generated_text = candidate['text']
+                else:
+                    return Response({'error': 'AI service error: Unexpected Gemini response format.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            except Exception as parse_exc:
+                return Response({'error': f'AI service error: Failed to parse Gemini response: {str(parse_exc)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as exc:
-            print(f"[AI] Exception: {exc}")
-            traceback.print_exc()
             return Response({'error': f'AI service error: {str(exc)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Enrich YouTube search links → direct watch links (requires YOUTUBE_API_KEY)
