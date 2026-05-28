@@ -1388,6 +1388,11 @@ class GenerateTrainingPlanView(APIView):
     def post(self, request):
         import traceback
         try:
+            payload = {
+                "system_instruction": {"parts": [{"text": system_prompt}]},
+                "contents": [{"role": "user", "parts": [{"text": user_message}]}],
+                "generationConfig": {"temperature": 0.7},
+            }
             print("[AI DEBUG] Backend Gemini request payload:")
             print(payload)
             return self._post_inner(request)
