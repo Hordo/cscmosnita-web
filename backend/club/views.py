@@ -1431,31 +1431,92 @@ class GenerateTrainingPlanView(APIView):
         if not focus_areas:
             return Response({'error': 'At least one focus area is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Fetch last 5 plans for memory context
+        # Fetch last 2 plans for memory context and extract only exercise names
         history_qs = AITrainingPlan.objects.all()
         if team_id:
             history_qs = history_qs.filter(team_id=team_id)
-        elif discipline_id:
+        if discipline_id:
             history_qs = history_qs.filter(discipline_id=discipline_id)
-        previous_plans = list(history_qs.order_by('-created_at')[:5])
+        previous_plans = list(history_qs.order_by('-created_at')[:2])
 
-        # Build the AI prompt
+        def _extract_exercise_names(plan_text):
+            import re
+            names = []
+            if not plan_text:
+                return names
+            lines = plan_text.splitlines()
+            bullet_re = re.compile(r"^\s*[-\*•]\s*(.+)")
+            num_re = re.compile(r"^\s*\d+[\.)]\s*(.+)")
+            heading_re = re.compile(r"^\s*#{1,6}\s*(.+)")
+            # First pass: collect explicit list items / headings
+            for ln in lines:
+                m = bullet_re.match(ln) or num_re.match(ln) or heading_re.match(ln)
+                if m:
+                    title = m.group(1).strip()
+                    # Keep only text before first colon
+                    title = title.split(':', 1)[0].strip()
+                    # Trim long titles
+                    if title:
+                        names.append(title[:120])
+            # Fallback: look for short lines with a colon (Title: description)
+            if not names:
+                for ln in lines:
+                    if ':' in ln:
+                        left = ln.split(':', 1)[0].strip()
+                        if 2 < len(left) <= 80:
+                            names.append(left[:120])
+            # Deduplicate while preserving order
+            seen = set()
+            out = []
+            for n in names:
+                if n and n.lower() not in seen:
+                    seen.add(n.lower())
+                    out.append(n)
+            return out
+
+        # Build compact history context containing only exercise names
         history_context = ""
+        previous_exercise_names = []
         if previous_plans:
             history_lines = []
+            # reversed so that the oldest of the two appears first (most recent last in text)
             for idx, plan in enumerate(reversed(previous_plans), 1):
                 session_date = plan.created_at.strftime('%d %b %Y')
                 focuses = ', '.join(plan.focus_areas) if plan.focus_areas else 'general'
-                snippet = plan.generated_plan[:400].replace('\n', ' ')
-                followup = plan.followup_notes[:200].replace('\n', ' ') if plan.followup_notes else ''
-                line = f"Session {idx} ({session_date}) — Focus: {focuses}. Summary: {snippet}..."
-                if followup:
-                    line += f" Follow-up notes: {followup}"
-                history_lines.append(line)
-            history_context = (
-                "\n\nPREVIOUS SESSIONS (most recent last, use these to avoid repetition and build progression):\n"
-                + "\n".join(history_lines)
-            )
+                names = _extract_exercise_names(plan.generated_plan)
+                # Limit per-session list to avoid huge payloads
+                if names:
+                    # append to flattened previous_exercise_names in most-recent-first order
+                    previous_exercise_names.extend(names)
+                    # make readable history context line
+                    names_str = ', '.join(names[:12])
+                    history_lines.append(f"Session {idx} ({session_date}) — Exercises: {names_str}")
+            if history_lines:
+                history_context = (
+                    "\n\nPREVIOUS SESSIONS (most recent last, exercises only):\n"
+                    + "\n".join(history_lines)
+                )
+        # Ensure deterministic ordering and cap total size to keep payload small
+        # Keep most recent sessions first in the list
+        previous_exercise_names = [n[:120] for n in previous_exercise_names]
+        # Trim the list so that its JSON representation stays well under 10KB (use 8KB safe limit)
+        try:
+            import json
+            safe_limit = 8 * 1024
+            # progressively reduce list length if needed
+            if len(json.dumps(previous_exercise_names)) > safe_limit:
+                for cut in range(len(previous_exercise_names), -1, -1):
+                    if len(json.dumps(previous_exercise_names[:cut])) <= safe_limit:
+                        previous_exercise_names = previous_exercise_names[:cut]
+                        break
+        except Exception:
+            # If anything goes wrong, keep a small deterministic subset
+            previous_exercise_names = previous_exercise_names[:20]
+        # Log count
+        try:
+            print(f"[AI DEBUG] Included {len(previous_exercise_names)} previous exercise names in payload")
+        except Exception:
+            pass
 
         focus_str = ', '.join(focus_areas)
         team_info = ""
@@ -1514,6 +1575,7 @@ class GenerateTrainingPlanView(APIView):
         payload = {
             "system_instruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": user_message}]}],
+            "previous_exercise_names": previous_exercise_names,
             "generationConfig": {"temperature": 0.7},
         }
         
@@ -1525,6 +1587,7 @@ class GenerateTrainingPlanView(APIView):
             payload = {
                 "system_instruction": {"parts": [{"text": system_prompt}]},
                 "contents": [{"role": "user", "parts": [{"text": user_message}]}],
+                "previous_exercise_names": previous_exercise_names,
                 "generationConfig": {"temperature": 0.7},
             }
             resp = http_requests.post(gemini_url, json=payload, timeout=45)
