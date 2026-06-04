@@ -1474,47 +1474,51 @@ class GenerateTrainingPlanView(APIView):
                     out.append(n)
             return out
 
-        # Build compact history context containing only exercise names
+        # Build compact historyContext: a short bullet list of exercise names from the last 1-2 sessions
         history_context = ""
-        previous_exercise_names = []
+        exercise_names_flat = []
         if previous_plans:
-            history_lines = []
-            # reversed so that the oldest of the two appears first (most recent last in text)
-            for idx, plan in enumerate(reversed(previous_plans), 1):
-                session_date = plan.created_at.strftime('%d %b %Y')
-                focuses = ', '.join(plan.focus_areas) if plan.focus_areas else 'general'
+            # reversed so that the oldest of the selected sessions appears first
+            for plan in reversed(previous_plans):
                 names = _extract_exercise_names(plan.generated_plan)
-                # Limit per-session list to avoid huge payloads
                 if names:
-                    # append to flattened previous_exercise_names in most-recent-first order
-                    previous_exercise_names.extend(names)
-                    # make readable history context line
-                    names_str = ', '.join(names[:12])
-                    history_lines.append(f"Session {idx} ({session_date}) — Exercises: {names_str}")
-            if history_lines:
-                history_context = (
-                    "\n\nPREVIOUS SESSIONS (most recent last, exercises only):\n"
-                    + "\n".join(history_lines)
-                )
-        # Ensure deterministic ordering and cap total size to keep payload small
-        # Keep most recent sessions first in the list
-        previous_exercise_names = [n[:120] for n in previous_exercise_names]
-        # Trim the list so that its JSON representation stays well under 10KB (use 8KB safe limit)
+                    # include short names only, deterministic truncation
+                    exercise_names_flat.extend([n[:120] for n in names])
+
+        # Deduplicate while preserving order
+        seen = set()
+        exercise_names = []
+        for n in exercise_names_flat:
+            nl = n.lower()
+            if nl and nl not in seen:
+                seen.add(nl)
+                exercise_names.append(n)
+
+        # Build the bullet block required by the spec
+        if exercise_names:
+            block_lines = ["\n\nPREVIOUS EXERCISES (do not repeat these in the new session):"]
+            for n in exercise_names:
+                block_lines.append(f"- {n}")
+            history_block = "\n".join(block_lines)
+            # Ensure the final text block stays under 5KB; trim if necessary
+            try:
+                import json
+                max_bytes = 5 * 1024
+                # If too large, progressively remove items from the end until it fits
+                while len(history_block.encode("utf-8")) > max_bytes and len(exercise_names) > 0:
+                    exercise_names = exercise_names[:-1]
+                    block_lines = ["\n\nPREVIOUS EXERCISES (do not repeat these in the new session):"]
+                    block_lines += [f"- {n}" for n in exercise_names]
+                    history_block = "\n".join(block_lines)
+            except Exception:
+                # fallback: keep only first few items
+                exercise_names = exercise_names[:5]
+                history_block = "\n\nPREVIOUS EXERCISES (do not repeat these in the new session):\n" + "\n".join(f"- {n}" for n in exercise_names)
+
+            history_context = history_block
+        # Log number of exercises included
         try:
-            import json
-            safe_limit = 8 * 1024
-            # progressively reduce list length if needed
-            if len(json.dumps(previous_exercise_names)) > safe_limit:
-                for cut in range(len(previous_exercise_names), -1, -1):
-                    if len(json.dumps(previous_exercise_names[:cut])) <= safe_limit:
-                        previous_exercise_names = previous_exercise_names[:cut]
-                        break
-        except Exception:
-            # If anything goes wrong, keep a small deterministic subset
-            previous_exercise_names = previous_exercise_names[:20]
-        # Log count
-        try:
-            print(f"[AI DEBUG] Included {len(previous_exercise_names)} previous exercise names in payload")
+            print(f"[AI DEBUG] Included {len(exercise_names)} previous exercise names in user text")
         except Exception:
             pass
 
@@ -1575,7 +1579,6 @@ class GenerateTrainingPlanView(APIView):
         payload = {
             "system_instruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": user_message}]}],
-            "previous_exercise_names": previous_exercise_names,
             "generationConfig": {"temperature": 0.7},
         }
         
@@ -1587,7 +1590,6 @@ class GenerateTrainingPlanView(APIView):
             payload = {
                 "system_instruction": {"parts": [{"text": system_prompt}]},
                 "contents": [{"role": "user", "parts": [{"text": user_message}]}],
-                "previous_exercise_names": previous_exercise_names,
                 "generationConfig": {"temperature": 0.7},
             }
             resp = http_requests.post(gemini_url, json=payload, timeout=45)
