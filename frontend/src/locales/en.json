@@ -728,6 +728,8 @@
 
   "tp.title": "AI Training Planner",
   "tp.subtitle": "Generate a tailored training session for your team using AI.",
+  "tp.discipline": "Discipline",
+  "tp.all_disciplines": "All disciplines",
   "tp.team": "Team",
   "tp.choose_team": "Select a team (optional)",
   "tp.age_label": "Age Group",
@@ -744,6 +746,7 @@
   "tp.generated_plan": "Training Plan",
   "tp.followup": "Follow-up for Next Session",
   "tp.history": "Previous Sessions",
+  "tp.history_subtitle": "Browse training sessions previously generated for your teams.",
   "tp.no_history": "No previous sessions found for this team.",
   "tp.history_session": "Session",
   "tp.history_focus": "Focus",
@@ -770,5 +773,6 @@
   "tp.focus_fun_games": "Fun Games / Warm-up Games",
   "tp.focus_transition": "Transition Play",
   "tp.new_session": "New Session",
+  "tp.back_to_planner": "Back to Planner",
   "tp.already_generated_today": "A training session has already been generated for this team today. Try again tomorrow or use a previous session."
 }

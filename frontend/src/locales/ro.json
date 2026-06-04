@@ -729,6 +729,8 @@
 
   "tp.title": "Planificator Antrenamente AI",
   "tp.subtitle": "Generează o sesiune de antrenament personalizată pentru echipa ta folosind AI.",
+  "tp.discipline": "Disciplină",
+  "tp.all_disciplines": "Toate disciplinele",
   "tp.team": "Echipă",
   "tp.choose_team": "Selectează o echipă (opțional)",
   "tp.age_label": "Grupă de Vârstă",
@@ -745,6 +747,7 @@
   "tp.generated_plan": "Planul de Antrenament",
   "tp.followup": "Continuare pentru Sesiunea Viitoare",
   "tp.history": "Sesiuni Anterioare",
+  "tp.history_subtitle": "Navighează prin sesiunile de antrenament generate anterior pentru echipele tale.",
   "tp.no_history": "Nu s-au găsit sesiuni anterioare pentru această echipă.",
   "tp.history_session": "Sesiune",
   "tp.history_focus": "Focus",
@@ -759,7 +762,6 @@
   "tp.mark_as_used": "Salvează — Am folosit această sesiune",
   "tp.saving": "Se salvează…",
   "tp.session_saved": "Sesiune Salvată",
-  "tp.copied": "Copiat!",
   "tp.focus_passing": "Pasă",
   "tp.focus_finishing": "Finalizare",
   "tp.focus_positioning": "Poziționare",
@@ -772,5 +774,6 @@
   "tp.focus_fun_games": "Jocuri Distractive / Încălzire",
   "tp.focus_transition": "Tranziție",
   "tp.new_session": "Sesiune Nouă",
+  "tp.back_to_planner": "Înapoi la Planificator",
   "tp.already_generated_today": "A fost deja generată o sesiune de antrenament pentru această echipă astăzi. Încearcă din nou mâine sau folosește o sesiune anterioară."
 }

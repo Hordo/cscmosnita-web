@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import api from "../config/axios";
 import { API_URLS } from "../config/api";
 import "../styles/adminStyles.css";
+
+import { useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 
 const mdLinkNewTab = {
@@ -20,6 +22,7 @@ interface Team {
   id: number;
   name: string;
   year: number | null;
+  discipline?: string | null;
 }
 
 interface TrainingPlan {
@@ -63,6 +66,7 @@ export default function TrainingPlanGeneratorPage() {
 
   // Form state
   const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("all");
   const [teamId, setTeamId] = useState<number | "">("");
   const [ageLabel, setAgeLabel] = useState("");
   const [focusAreas, setFocusAreas] = useState<FocusKey[]>([]);
@@ -80,19 +84,75 @@ export default function TrainingPlanGeneratorPage() {
   // New: restrict one training per team per day
   const [alreadyGeneratedToday, setAlreadyGeneratedToday] = useState(false);
 
-  // History state
-  const [history, setHistory] = useState<TrainingPlan[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-  const [expandedHistoryId, setExpandedHistoryId] = useState<number | null>(
-    null,
-  );
-
   // ── Load teams on mount ──────────────────────────────────────────────────
   useEffect(() => {
     api.get(API_URLS.teams).then((res) => {
       setTeams(res.data ?? []);
     });
   }, []);
+
+  // Build discipline options: dedupe by lower-cased value but preserve original labels
+  const disciplineOptions = Array.from(
+    new Map(
+      teams
+        .map((team) => team.discipline?.trim())
+        .filter((d): d is string => Boolean(d))
+        .map((d) => [d.toLowerCase(), d.trim()]),
+    ).values(),
+  ).sort((a, b) => a.localeCompare(b));
+
+  const filteredTeams =
+    selectedDiscipline === "all"
+      ? teams
+      : teams.filter(
+          (team) =>
+            (team.discipline?.trim().toLowerCase() ?? "") ===
+            selectedDiscipline.trim().toLowerCase(),
+        );
+
+  useEffect(() => {
+    if (teamId === "" || selectedDiscipline === "all") {
+      return;
+    }
+
+    const selectedTeam = teams.find((team) => team.id === teamId);
+    if (
+      !selectedTeam ||
+      (selectedTeam.discipline?.trim().toLowerCase() ?? "") !==
+        selectedDiscipline.trim().toLowerCase()
+    ) {
+      setTeamId("");
+      setAgeLabel("");
+    }
+  }, [selectedDiscipline, teamId, teams]);
+
+  // ── Check if a plan was already generated today for this team ────────────
+  useEffect(() => {
+    if (teamId === "") {
+      setAlreadyGeneratedToday(false);
+      return;
+    }
+    api
+      .get(API_URLS.aiTrainingPlans, { params: { team_id: String(teamId) } })
+      .then((res) => {
+        const plans: TrainingPlan[] = res.data ?? [];
+        const today = new Date();
+        const hasToday = plans.some((p) => {
+          try {
+            const d = new Date(p.created_at);
+            return (
+              d.getFullYear() === today.getFullYear() &&
+              d.getMonth() === today.getMonth() &&
+              d.getDate() === today.getDate()
+            );
+          } catch (e) {
+            return false;
+          }
+        });
+        setAlreadyGeneratedToday(hasToday);
+      })
+      .catch(() => setAlreadyGeneratedToday(false));
+  }, [teamId]);
 
   // ── Auto-fill age label when team is selected ────────────────────────────
   useEffect(() => {
@@ -105,33 +165,6 @@ export default function TrainingPlanGeneratorPage() {
       setAgeLabel(`U${age} (born ${team.year})`);
     }
   }, [teamId, teams]);
-
-  // ── Load history whenever teamId changes ────────────────────────────────
-  useEffect(() => {
-    setLoadingHistory(true);
-    setHistory([]);
-    setAlreadyGeneratedToday(false);
-    const params: Record<string, string> = {};
-    if (teamId !== "") params.team_id = String(teamId);
-    api
-      .get(API_URLS.aiTrainingPlans, { params })
-      .then((res) => {
-        const plans = res.data ?? [];
-        setHistory(plans);
-        // Check if any plan for today exists
-        const today = new Date().toISOString().slice(0, 10);
-        const hasToday = plans.some(
-          (plan: TrainingPlan) =>
-            plan.created_at && plan.created_at.slice(0, 10) === today,
-        );
-        setAlreadyGeneratedToday(hasToday);
-      })
-      .catch(() => {
-        setHistory([]);
-        setAlreadyGeneratedToday(false);
-      })
-      .finally(() => setLoadingHistory(false));
-  }, [teamId]);
 
   // ── Toggle focus area ────────────────────────────────────────────────────
   const toggleFocus = (key: FocusKey) => {
@@ -191,6 +224,8 @@ export default function TrainingPlanGeneratorPage() {
         followup_notes: res.data.followup_notes,
       };
       const saveRes = await api.post(API_URLS.aiSaveTraining, savePayload);
+      // Mark that we have a generated plan for this team today to prevent duplicates
+      setAlreadyGeneratedToday(true);
       const plan: TrainingPlan = {
         id: saveRes.data.id,
         team_id: teamId === "" ? null : (teamId as number),
@@ -208,7 +243,7 @@ export default function TrainingPlanGeneratorPage() {
       };
       setGeneratedPlan(plan);
       setSaved(true);
-      setHistory((prev) => [plan, ...prev]);
+      // No-op: history state removed
     } catch (err: any) {
       const msg =
         err?.response?.data?.error ||
@@ -255,7 +290,7 @@ export default function TrainingPlanGeneratorPage() {
         created_at: res.data.created_at,
       };
       setGeneratedPlan(saved_plan);
-      setHistory((prev) => [saved_plan, ...prev]);
+      // No-op: history state removed
       setSaved(true);
     } catch (err: any) {
       // save failed silently
@@ -274,14 +309,9 @@ export default function TrainingPlanGeneratorPage() {
   };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(undefined, {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
 
   // ─── Render ─────────────────────────────────────────────────────────────────
+  const navigate = useNavigate();
   return (
     <div
       className="admin-page"
@@ -295,8 +325,28 @@ export default function TrainingPlanGeneratorPage() {
         <p style={{ color: "#666", margin: 0 }}>{t("tp.subtitle")}</p>
       </div>
 
+      {/* Link to history page */}
+      <div style={{ marginBottom: 24 }}>
+        <button
+          type="button"
+          onClick={() => navigate("/admin/training-planner/history")}
+          style={{
+            padding: "7px 16px",
+            borderRadius: 7,
+            border: "1px solid #1a73e8",
+            background: "#f8faff",
+            color: "#1a73e8",
+            cursor: "pointer",
+            fontWeight: 600,
+            fontSize: "0.95rem",
+            marginBottom: 0,
+          }}
+        >
+          🕑 {t("tp.history")}
+        </button>
+      </div>
+
       <div className="tp-layout">
-        {/* ── LEFT: Form / Result ──────────────────────────────────────────── */}
         <div>
           {generatedPlan ? (
             <GeneratedPlanView
@@ -311,9 +361,12 @@ export default function TrainingPlanGeneratorPage() {
             />
           ) : (
             <GeneratorForm
-              teams={teams}
+              teams={filteredTeams}
               teamId={teamId}
               setTeamId={setTeamId}
+              selectedDiscipline={selectedDiscipline}
+              setSelectedDiscipline={setSelectedDiscipline}
+              disciplineOptions={disciplineOptions}
               ageLabel={ageLabel}
               setAgeLabel={setAgeLabel}
               focusAreas={focusAreas}
@@ -334,18 +387,6 @@ export default function TrainingPlanGeneratorPage() {
             />
           )}
         </div>
-
-        {/* ── RIGHT: History ────────────────────────────────────────────────── */}
-        <div>
-          <HistoryPanel
-            history={history}
-            loading={loadingHistory}
-            expandedId={expandedHistoryId}
-            setExpandedId={setExpandedHistoryId}
-            formatDate={formatDate}
-            t={t}
-          />
-        </div>
       </div>
     </div>
   );
@@ -359,6 +400,9 @@ function GeneratorForm({
   teams,
   teamId,
   setTeamId,
+  selectedDiscipline,
+  setSelectedDiscipline,
+  disciplineOptions,
   ageLabel,
   setAgeLabel,
   focusAreas,
@@ -380,6 +424,9 @@ function GeneratorForm({
   teams: Team[];
   teamId: number | "";
   setTeamId: (v: number | "") => void;
+  selectedDiscipline: string;
+  setSelectedDiscipline: (v: string) => void;
+  disciplineOptions: string[];
   ageLabel: string;
   setAgeLabel: (v: string) => void;
   focusAreas: FocusKey[];
@@ -408,6 +455,31 @@ function GeneratorForm({
         padding: "1.5rem",
       }}
     >
+      {/* Discipline selector */}
+      <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+        <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+          {t("tp.discipline")}
+        </label>
+        <select
+          className="form-control"
+          value={selectedDiscipline}
+          onChange={(e) => setSelectedDiscipline(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "0.5rem 0.75rem",
+            borderRadius: 6,
+            border: "1px solid #ccc",
+          }}
+        >
+          <option value="all">{t("tp.all_disciplines")}</option>
+          {disciplineOptions.map((discipline) => (
+            <option key={discipline} value={discipline}>
+              {discipline}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Team selector */}
       <div className="form-group" style={{ marginBottom: "1.25rem" }}>
         <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
@@ -845,121 +917,3 @@ function GeneratedPlanView({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-
-function HistoryPanel({
-  history,
-  loading,
-  expandedId,
-  setExpandedId,
-  formatDate,
-  t,
-}: {
-  history: TrainingPlan[];
-  loading: boolean;
-  expandedId: number | null;
-  setExpandedId: (id: number | null) => void;
-  formatDate: (iso: string) => string;
-  t: (k: string) => string;
-}) {
-  return (
-    <div className="tp-history-panel">
-      <h3
-        style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.75rem" }}
-      >
-        🕑 {t("tp.history")}
-      </h3>
-
-      {loading ? (
-        <p style={{ color: "#888", fontSize: "0.875rem" }}>Loading…</p>
-      ) : history.length === 0 ? (
-        <p style={{ color: "#888", fontSize: "0.875rem" }}>
-          {t("tp.no_history")}
-        </p>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {history.map((plan, idx) => (
-            <div
-              key={plan.id}
-              style={{
-                borderRadius: 8,
-                border: "1px solid #e8e8e8",
-                overflow: "hidden",
-              }}
-            >
-              {/* Header row */}
-              <button
-                type="button"
-                onClick={() =>
-                  setExpandedId(expandedId === plan.id ? null : plan.id)
-                }
-                style={{
-                  width: "100%",
-                  background: "#f7f9ff",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "8px 12px",
-                  textAlign: "left",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                }}
-              >
-                <span style={{ fontSize: "0.8rem", color: "#555" }}>
-                  {t("tp.history_session")} #{history.length - idx} —{" "}
-                  {formatDate(plan.created_at)}
-                </span>
-                <span
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "#1a73e8",
-                    fontWeight: 600,
-                  }}
-                >
-                  {plan.focus_areas.map((f) => t(`tp.focus_${f}`)).join(", ") ||
-                    "—"}
-                </span>
-                <span style={{ fontSize: "0.75rem", color: "#888" }}>
-                  {plan.age_label} · {plan.expected_players} players
-                </span>
-              </button>
-
-              {/* Expanded view */}
-              {expandedId === plan.id && (
-                <div
-                  style={{
-                    padding: "10px 12px",
-                    borderTop: "1px solid #e8e8e8",
-                    fontSize: "0.82rem",
-                    lineHeight: 1.65,
-                    maxHeight: 320,
-                    overflowY: "auto",
-                    background: "#fff",
-                  }}
-                >
-                  <ReactMarkdown components={mdLinkNewTab}>
-                    {plan.generated_plan}
-                  </ReactMarkdown>
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(null)}
-                    style={{
-                      marginTop: 8,
-                      padding: "4px 12px",
-                      borderRadius: 5,
-                      border: "1px solid #ccc",
-                      background: "#f5f5f5",
-                      cursor: "pointer",
-                      fontSize: "0.8rem",
-                    }}
-                  >
-                    {t("tp.history_close")}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

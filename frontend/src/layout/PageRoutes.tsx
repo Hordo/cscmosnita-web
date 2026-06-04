@@ -43,6 +43,7 @@ import ResourceBookingsAdminPage from "../admin/ResourceBookingsAdminPage";
 import IndividualCompetitionAdminPage from "../admin/IndividualCompetitionAdminPage";
 import SportConfigAdminPage from "../admin/SportConfigAdminPage";
 import TrainingPlanGeneratorPage from "../admin/TrainingPlanGeneratorPage";
+import TrainingSessionsHistoryPage from "../admin/TrainingSessionsHistoryPage";
 import { IndividualCompetitionsPage } from "../pages/IndividualCompetitionsPage";
 import { CompetitionRacesPage } from "../pages/CompetitionRacesPage";
 
@@ -136,6 +137,10 @@ const router = createBrowserRouter([
           {
             path: "training-planner",
             element: <TrainingPlanGeneratorPage />,
+          },
+          {
+            path: "training-planner/history",
+            element: <TrainingSessionsHistoryPage />,
           },
         ],
       },
