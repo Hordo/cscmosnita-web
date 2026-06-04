@@ -1440,10 +1440,6 @@ class GenerateTrainingPlanView(APIView):
         previous_plans = list(history_qs.order_by('-created_at')[:2])
 
         def _extract_exercise_names(plan_text):
-            """Heuristic extraction of short exercise titles from AI-generated plan text.
-            Returns a list of short, cleaned titles. Filters out common metadata and
-            descriptive lines. Deterministic and memory-safe.
-            """
             import re
             if not plan_text:
                 return []
@@ -1452,56 +1448,106 @@ class GenerateTrainingPlanView(APIView):
             num_re = re.compile(r"^\s*\d+[\.)]\s*(.+)")
             heading_re = re.compile(r"^\s*#{1,6}\s*(.+)")
 
-            def clean_title(s: str) -> str | None:
+            def clean_title(s: str):
                 s = s.strip()
-                # drop trailing markup artifacts
-                s = re.sub(r"\*+|\*\*+", "", s).strip()
-                # remove leading A., B., etc.
+                s = re.sub(r"\*+", "", s).strip()
                 s = re.sub(r"^[A-Za-z]\.[\s\-]*", "", s)
-                # keep only before colon
+                # Prefer RHS after em-dash/hyphen
+                if '—' in s or '–' in s or ' - ' in s:
+                    parts = re.split(r"[—–-]", s)
+                    for p in reversed(parts):
+                        p = p.strip()
+                        if p:
+                            s = p
+                            break
+                # remove trailing parenthetical times
+                s = re.sub(r"\(.*?min.*?\)", "", s, flags=re.IGNORECASE).strip()
                 if ':' in s:
                     s = s.split(':', 1)[0].strip()
-                # strip surrounding punctuation
                 s = s.strip("\t \n\r-–—:")
                 if not s:
                     return None
-                # lower-case for checks
                 sl = s.lower()
-                # blocklist of obvious metadata / noisy tokens
                 block_tokens = [
-                    "plan de antrenament", "plan de antrenament", "data", "echipa", "vârsta",
+                    "plan de antrenament", "data", "echipa", "vârsta",
                     "număr", "numar", "obiective", "obiectiv", "descriere", "coaching",
-                    "puncte", "durata", "timp", "urmărire", "urmărire pentru următoarea sesiune",
-                    "follow-up", "follow up", "durata totală", "timp alocat", "pasa", "pase",
+                    "puncte", "durata", "timp", "urmărire", "follow-up",
+                    "config", "seturi", "obiectiv", "format", "revenire", "cool-down",
+                    "consolidare", "pauză", "pauza", "min", "minute", "alergare", "stretching",
                 ]
                 for tok in block_tokens:
                     if tok in sl:
                         return None
-                # length and word count heuristics
                 if len(s) < 3 or len(s) > 80:
                     return None
                 words = s.split()
                 if len(words) > 8:
                     return None
-                # require at least one alphabetic character
                 if not re.search(r"[A-Za-zĂÂÎȘȚăâîșț]", s):
                     return None
-                # reject lines with excessive punctuation
                 punct_ratio = sum(1 for ch in s if not ch.isalnum() and not ch.isspace()) / max(1, len(s))
                 if punct_ratio > 0.35:
                     return None
                 return s
 
-            candidates: list[str] = []
-            # Prefer explicit bullets / numbered / headings
+            # 1) explicit 'Exercițiu:' matches
+            exer_re = re.compile(r"(?i)exer[cț]iu\s*(?:tehnic)?\s*[:\-–]\s*(.+)")
+            candidates = []
             for ln in lines:
-                m = bullet_re.match(ln) or num_re.match(ln) or heading_re.match(ln)
+                m = exer_re.search(ln)
                 if m:
-                    title = m.group(1).strip()
-                    cleaned = clean_title(title)
+                    cleaned = clean_title(m.group(1).strip())
                     if cleaned:
                         candidates.append(cleaned[:120])
-            # Fallback: left-of-colon heuristics for short lines
+
+            # 2) scan numbered/bulleted/headings
+            for ln in lines:
+                m = bullet_re.match(ln) or num_re.match(ln) or heading_re.match(ln)
+                if not m:
+                    continue
+                title = m.group(1).strip()
+                # prefer RHS after dash/em-dash
+                if '—' in title or '–' in title or ' - ' in title:
+                    parts = re.split(r"[—–-]", title)
+                    rhs = parts[-1].strip()
+                    cleaned_rhs = clean_title(rhs)
+                    if cleaned_rhs:
+                        candidates.append(cleaned_rhs[:120])
+                        continue
+                # prefer RHS after colon
+                if ':' in title:
+                    left, right = title.split(':', 1)
+                    cleaned_right = clean_title(right)
+                    if cleaned_right:
+                        candidates.append(cleaned_right[:120])
+                        continue
+                # generic headers: look ahead for the next short line or explicit 'Exercițiu:'
+                generic_tokens = ["încălzire", "exercițiu tehnic", "exerciții tehnice", "exercițiu", "jocuri", "revenire", "cool-down", "recomandare"]
+                low = title.lower()
+                if any(tok in low for tok in generic_tokens):
+                    try:
+                        idx = lines.index(ln)
+                    except ValueError:
+                        idx = -1
+                    for j in range(idx + 1, min(len(lines), idx + 3)):
+                        next_ln = lines[j].strip()
+                        m2 = exer_re.search(next_ln)
+                        if m2:
+                            cleaned = clean_title(m2.group(1).strip())
+                            if cleaned:
+                                candidates.append(cleaned[:120])
+                                break
+                        cleaned_next = clean_title(next_ln)
+                        if cleaned_next:
+                            candidates.append(cleaned_next[:120])
+                            break
+                    continue
+                # otherwise try cleansing the title
+                cleaned = clean_title(title)
+                if cleaned:
+                    candidates.append(cleaned[:120])
+
+            # 3) fallback: left-of-colon heuristics
             if not candidates:
                 for ln in lines:
                     if ':' in ln:
@@ -1510,9 +1556,9 @@ class GenerateTrainingPlanView(APIView):
                         if cleaned:
                             candidates.append(cleaned[:120])
 
-            # Deduplicate preserving order
+            # dedupe preserve order
             seen = set()
-            out: list[str] = []
+            out = []
             for c in candidates:
                 key = c.lower()
                 if key not in seen:
