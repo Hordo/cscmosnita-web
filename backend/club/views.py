@@ -1440,38 +1440,84 @@ class GenerateTrainingPlanView(APIView):
         previous_plans = list(history_qs.order_by('-created_at')[:2])
 
         def _extract_exercise_names(plan_text):
+            """Heuristic extraction of short exercise titles from AI-generated plan text.
+            Returns a list of short, cleaned titles. Filters out common metadata and
+            descriptive lines. Deterministic and memory-safe.
+            """
             import re
-            names = []
             if not plan_text:
-                return names
+                return []
             lines = plan_text.splitlines()
             bullet_re = re.compile(r"^\s*[-\*•]\s*(.+)")
             num_re = re.compile(r"^\s*\d+[\.)]\s*(.+)")
             heading_re = re.compile(r"^\s*#{1,6}\s*(.+)")
-            # First pass: collect explicit list items / headings
+
+            def clean_title(s: str) -> str | None:
+                s = s.strip()
+                # drop trailing markup artifacts
+                s = re.sub(r"\*+|\*\*+", "", s).strip()
+                # remove leading A., B., etc.
+                s = re.sub(r"^[A-Za-z]\.[\s\-]*", "", s)
+                # keep only before colon
+                if ':' in s:
+                    s = s.split(':', 1)[0].strip()
+                # strip surrounding punctuation
+                s = s.strip("\t \n\r-–—:")
+                if not s:
+                    return None
+                # lower-case for checks
+                sl = s.lower()
+                # blocklist of obvious metadata / noisy tokens
+                block_tokens = [
+                    "plan de antrenament", "plan de antrenament", "data", "echipa", "vârsta",
+                    "număr", "numar", "obiective", "obiectiv", "descriere", "coaching",
+                    "puncte", "durata", "timp", "urmărire", "urmărire pentru următoarea sesiune",
+                    "follow-up", "follow up", "durata totală", "timp alocat", "pasa", "pase",
+                ]
+                for tok in block_tokens:
+                    if tok in sl:
+                        return None
+                # length and word count heuristics
+                if len(s) < 3 or len(s) > 80:
+                    return None
+                words = s.split()
+                if len(words) > 8:
+                    return None
+                # require at least one alphabetic character
+                if not re.search(r"[A-Za-zĂÂÎȘȚăâîșț]", s):
+                    return None
+                # reject lines with excessive punctuation
+                punct_ratio = sum(1 for ch in s if not ch.isalnum() and not ch.isspace()) / max(1, len(s))
+                if punct_ratio > 0.35:
+                    return None
+                return s
+
+            candidates: list[str] = []
+            # Prefer explicit bullets / numbered / headings
             for ln in lines:
                 m = bullet_re.match(ln) or num_re.match(ln) or heading_re.match(ln)
                 if m:
                     title = m.group(1).strip()
-                    # Keep only text before first colon
-                    title = title.split(':', 1)[0].strip()
-                    # Trim long titles
-                    if title:
-                        names.append(title[:120])
-            # Fallback: look for short lines with a colon (Title: description)
-            if not names:
+                    cleaned = clean_title(title)
+                    if cleaned:
+                        candidates.append(cleaned[:120])
+            # Fallback: left-of-colon heuristics for short lines
+            if not candidates:
                 for ln in lines:
                     if ':' in ln:
                         left = ln.split(':', 1)[0].strip()
-                        if 2 < len(left) <= 80:
-                            names.append(left[:120])
-            # Deduplicate while preserving order
+                        cleaned = clean_title(left)
+                        if cleaned:
+                            candidates.append(cleaned[:120])
+
+            # Deduplicate preserving order
             seen = set()
-            out = []
-            for n in names:
-                if n and n.lower() not in seen:
-                    seen.add(n.lower())
-                    out.append(n)
+            out: list[str] = []
+            for c in candidates:
+                key = c.lower()
+                if key not in seen:
+                    seen.add(key)
+                    out.append(c)
             return out
 
         # Build compact historyContext: a short bullet list of exercise names from the last 1-2 sessions
