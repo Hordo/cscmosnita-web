@@ -1443,120 +1443,92 @@ class GenerateTrainingPlanView(APIView):
             import re
             if not plan_text:
                 return []
-            lines = plan_text.splitlines()
-            bullet_re = re.compile(r"^\s*[-\*•]\s*(.+)")
-            num_re = re.compile(r"^\s*\d+[\.)]\s*(.+)")
-            heading_re = re.compile(r"^\s*#{1,6}\s*(.+)")
 
-            def clean_title(s: str):
-                s = s.strip()
+            lines = plan_text.splitlines()
+            numbered_re = re.compile(r"^\s*\d+[\.)]\s*(.+)")
+            heading_re = re.compile(r"^\s*#{1,6}\s*(.+)")
+            explicit_re = re.compile(r"(?i)^\s*(?:exerci[țt]iu(?:l)?(?:\s+tehnic)?|drill(?:\s+tehnic)?|joc(?:ul)?(?:\s+mici)?)\s*\d*\s*[:\-–]\s*(.+)")
+
+            def _pick_best_segment(raw: str) -> str:
+                # In lines like "Drill 1 — Shooting Circuit", keep the right-hand side.
+                if '—' in raw or '–' in raw or ' - ' in raw:
+                    parts = re.split(r"[—–-]", raw)
+                    candidate = parts[-1].strip()
+                    if candidate:
+                        return candidate
+                if ':' in raw:
+                    right = raw.split(':', 1)[1].strip()
+                    if right:
+                        return right
+                return raw.strip()
+
+            def _clean_title(raw: str):
+                s = _pick_best_segment(raw)
                 s = re.sub(r"\*+", "", s).strip()
-                s = re.sub(r"^[A-Za-z]\.[\s\-]*", "", s)
-                # Prefer RHS after em-dash/hyphen
-                if '—' in s or '–' in s or ' - ' in s:
-                    parts = re.split(r"[—–-]", s)
-                    for p in reversed(parts):
-                        p = p.strip()
-                        if p:
-                            s = p
-                            break
-                # remove trailing parenthetical times
-                s = re.sub(r"\(.*?min.*?\)", "", s, flags=re.IGNORECASE).strip()
-                if ':' in s:
-                    s = s.split(':', 1)[0].strip()
-                s = s.strip("\t \n\r-–—:")
+                s = re.sub(r"\(.*?min(?:ute)?s?.*?\)", "", s, flags=re.IGNORECASE).strip()
+                s = s.strip("\t \n\r-–—:;,.\"'")
                 if not s:
                     return None
+
                 sl = s.lower()
-                block_tokens = [
-                    "plan de antrenament", "data", "echipa", "vârsta",
-                    "număr", "numar", "obiective", "obiectiv", "descriere", "coaching",
-                    "puncte", "durata", "timp", "urmărire", "follow-up",
-                    "config", "seturi", "obiectiv", "format", "revenire", "cool-down",
-                    "consolidare", "pauză", "pauza", "min", "minute", "alergare", "stretching",
+                blocked_fragments = [
+                    "plan de antrenament", "data", "echipa", "vârsta", "varsta",
+                    "număr", "numar", "obiective", "descriere", "coaching", "puncte",
+                    "durata", "timp", "urmărire", "urmarire", "follow-up", "follow up",
+                    "config", "seturi", "format", "consolidare", "pauză", "pauza",
+                    "respira", "stretch", "întinder", "intinder", "adaptabil",
+                    "jucători", "jucatori", "faza", "tranziție", "tranzitie",
+                    "pentru atacatori", "pentru apărători", "pentru aparatori",
                 ]
-                for tok in block_tokens:
-                    if tok in sl:
-                        return None
-                if len(s) < 3 or len(s) > 80:
+                if any(tok in sl for tok in blocked_fragments):
+                    return None
+
+                if len(s) < 4 or len(s) > 70:
                     return None
                 words = s.split()
-                if len(words) > 8:
+                if len(words) < 2 or len(words) > 7:
                     return None
                 if not re.search(r"[A-Za-zĂÂÎȘȚăâîșț]", s):
                     return None
+                if '"' in s or "'" in s:
+                    return None
+
                 punct_ratio = sum(1 for ch in s if not ch.isalnum() and not ch.isspace()) / max(1, len(s))
-                if punct_ratio > 0.35:
+                if punct_ratio > 0.30:
                     return None
                 return s
 
-            # 1) explicit 'Exercițiu:' matches
-            exer_re = re.compile(r"(?i)exer[cț]iu\s*(?:tehnic)?\s*[:\-–]\s*(.+)")
             candidates = []
             for ln in lines:
-                m = exer_re.search(ln)
-                if m:
-                    cleaned = clean_title(m.group(1).strip())
+                ln_strip = ln.strip()
+                if not ln_strip:
+                    continue
+
+                # Stop scanning after follow-up sections.
+                low = ln_strip.lower()
+                if "urmărire pentru următoarea sesiune" in low or "urmarire pentru urmatoarea sesiune" in low or "follow-up for next session" in low:
+                    break
+
+                explicit_match = explicit_re.match(ln_strip)
+                if explicit_match:
+                    cleaned = _clean_title(explicit_match.group(1))
+                    if cleaned:
+                        candidates.append(cleaned[:120])
+                    continue
+
+                numbered_match = numbered_re.match(ln_strip)
+                if numbered_match:
+                    cleaned = _clean_title(numbered_match.group(1))
+                    if cleaned:
+                        candidates.append(cleaned[:120])
+                    continue
+
+                heading_match = heading_re.match(ln_strip)
+                if heading_match:
+                    cleaned = _clean_title(heading_match.group(1))
                     if cleaned:
                         candidates.append(cleaned[:120])
 
-            # 2) scan numbered/bulleted/headings
-            for ln in lines:
-                m = bullet_re.match(ln) or num_re.match(ln) or heading_re.match(ln)
-                if not m:
-                    continue
-                title = m.group(1).strip()
-                # prefer RHS after dash/em-dash
-                if '—' in title or '–' in title or ' - ' in title:
-                    parts = re.split(r"[—–-]", title)
-                    rhs = parts[-1].strip()
-                    cleaned_rhs = clean_title(rhs)
-                    if cleaned_rhs:
-                        candidates.append(cleaned_rhs[:120])
-                        continue
-                # prefer RHS after colon
-                if ':' in title:
-                    left, right = title.split(':', 1)
-                    cleaned_right = clean_title(right)
-                    if cleaned_right:
-                        candidates.append(cleaned_right[:120])
-                        continue
-                # generic headers: look ahead for the next short line or explicit 'Exercițiu:'
-                generic_tokens = ["încălzire", "exercițiu tehnic", "exerciții tehnice", "exercițiu", "jocuri", "revenire", "cool-down", "recomandare"]
-                low = title.lower()
-                if any(tok in low for tok in generic_tokens):
-                    try:
-                        idx = lines.index(ln)
-                    except ValueError:
-                        idx = -1
-                    for j in range(idx + 1, min(len(lines), idx + 3)):
-                        next_ln = lines[j].strip()
-                        m2 = exer_re.search(next_ln)
-                        if m2:
-                            cleaned = clean_title(m2.group(1).strip())
-                            if cleaned:
-                                candidates.append(cleaned[:120])
-                                break
-                        cleaned_next = clean_title(next_ln)
-                        if cleaned_next:
-                            candidates.append(cleaned_next[:120])
-                            break
-                    continue
-                # otherwise try cleansing the title
-                cleaned = clean_title(title)
-                if cleaned:
-                    candidates.append(cleaned[:120])
-
-            # 3) fallback: left-of-colon heuristics
-            if not candidates:
-                for ln in lines:
-                    if ':' in ln:
-                        left = ln.split(':', 1)[0].strip()
-                        cleaned = clean_title(left)
-                        if cleaned:
-                            candidates.append(cleaned[:120])
-
-            # dedupe preserve order
             seen = set()
             out = []
             for c in candidates:
@@ -1564,6 +1536,8 @@ class GenerateTrainingPlanView(APIView):
                 if key not in seen:
                     seen.add(key)
                     out.append(c)
+                if len(out) >= 8:
+                    break
             return out
 
         # Build compact historyContext: a short bullet list of exercise names from the last 1-2 sessions
@@ -1586,16 +1560,18 @@ class GenerateTrainingPlanView(APIView):
                 seen.add(nl)
                 exercise_names.append(n)
 
+        # Keep the context concise to avoid oversized AI payloads/timeouts.
+        exercise_names = exercise_names[:12]
+
         # Build the bullet block required by the spec
         if exercise_names:
             block_lines = ["\n\nPREVIOUS EXERCISES (do not repeat these in the new session):"]
             for n in exercise_names:
                 block_lines.append(f"- {n}")
             history_block = "\n".join(block_lines)
-            # Ensure the final text block stays under 5KB; trim if necessary
+            # Ensure the final text block stays compact; trim if necessary.
             try:
-                import json
-                max_bytes = 5 * 1024
+                max_bytes = 2 * 1024
                 # If too large, progressively remove items from the end until it fits
                 while len(history_block.encode("utf-8")) > max_bytes and len(exercise_names) > 0:
                     exercise_names = exercise_names[:-1]
