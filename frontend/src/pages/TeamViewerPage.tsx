@@ -118,6 +118,16 @@ export const TeamViewerPage: React.FC = () => {
 
   return (
     <div className="container py-4">
+      {team.discipline && (
+        <div className="mb-3">
+          <Link
+            to={`/disciplines/${encodeURIComponent(team.discipline)}`}
+            className="btn btn-outline-primary btn-sm"
+          >
+            ← {team.discipline}
+          </Link>
+        </div>
+      )}
       <div className="d-flex align-items-center mb-4">
         <div style={{ width: 120, height: 120, marginRight: 24 }}>
           <img

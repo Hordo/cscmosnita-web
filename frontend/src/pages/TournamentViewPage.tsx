@@ -150,7 +150,7 @@ export const TournamentViewPage: React.FC = () => {
     <div className="container py-4">
       <div className="d-flex align-items-center mb-2 gap-3">
         <Link
-          to={`/teams/${tour.team_id || ""}/tournaments`}
+          to={`/teams/${tour.team || ""}/tournaments`}
           className="btn btn-outline-secondary btn-sm"
         >
           ← {t("back")}
