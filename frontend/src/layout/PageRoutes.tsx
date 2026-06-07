@@ -25,6 +25,7 @@ import Calendar from "../admin/Calendar";
 import NotificationPreferencesPage from "../pages/NotificationPreferencesPage";
 import RouteError from "./RouteError";
 import TournamentAdminPage from "../admin/TournamentAdminPage";
+import TournamentGameAdminPage from "../admin/TournamentGameAdminPage";
 import SponsorAdminPage from "../admin/SponsorAdminPage";
 import NewsAdminPage from "../admin/NewsAdminPage";
 import NewsPage from "../pages/NewsPage";
@@ -101,6 +102,10 @@ const router = createBrowserRouter([
           {
             path: "tournaments",
             element: <TournamentAdminPage />,
+          },
+          {
+            path: "tournaments/:id",
+            element: <TournamentGameAdminPage />,
           },
           {
             path: "gallery",

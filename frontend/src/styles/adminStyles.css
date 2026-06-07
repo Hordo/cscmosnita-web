@@ -131,3 +131,52 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Admin page responsive tweaks for small screens ───────────────────── */
+.admin-table-wrapper {
+  overflow-x: auto;
+}
+
+.admin-table thead th,
+.admin-table tbody td {
+  white-space: nowrap;
+}
+
+.admin-table td .d-flex {
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+@media (max-width: 576px) {
+  /* Hide less important columns on very small screens */
+  .admin-table th:nth-child(2),
+  .admin-table td:nth-child(2),
+  .admin-table th:nth-child(4),
+  .admin-table td:nth-child(4) {
+    display: none;
+  }
+
+  /* Make action buttons easier to tap */
+  .admin-table td .btn {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Form: ensure columns stack cleanly and buttons are full-width */
+  .admin-form-card .row > div {
+    padding-right: 0.25rem;
+    padding-left: 0.25rem;
+  }
+
+  .admin-form-card .btn-sm {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.875rem;
+  }
+
+  .admin-form-card .col-md-1,
+  .admin-form-card .col-md-2,
+  .admin-form-card .col-md-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+}

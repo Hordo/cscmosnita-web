@@ -1,11 +1,10 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import "../styles/adminStyles.css";
 import { API_URLS } from "../config/api";
 import api, { setAuthToken } from "../config/axios";
 import { useAuth } from "../context/AuthContext";
-
-const KNOCKOUT_STAGE_VALUES = ["r32", "r16", "r8", "semi", "third", "final"];
 
 const emptyTournament = {
   name: "",
@@ -19,8 +18,10 @@ const emptyTournament = {
 
 const TournamentAdminPage: React.FC = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { user, isSuperAdmin, getAdminDisciplines, getCoachTeamIds } =
     useAuth();
+
   const [tournaments, setTournaments] = useState<any[]>([]);
   const [disciplines, setDisciplines] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
@@ -28,52 +29,6 @@ const TournamentAdminPage: React.FC = () => {
   const [editId, setEditId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Selected tournament for in-page management
-  const [activeTournament, setActiveTournament] = useState<any | null>(null);
-  const [tourLoading, setTourLoading] = useState(false);
-
-  // Group management state
-  const [newGroupName, setNewGroupName] = useState("");
-  const [newTeamNames, setNewTeamNames] = useState<Record<number, string>>({});
-
-  // Knockout match form
-  const [knockoutForm, setKnockoutForm] = useState({
-    stage: "r16",
-    home_team_name: "",
-    away_team_name: "",
-    home_score: "",
-    away_score: "",
-    youtube_link: "",
-    ended_after_penalties: false,
-  });
-  const [editMatchId, setEditMatchId] = useState<number | null>(null);
-
-  // Local state for group match score edits (controlled inputs)
-  const [groupMatchEdits, setGroupMatchEdits] = useState<
-    Record<number, { home: string; away: string }>
-  >({});
-
-  // Populate groupMatchEdits whenever activeTournament changes
-  useEffect(() => {
-    if (!activeTournament) return;
-    const edits: Record<number, { home: string; away: string }> = {};
-    activeTournament.groups?.forEach((g: any) => {
-      g.matches?.forEach((m: any) => {
-        edits[m.id] = {
-          home: m.home_score ?? "",
-          away: m.away_score ?? "",
-        };
-      });
-    });
-    setGroupMatchEdits(edits);
-    // When opening a new (non-edit) knockout form, pre-fill home team
-    if (!editMatchId) {
-      setKnockoutForm((prev) => ({
-        ...prev,
-        home_team_name: activeTournament.team_name ?? "",
-      }));
-    }
-  }, [activeTournament]);
 
   useEffect(() => {
     if (!user?.access) return;
@@ -88,7 +43,6 @@ const TournamentAdminPage: React.FC = () => {
         setTournaments(t.data);
         setDisciplines(d.data);
         setTeams(tm.data);
-        // Auto-select discipline when the coach has access to exactly one
         if (!editId && !user?.is_superuser) {
           const roles = user?.admin_roles ?? [];
           const uniqueDiscIds = [
@@ -106,7 +60,6 @@ const TournamentAdminPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, [user]);
 
-  // Disciplines visible in the dropdown (all for superuser/head_admin, own only for coach)
   const adminRoles = getAdminDisciplines();
   const allowedDisciplineIds: number[] | null = isSuperAdmin()
     ? null
@@ -128,7 +81,6 @@ const TournamentAdminPage: React.FC = () => {
   const headAdminSingleDiscipline =
     headAdminRoles.length === 1 ? headAdminRoles[0] : null;
 
-  // Teams for the "Our team" dropdown: filter by discipline then by coach's allowed teams
   const filteredTeams = (() => {
     let result = form.discipline_id
       ? teams.filter(
@@ -139,9 +91,8 @@ const TournamentAdminPage: React.FC = () => {
       : teams;
     if (form.discipline_id) {
       const allowedTeamIds = getCoachTeamIds(Number(form.discipline_id));
-      if (allowedTeamIds !== null) {
+      if (allowedTeamIds !== null)
         result = result.filter((t) => allowedTeamIds.includes(t.id));
-      }
     }
     return result;
   })();
@@ -159,11 +110,8 @@ const TournamentAdminPage: React.FC = () => {
     if (form.date) payload.date = form.date;
     if (form.discipline_id) payload.discipline = Number(form.discipline_id);
     try {
-      if (editId) {
-        await api.patch(`${API_URLS.tournaments}${editId}/`, payload);
-      } else {
-        await api.post(API_URLS.tournaments, payload);
-      }
+      if (editId) await api.patch(`${API_URLS.tournaments}${editId}/`, payload);
+      else await api.post(API_URLS.tournaments, payload);
       const res = await api.get(API_URLS.tournaments);
       setTournaments(res.data);
       setForm(emptyTournament);
@@ -185,147 +133,15 @@ const TournamentAdminPage: React.FC = () => {
       calculate_place_from_groups: !!t.calculate_place_from_groups,
     });
     setEditId(t.id);
-    setActiveTournament(null);
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm(t("tour.confirm_delete"))) return;
     await api.delete(`${API_URLS.tournaments}${id}/`);
     setTournaments((prev) => prev.filter((t) => t.id !== id));
-    if (activeTournament?.id === id) setActiveTournament(null);
   };
 
-  const loadTournament = useCallback(async (id: number) => {
-    setTourLoading(true);
-    try {
-      const res = await api.get(`${API_URLS.tournaments}${id}/`);
-      setActiveTournament(res.data);
-    } finally {
-      setTourLoading(false);
-    }
-  }, []);
-
-  const handleManage = (t: any) => {
-    setEditId(null);
-    loadTournament(t.id);
-  };
-
-  // ── Group operations ──────────────────────────────────────────────────────
-
-  const addGroup = async () => {
-    if (!newGroupName.trim() || !activeTournament) return;
-    const res = await api.post(API_URLS.tournamentGroups, {
-      tournament: activeTournament.id,
-      name: newGroupName.trim(),
-    });
-    // Auto-add club's team to every new group
-    await api.post(`${API_URLS.tournamentGroups}${res.data.id}/add_teams/`, {
-      team_names: [],
-    });
-    setNewGroupName("");
-    loadTournament(activeTournament.id);
-  };
-
-  const addTeamsToGroup = async (groupId: number) => {
-    const raw = newTeamNames[groupId] || "";
-    const names = raw
-      .split(",")
-      .map((n) => n.trim())
-      .filter(Boolean);
-    await api.post(`${API_URLS.tournamentGroups}${groupId}/add_teams/`, {
-      team_names: names,
-    });
-    setNewTeamNames((prev) => ({ ...prev, [groupId]: "" }));
-    loadTournament(activeTournament.id);
-  };
-
-  const saveGroupMatchScore = async (matchId: number) => {
-    const edits = groupMatchEdits[matchId];
-    if (!edits) return;
-    await api.patch(`${API_URLS.tournamentMatches}${matchId}/`, {
-      home_score: edits.home === "" ? null : Number(edits.home),
-      away_score: edits.away === "" ? null : Number(edits.away),
-    });
-    // Backend auto-recalculates standings; just reload
-    loadTournament(activeTournament.id);
-  };
-
-  const deleteGroup = async (groupId: number) => {
-    if (!confirm(t("tour.confirm_delete_group"))) return;
-    await api.delete(`${API_URLS.tournamentGroups}${groupId}/`);
-    loadTournament(activeTournament.id);
-  };
-
-  const toggleShowDetails = async (groupTeamId: number, value: boolean) => {
-    await api.patch(`${API_URLS.groupTeams}${groupTeamId}/`, {
-      show_group_details: value,
-    });
-    loadTournament(activeTournament.id);
-  };
-
-  const toggleMatchVisibility = async (matchId: number, value: boolean) => {
-    await api.patch(`${API_URLS.tournamentMatches}${matchId}/`, {
-      visible_on_tournament_page: value,
-    });
-    loadTournament(activeTournament.id);
-  };
-
-  // ── Match operations ──────────────────────────────────────────────────────
-
-  const saveKnockoutMatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const payload: any = {
-      tournament: activeTournament.id,
-      stage: knockoutForm.stage,
-      home_team_name: activeTournament.team_name,
-      away_team_name: knockoutForm.away_team_name,
-      youtube_link: knockoutForm.youtube_link,
-    };
-    if (knockoutForm.home_score !== "")
-      payload.home_score = Number(knockoutForm.home_score);
-    if (knockoutForm.away_score !== "")
-      payload.away_score = Number(knockoutForm.away_score);
-    // include ended after penalties flag
-    payload.ended_after_penalties = !!knockoutForm.ended_after_penalties;
-
-    if (editMatchId) {
-      await api.patch(`${API_URLS.tournamentMatches}${editMatchId}/`, payload);
-    } else {
-      payload.match_order = activeTournament.knockout_matches.length;
-      await api.post(API_URLS.tournamentMatches, payload);
-    }
-    setKnockoutForm({
-      stage: "r16",
-      home_team_name: activeTournament.team_name ?? "",
-      away_team_name: "",
-      home_score: "",
-      away_score: "",
-      youtube_link: "",
-      ended_after_penalties: false,
-    });
-    setEditMatchId(null);
-    loadTournament(activeTournament.id);
-  };
-
-  const deleteMatch = async (matchId: number) => {
-    if (!confirm(t("tour.confirm_delete_match"))) return;
-    await api.delete(`${API_URLS.tournamentMatches}${matchId}/`);
-    loadTournament(activeTournament.id);
-  };
-
-  const editKnockoutMatch = (m: any) => {
-    setKnockoutForm({
-      stage: m.stage,
-      home_team_name: m.home_team_name,
-      away_team_name: m.away_team_name,
-      home_score: m.home_score ?? "",
-      away_score: m.away_score ?? "",
-      youtube_link: m.youtube_link || "",
-      ended_after_penalties: !!m.ended_after_penalties,
-    });
-    setEditMatchId(m.id);
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-  };
+  const handleManage = (t: any) => navigate(`/admin/tournaments/${t.id}`);
 
   if (loading) return <div className="text-center mt-5">{t("loading")}</div>;
 
@@ -334,7 +150,6 @@ const TournamentAdminPage: React.FC = () => {
       <h2 className="mb-4">🏆 {t("tour.page_title")}</h2>
       {error && <div className="alert alert-danger">{error}</div>}
 
-      {/* ── Tournament form ── */}
       <div className="admin-form-card mb-4">
         <h5 className="mb-3">
           {editId ? t("tour.form_edit") : t("tour.form_new")}
@@ -459,7 +274,6 @@ const TournamentAdminPage: React.FC = () => {
         </form>
       </div>
 
-      {/* ── Tournament list ── */}
       <div className="admin-table-wrapper mb-4">
         <table className="table table-hover admin-table">
           <thead>
@@ -474,12 +288,7 @@ const TournamentAdminPage: React.FC = () => {
           </thead>
           <tbody>
             {tournaments.map((tour) => (
-              <tr
-                key={tour.id}
-                className={
-                  activeTournament?.id === tour.id ? "table-active" : ""
-                }
-              >
+              <tr key={tour.id}>
                 <td>{tour.name}</td>
                 <td>{tour.season}</td>
                 <td>{tour.team_name}</td>
@@ -517,549 +326,6 @@ const TournamentAdminPage: React.FC = () => {
           </tbody>
         </table>
       </div>
-
-      {/* ── Tournament management panel ── */}
-      {activeTournament && (
-        <div className="card border-0 shadow-sm">
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <h5 className="mb-0">
-              ⚙️ {activeTournament.name}{" "}
-              {activeTournament.season && `(${activeTournament.season})`}
-            </h5>
-            <button
-              className="btn btn-sm btn-outline-secondary"
-              onClick={() => setActiveTournament(null)}
-            >
-              {t("tour.btn_close")}
-            </button>
-          </div>
-          <div className="card-body">
-            {tourLoading && (
-              <div className="text-center py-3">{t("loading")}</div>
-            )}
-
-            {/* ── Group Stage ── */}
-            {activeTournament.has_group_stage && (
-              <div className="mb-4">
-                <h6 className="border-bottom pb-2 mb-3">
-                  {t("tour.section_groups")}
-                </h6>
-
-                {/* Add group */}
-                <div className="d-flex gap-2 mb-3" style={{ maxWidth: 400 }}>
-                  <input
-                    className="form-control form-control-sm"
-                    placeholder={t("tour.ph_group_name")}
-                    value={newGroupName}
-                    onChange={(e) => setNewGroupName(e.target.value)}
-                  />
-                  <button className="btn btn-sm btn-primary" onClick={addGroup}>
-                    {t("tour.btn_add_group")}
-                  </button>
-                </div>
-
-                {activeTournament.groups.map((group: any) => (
-                  <div key={group.id} className="border rounded p-3 mb-3">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <strong>{group.name}</strong>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => deleteGroup(group.id)}
-                      >
-                        {t("tour.btn_delete_group")}
-                      </button>
-                    </div>
-
-                    {/* Add teams input */}
-                    <div
-                      className="d-flex gap-2 mb-3"
-                      style={{ maxWidth: 500 }}
-                    >
-                      <input
-                        className="form-control form-control-sm"
-                        placeholder={t("tour.ph_team_names")}
-                        value={newTeamNames[group.id] || ""}
-                        onChange={(e) =>
-                          setNewTeamNames((prev) => ({
-                            ...prev,
-                            [group.id]: e.target.value,
-                          }))
-                        }
-                      />
-                      <button
-                        className="btn btn-sm btn-success"
-                        onClick={() => addTeamsToGroup(group.id)}
-                      >
-                        {t("tour.btn_add_teams")}
-                      </button>
-                    </div>
-
-                    {/* Standings table */}
-                    {group.group_teams.length > 0 && (
-                      <div className="mb-3">
-                        <h6 className="small text-muted text-uppercase mb-1">
-                          {t("tour.standings")}
-                        </h6>
-                        <div className="table-responsive">
-                          <table
-                            className="table table-sm table-bordered mb-0"
-                            style={{ fontSize: "0.84rem" }}
-                          >
-                            <thead className="table-light">
-                              <tr>
-                                <th>{t("tour.col_team")}</th>
-                                <th>{t("tour.col_p")}</th>
-                                <th>{t("tour.col_w")}</th>
-                                <th>{t("tour.col_d")}</th>
-                                <th>{t("tour.col_l")}</th>
-                                <th>{t("tour.col_gf")}</th>
-                                <th>{t("tour.col_ga")}</th>
-                                <th>{t("tour.col_pts")}</th>
-                                <th>{t("tour.col_show_details")}</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {[...group.group_teams]
-                                .sort(
-                                  (a: any, b: any) =>
-                                    b.points - a.points ||
-                                    b.goals_for -
-                                      b.goals_against -
-                                      (a.goals_for - a.goals_against),
-                                )
-                                .map((gt: any) => (
-                                  <tr
-                                    key={gt.id}
-                                    className={
-                                      gt.team_name ===
-                                      activeTournament.team_name
-                                        ? "table-primary fw-semibold"
-                                        : ""
-                                    }
-                                  >
-                                    <td>{gt.team_name}</td>
-                                    {[
-                                      "played",
-                                      "won",
-                                      "drawn",
-                                      "lost",
-                                      "goals_for",
-                                      "goals_against",
-                                      "points",
-                                    ].map((field) => (
-                                      <td key={field} className="text-center">
-                                        {gt[field]}
-                                      </td>
-                                    ))}
-                                    <td className="text-center">
-                                      <div className="form-check form-switch">
-                                        <input
-                                          className="form-check-input"
-                                          type="checkbox"
-                                          role="switch"
-                                          checked={!!gt.show_group_details}
-                                          onChange={(e) =>
-                                            toggleShowDetails(
-                                              gt.id,
-                                              e.target.checked,
-                                            )
-                                          }
-                                        />
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Group matches */}
-                    {group.matches.length > 0 && (
-                      <div>
-                        <h6 className="small text-muted text-uppercase mb-1">
-                          {t("matches")}
-                        </h6>
-                        <div className="table-responsive">
-                          <table
-                            className="table table-sm table-bordered mb-0"
-                            style={{ fontSize: "0.84rem" }}
-                          >
-                            <thead className="table-light">
-                              <tr>
-                                <th>{t("tour.col_home")}</th>
-                                <th>{t("tour.col_score")}</th>
-                                <th>{t("tour.col_away")}</th>
-                                <th>{t("tour.col_video")}</th>
-                                <th>{t("tour.col_visible")}</th>
-                                <th></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {group.matches.map((m: any) => (
-                                <tr key={m.id}>
-                                  <td
-                                    className={
-                                      m.home_team_name ===
-                                      activeTournament.team_name
-                                        ? "fw-semibold"
-                                        : ""
-                                    }
-                                  >
-                                    {m.home_team_name}
-                                  </td>
-                                  <td>
-                                    <div className="d-flex gap-1 align-items-center">
-                                      <input
-                                        type="number"
-                                        className="form-control form-control-sm p-0 text-center"
-                                        style={{ width: 44 }}
-                                        value={
-                                          groupMatchEdits[m.id]?.home ?? ""
-                                        }
-                                        onChange={(e) =>
-                                          setGroupMatchEdits((prev) => ({
-                                            ...prev,
-                                            [m.id]: {
-                                              ...prev[m.id],
-                                              home: e.target.value,
-                                            },
-                                          }))
-                                        }
-                                      />
-                                      <span>–</span>
-                                      <input
-                                        type="number"
-                                        className="form-control form-control-sm p-0 text-center"
-                                        style={{ width: 44 }}
-                                        value={
-                                          groupMatchEdits[m.id]?.away ?? ""
-                                        }
-                                        onChange={(e) =>
-                                          setGroupMatchEdits((prev) => ({
-                                            ...prev,
-                                            [m.id]: {
-                                              ...prev[m.id],
-                                              away: e.target.value,
-                                            },
-                                          }))
-                                        }
-                                      />
-                                      <button
-                                        className="btn btn-sm btn-success py-0 px-1"
-                                        title="Save score"
-                                        onClick={() =>
-                                          saveGroupMatchScore(m.id)
-                                        }
-                                      >
-                                        💾
-                                      </button>
-                                    </div>
-                                  </td>
-                                  <td
-                                    className={
-                                      m.away_team_name ===
-                                      activeTournament.team_name
-                                        ? "fw-semibold"
-                                        : ""
-                                    }
-                                  >
-                                    {m.away_team_name}
-                                  </td>
-                                  <td>
-                                    <input
-                                      className="form-control form-control-sm p-0"
-                                      style={{ width: 120 }}
-                                      placeholder="YouTube URL"
-                                      defaultValue={m.youtube_link || ""}
-                                      onBlur={(e) =>
-                                        api
-                                          .patch(
-                                            `${API_URLS.tournamentMatches}${m.id}/`,
-                                            { youtube_link: e.target.value },
-                                          )
-                                          .then(() =>
-                                            loadTournament(activeTournament.id),
-                                          )
-                                      }
-                                    />
-                                  </td>
-                                  <td className="text-center">
-                                    <div className="form-check form-switch">
-                                      <input
-                                        className="form-check-input"
-                                        type="checkbox"
-                                        role="switch"
-                                        checked={
-                                          m.visible_on_tournament_page !== false
-                                        }
-                                        onChange={(e) =>
-                                          toggleMatchVisibility(
-                                            m.id,
-                                            e.target.checked,
-                                          )
-                                        }
-                                      />
-                                    </div>
-                                  </td>
-                                  <td>
-                                    <button
-                                      className="btn btn-sm btn-outline-danger"
-                                      onClick={() => deleteMatch(m.id)}
-                                    >
-                                      ✕
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* ── Knockout Stage ── */}
-            <div className="mb-3">
-              <h6 className="border-bottom pb-2 mb-3">
-                {t("tour.section_knockout")}
-              </h6>
-
-              {/* Existing knockout matches grouped by stage */}
-              {KNOCKOUT_STAGE_VALUES.map((stageVal) => {
-                const stageMatches = activeTournament.knockout_matches.filter(
-                  (m: any) => m.stage === stageVal,
-                );
-                if (stageMatches.length === 0) return null;
-                return (
-                  <div key={stageVal} className="mb-3">
-                    <h6 className="small text-muted text-uppercase mb-1">
-                      {t(`stage.${stageVal}`)}
-                    </h6>
-                    <div className="table-responsive">
-                      <table
-                        className="table table-sm table-bordered mb-0"
-                        style={{ fontSize: "0.84rem" }}
-                      >
-                        <thead className="table-light">
-                          <tr>
-                            <th>{t("tour.col_home")}</th>
-                            <th>{t("tour.col_score")}</th>
-                            <th>{t("tour.col_away")}</th>
-                            <th>{t("tour.col_video")}</th>
-                            <th>{t("tour.col_visible")}</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {stageMatches.map((m: any) => (
-                            <tr key={m.id}>
-                              <td>{m.home_team_name}</td>
-                              <td>
-                                {m.home_score ?? "–"} – {m.away_score ?? "–"}
-                              </td>
-                              <td>{m.away_team_name}</td>
-                              <td>
-                                {m.youtube_link ? (
-                                  <a
-                                    href={m.youtube_link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    ▶
-                                  </a>
-                                ) : (
-                                  "–"
-                                )}
-                              </td>
-                              <td className="text-center">
-                                <div className="form-check form-switch">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    role="switch"
-                                    checked={
-                                      m.visible_on_tournament_page !== false
-                                    }
-                                    onChange={(e) =>
-                                      toggleMatchVisibility(
-                                        m.id,
-                                        e.target.checked,
-                                      )
-                                    }
-                                  />
-                                </div>
-                              </td>
-                              <td className="d-flex gap-1">
-                                <button
-                                  className="btn btn-sm btn-outline-secondary"
-                                  onClick={() => editKnockoutMatch(m)}
-                                >
-                                  ✏️
-                                </button>
-                                <button
-                                  className="btn btn-sm btn-outline-danger"
-                                  onClick={() => deleteMatch(m.id)}
-                                >
-                                  ✕
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Add / Edit knockout match form */}
-              <div className="border rounded p-3 mt-2">
-                <h6 className="mb-2">
-                  {editMatchId
-                    ? `✏️ ${t("tour.form_edit_match")}`
-                    : `➕ ${t("tour.form_add_match")}`}
-                </h6>
-                <form onSubmit={saveKnockoutMatch} className="row g-2">
-                  <div className="col-md-2">
-                    <select
-                      className="form-select form-select-sm"
-                      value={knockoutForm.stage}
-                      onChange={(e) =>
-                        setKnockoutForm({
-                          ...knockoutForm,
-                          stage: e.target.value,
-                        })
-                      }
-                    >
-                      {KNOCKOUT_STAGE_VALUES.map((s) => (
-                        <option key={s} value={s}>
-                          {t(`stage.${s}`)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-md-2">
-                    <input
-                      className="form-control form-control-sm bg-light"
-                      value={activeTournament.team_name ?? ""}
-                      readOnly
-                      title="Home team is always your team"
-                    />
-                  </div>
-                  <div className="col-auto d-flex align-items-center gap-1">
-                    <input
-                      type="number"
-                      className="form-control form-control-sm p-1 text-center"
-                      style={{ width: 52 }}
-                      placeholder="–"
-                      value={knockoutForm.home_score}
-                      onChange={(e) =>
-                        setKnockoutForm({
-                          ...knockoutForm,
-                          home_score: e.target.value,
-                        })
-                      }
-                    />
-                    <span>:</span>
-                    <input
-                      type="number"
-                      className="form-control form-control-sm p-1 text-center"
-                      style={{ width: 52 }}
-                      placeholder="–"
-                      value={knockoutForm.away_score}
-                      onChange={(e) =>
-                        setKnockoutForm({
-                          ...knockoutForm,
-                          away_score: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="col-md-2">
-                    <input
-                      className="form-control form-control-sm"
-                      placeholder={t("tour.ph_away_team")}
-                      value={knockoutForm.away_team_name}
-                      onChange={(e) =>
-                        setKnockoutForm({
-                          ...knockoutForm,
-                          away_team_name: e.target.value,
-                        })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="col-md-2">
-                    <input
-                      className="form-control form-control-sm"
-                      placeholder={t("tour.ph_youtube")}
-                      value={knockoutForm.youtube_link}
-                      onChange={(e) =>
-                        setKnockoutForm({
-                          ...knockoutForm,
-                          youtube_link: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
-                  <div className="col-md-2 d-flex align-items-center">
-                    <div className="form-check">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="endedAfterPenalties"
-                        checked={knockoutForm.ended_after_penalties}
-                        onChange={(e) =>
-                          setKnockoutForm({
-                            ...knockoutForm,
-                            ended_after_penalties: e.target.checked,
-                          })
-                        }
-                      />
-                      <label
-                        className="form-check-label"
-                        htmlFor="endedAfterPenalties"
-                      >
-                        Ended after penalties
-                      </label>
-                    </div>
-                  </div>
-                  <div className="col-auto d-flex gap-1">
-                    <button className="btn btn-sm btn-primary" type="submit">
-                      {editMatchId ? t("tour.btn_update") : t("tour.btn_add")}
-                    </button>
-                    {editMatchId && (
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        type="button"
-                        onClick={() => {
-                          setEditMatchId(null);
-                          setKnockoutForm({
-                            stage: "r16",
-                            home_team_name: "",
-                            away_team_name: "",
-                            home_score: "",
-                            away_score: "",
-                            youtube_link: "",
-                            ended_after_penalties: false,
-                          });
-                        }}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
