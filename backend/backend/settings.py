@@ -200,7 +200,9 @@ MEDIA_ROOT = ""
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "https://cscmosnita-web.vercel.app",
-    "http://localhost:5173",  # for local development
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://localhost:5173",  # for local development (Vite default)
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = ["*"]
